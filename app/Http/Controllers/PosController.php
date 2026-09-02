@@ -1,0 +1,311 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\OrderStatus;
+use App\Models\Bundle;
+use App\Models\Category;
+use App\Models\Customer;
+use App\Models\DiningTable;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Reward;
+use App\Services\DiscountService;
+use App\Services\InventoryService;
+use App\Services\OrderService;
+use App\Services\PrinterRoutingService;
+use App\Services\TableService;
+use Illuminate\Support\Str;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class PosController extends Controller
+{
+    public function index(Request $request, DiscountService $discounts): View
+    {
+        abort_unless($request->user()->hasPermission('pos.access'), 403);
+
+        $outletId = current_outlet_id();
+
+        $customers = Customer::query()->where('is_active', true)->orderBy('name')->limit(200)->get();
+        $products = Product::query()->sellable()->with(['category', 'unit', 'variants'])->orderBy('name')->get();
+        $lowStock = app(InventoryService::class)->lowStock($outletId);
+
+        return view('pos.index', [
+            'categories' => Category::query()
+                ->where('is_active', true)
+                ->whereHas('products', fn ($q) => $q->sellable())
+                ->orderBy('sort_order')
+                ->get(),
+            'products' => $products,
+            'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
+            'customers' => $customers,
+            'bundles' => Bundle::query()
+                ->where('is_active', true)
+                ->with(['product', 'items.product', 'outlets'])
+                ->get()
+                ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId))
+                ->values(),
+            'discounts' => $discounts->activeForOutlet($outletId),
+            'rewards' => Reward::query()->where('is_active', true)->orderBy('points_required')->get(),
+            'heldOrders' => $this->heldOrdersQuery($outletId)
+                ->get()
+                ->map(fn (Order $order) => $this->heldOrderPayload($order))
+                ->values(),
+            'canCheckout' => $request->user()->hasPermission('orders.checkout'),
+            'canRegisterCustomer' => $request->user()->hasPermission('customers.manage'),
+            'lowStock' => $lowStock,
+            'pointsRedeemValue' => points_redeem_value(),
+            'customerOptions' => $customers->map(fn ($customer) => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'points' => $customer->points,
+            ])->values(),
+            'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()]),
+            'lowStockNames' => $lowStock->take(3)->pluck('name')->join(', '),
+            'lowStockExtra' => max(0, $lowStock->count() - 3),
+        ]);
+    }
+
+    public function draft(Request $request, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'order_type' => ['required', 'in:dine_in,pickup,online'],
+            'channel' => ['nullable', 'in:pos,online,pickup'],
+            'table_id' => ['nullable', 'exists:tables,id'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'guest_count' => ['nullable', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $data['outlet_id'] = current_outlet_id();
+        $data['channel'] = $data['channel'] ?? match ($data['order_type']) {
+            'pickup' => 'pickup',
+            'online' => 'online',
+            default => 'pos',
+        };
+
+        return response()->json($orders->createDraft($data)->load(['items.product', 'table', 'customer']));
+    }
+
+    public function addItem(Request $request, Order $order, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'exists:products,id'],
+            'product_variant_id' => ['nullable', 'exists:product_variants,id'],
+            'bundle_id' => ['nullable', 'exists:bundles,id'],
+            'quantity' => ['nullable', 'numeric', 'min:0.01'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $orders->addItem($order, $data);
+
+        return response()->json($order->fresh(['items.product', 'customer', 'table']));
+    }
+
+    public function updateItem(Request $request, Order $order, $item, OrderService $orders): JsonResponse
+    {
+        $line = $order->items()->whereKey($item)->firstOrFail();
+        $data = $request->validate([
+            'quantity' => ['required', 'numeric', 'min:0.01'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json($orders->updateItem($line, $data));
+    }
+
+    public function removeItem(Order $order, $item, OrderService $orders): JsonResponse
+    {
+        $line = $order->items()->whereKey($item)->firstOrFail();
+
+        return response()->json($orders->removeItem($line));
+    }
+
+    public function discount(Request $request, Order $order, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'discount_id' => ['nullable', 'exists:discounts,id'],
+            'manual' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        return response()->json($orders->applyDiscount($order, $data['discount_id'] ?? null, (float) ($data['manual'] ?? 0)));
+    }
+
+    public function held(): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasPermission('pos.access'), 403);
+
+        return response()->json(
+            $this->heldOrdersQuery(current_outlet_id())
+                ->get()
+                ->map(fn (Order $order) => $this->heldOrderPayload($order))
+                ->values()
+        );
+    }
+
+    public function hold(Order $order, OrderService $orders): JsonResponse
+    {
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+
+        return response()->json($this->heldOrderPayload($orders->hold($order)));
+    }
+
+    public function recall(Order $order): JsonResponse
+    {
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+        abort_unless(in_array($order->status, [OrderStatus::Held, OrderStatus::Draft], true), 422);
+
+        return response()->json($order->load(['items.product', 'customer', 'table', 'discount']));
+    }
+
+    public function points(Request $request, Order $order, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'points' => ['required', 'integer', 'min:0'],
+        ]);
+
+        return response()->json($orders->applyPoints($order, (int) $data['points']));
+    }
+
+    public function customer(Request $request, Order $order, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'customer_id' => ['nullable', 'exists:customers,id'],
+        ]);
+
+        return response()->json($orders->assignCustomer($order, $data['customer_id'] ?? null));
+    }
+
+    public function storeCustomer(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('customers.manage'), 403);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email'],
+        ]);
+        $data['code'] = 'CUS-'.strtoupper(Str::random(6));
+        $data['is_active'] = true;
+
+        return response()->json(Customer::query()->create($data), 201);
+    }
+
+    public function submit(Request $request, Order $order, OrderService $orders, PrinterRoutingService $printers): JsonResponse
+    {
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+
+        $data = $request->validate([
+            'order_type' => ['nullable', 'in:dine_in,pickup,online'],
+            'table_id' => ['nullable', 'exists:tables,id'],
+        ]);
+
+        $submitted = $orders->submit($order, $data)->load(['items.product', 'customer', 'table']);
+
+        return response()->json([
+            'order' => $submitted,
+            'print_jobs' => $printers->route($submitted),
+        ]);
+    }
+
+    public function transfer(Request $request, Order $order, TableService $tables, OrderService $orders): JsonResponse
+    {
+        $data = $request->validate([
+            'table_id' => ['required', 'exists:tables,id'],
+        ]);
+
+        if ($order->table_id && (int) $order->table_id !== (int) $data['table_id']) {
+            $tables->transfer((int) $order->table_id, (int) $data['table_id']);
+        } elseif (! $order->table_id) {
+            $orders->assignTable($order, (int) $data['table_id']);
+        }
+
+        return response()->json($order->fresh(['items.product', 'customer', 'table']));
+    }
+
+    public function checkout(Request $request, Order $order, OrderService $orders, PrinterRoutingService $printers): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('orders.checkout'), 403);
+
+        $data = $request->validate([
+            'method' => ['required', 'in:cash,card,qris,transfer,points'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'tendered' => ['nullable', 'numeric', 'min:0'],
+            'reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $completed = $orders->checkout($order, $data);
+
+        return response()->json([
+            'order' => $completed,
+            'print_jobs' => $printers->route($completed),
+        ]);
+    }
+
+    public function cancel(Request $request, Order $order, OrderService $orders): JsonResponse|RedirectResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:255']]);
+        $orders->cancel($order, $data['reason']);
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return back()->with('success', 'Order dibatalkan.');
+    }
+
+    public function receipt(Order $order): View
+    {
+        return view('pos.receipt', ['order' => $order->load(['items', 'payments', 'outlet', 'customer', 'table', 'user'])]);
+    }
+
+    public function ticket(Request $request, Order $order, string $station): View
+    {
+        abort_unless(in_array($station, ['cashier', 'kitchen', 'bar'], true), 404);
+
+        $order->load(['items.product', 'items.variant', 'outlet', 'table', 'user', 'customer']);
+        $items = $order->items->filter(function ($item) use ($station) {
+            $itemStation = $item->station ?? $item->product?->station ?? $item->product?->category?->station;
+
+            return $station === 'cashier' || $itemStation === $station;
+        });
+
+        return view('pos.ticket', [
+            'order' => $order,
+            'station' => $station,
+            'items' => $items,
+            'reprint' => $request->boolean('reprint'),
+        ]);
+    }
+
+    protected function heldOrdersQuery(?int $outletId)
+    {
+        return Order::query()
+            ->where('outlet_id', $outletId)
+            ->where('status', OrderStatus::Held)
+            ->with(['table', 'customer', 'items'])
+            ->latest('held_at')
+            ->latest();
+    }
+
+    protected function heldOrderPayload(Order $order): array
+    {
+        $order->loadMissing(['table', 'customer', 'items']);
+
+        return [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'grand_total' => (float) $order->grand_total,
+            'order_type' => $order->order_type?->value,
+            'order_type_label' => $order->order_type?->label(),
+            'table' => $order->table?->code,
+            'customer' => $order->customer?->name,
+            'items_count' => $order->items->count(),
+            'held_at' => $order->held_at?->toIso8601String(),
+            'status' => $order->status?->value,
+        ];
+    }
+}

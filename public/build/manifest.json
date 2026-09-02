@@ -1,0 +1,53 @@
+{
+  "_fonts-BCD4Cae1.css": {
+    "file": "assets/fonts-BCD4Cae1.css",
+    "src": "_fonts-BCD4Cae1.css"
+  },
+  "_public-sans-400-normal-8Rpg0ruU.woff2": {
+    "file": "assets/public-sans-400-normal-8Rpg0ruU.woff2",
+    "src": "_public-sans-400-normal-8Rpg0ruU.woff2"
+  },
+  "_public-sans-400-normal-SBbinRkI.woff": {
+    "file": "assets/public-sans-400-normal-SBbinRkI.woff",
+    "src": "_public-sans-400-normal-SBbinRkI.woff"
+  },
+  "_public-sans-500-normal-NlrCPXnF.woff2": {
+    "file": "assets/public-sans-500-normal-NlrCPXnF.woff2",
+    "src": "_public-sans-500-normal-NlrCPXnF.woff2"
+  },
+  "_public-sans-500-normal-vCxiVFAq.woff": {
+    "file": "assets/public-sans-500-normal-vCxiVFAq.woff",
+    "src": "_public-sans-500-normal-vCxiVFAq.woff"
+  },
+  "_public-sans-600-normal-BR59oU-I.woff": {
+    "file": "assets/public-sans-600-normal-BR59oU-I.woff",
+    "src": "_public-sans-600-normal-BR59oU-I.woff"
+  },
+  "_public-sans-600-normal-Fru-LXNs.woff2": {
+    "file": "assets/public-sans-600-normal-Fru-LXNs.woff2",
+    "src": "_public-sans-600-normal-Fru-LXNs.woff2"
+  },
+  "_public-sans-700-normal-BqJmxWdE.woff2": {
+    "file": "assets/public-sans-700-normal-BqJmxWdE.woff2",
+    "src": "_public-sans-700-normal-BqJmxWdE.woff2"
+  },
+  "_public-sans-700-normal-Dm-oTPSL.woff": {
+    "file": "assets/public-sans-700-normal-Dm-oTPSL.woff",
+    "src": "_public-sans-700-normal-Dm-oTPSL.woff"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-qd0k2PQP.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CbB5lUnh.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}
