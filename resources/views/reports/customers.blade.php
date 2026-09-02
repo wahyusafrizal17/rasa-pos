@@ -1,15 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Customer Report')
 @section('breadcrumb', 'Reports')
+@section('actions')
+    <a href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}" class="btn-ghost">Export XLSX</a>
+    <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}" class="btn-ghost">Export PDF</a>
+@endsection
 @section('content')
     @unless ($exporting ?? false)
-        <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <p class="text-sm text-slate-500">Nilai pelanggan dan poin</p>
-            <div class="flex flex-wrap gap-2">
-                <a href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}" class="btn-ghost">Export XLSX</a>
-                <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}" class="btn-ghost">Export PDF</a>
-            </div>
-        </div>
         <form method="GET" action="{{ route('reports.customers') }}" class="card mb-6 p-5">
             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <div>

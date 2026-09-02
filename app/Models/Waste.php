@@ -40,4 +40,35 @@ class Waste extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['product.unit', 'unit', 'user', 'outlet']);
+
+        $unit = $this->product?->unit?->code ?? $this->unit?->code ?? '';
+        $qty = (float) $this->quantity;
+
+        return [
+            'id' => $this->id,
+            'number' => $this->number ?: '—',
+            'product_id' => $this->product_id ? (string) $this->product_id : '',
+            'product_name' => $this->product?->name ?? '—',
+            'sku' => $this->product?->sku ?? '—',
+            'quantity' => $qty,
+            'quantity_label' => $this->formatQty($qty, $unit),
+            'reason_label' => $this->reason?->label() ?? '—',
+            'reason_color' => $this->reason?->color() ?? 'gray',
+            'notes' => $this->notes ?: '—',
+            'user_name' => $this->user?->name ?? '—',
+            'outlet_name' => $this->outlet?->name ?? '—',
+            'created_label' => $this->created_at?->format('d/m/Y H:i') ?? '—',
+        ];
+    }
+
+    protected function formatQty(float $value, string $unit): string
+    {
+        $label = number_format($value, 2);
+
+        return $unit !== '' ? $label.' '.$unit : $label;
+    }
 }

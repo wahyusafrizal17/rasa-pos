@@ -13,20 +13,50 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        abort_unless(auth()->user()->hasPermission('users.view'), 403);
+        abort_unless($request->user()->hasPermission('users.view'), 403);
+
+        $filters = $request->only(['name', 'email', 'role_id', 'status']);
+        $query = User::query()->with(['roles', 'outlets']);
+
+        if (filled($filters['name'] ?? null)) {
+            $query->where('name', 'like', '%'.$filters['name'].'%');
+        }
+        if (filled($filters['email'] ?? null)) {
+            $query->where('email', 'like', '%'.$filters['email'].'%');
+        }
+        if (filled($filters['role_id'] ?? null)) {
+            $query->whereHas('roles', fn ($role) => $role->where('roles.id', $filters['role_id']));
+        }
+        if (($filters['status'] ?? '') === 'active') {
+            $query->where('is_active', true);
+        } elseif (($filters['status'] ?? '') === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        $focusUser = $request->filled('user')
+            ? User::query()->with(['roles', 'outlets'])->find($request->integer('user'))
+            : null;
 
         return view('users.index', [
-            'users' => User::query()->with(['roles', 'outlets'])->latest()->paginate(20),
+            'users' => $query->latest()->paginate(20)->withQueryString(),
+            'filters' => $filters,
             'roles' => Role::query()->orderBy('label')->get(),
-            'outlets' => Outlet::query()->where('is_active', true)->get(),
+            'outlets' => Outlet::query()->where('is_active', true)->orderBy('name')->get(),
+            'stats' => [
+                'total' => User::query()->count(),
+                'active' => User::query()->where('is_active', true)->count(),
+                'inactive' => User::query()->where('is_active', false)->count(),
+            ],
+            'focusPayload' => $focusUser?->toModalArray(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('users.manage'), 403);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'unique:users,email'],
@@ -34,6 +64,14 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'role_id' => ['required', 'exists:roles,id'],
             'outlet_ids' => ['nullable', 'array'],
+            'outlet_ids.*' => ['integer', 'exists:outlets,id'],
+        ], [
+            'name.required' => 'Nama wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.unique' => 'Email sudah digunakan.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'role_id.required' => 'Role wajib dipilih.',
         ]);
 
         $user = User::query()->create([
@@ -46,12 +84,13 @@ class UserController extends Controller
         $user->roles()->sync([$data['role_id']]);
         $user->outlets()->sync($request->input('outlet_ids', []));
 
-        return back()->with('success', 'Pengguna dibuat.');
+        return redirect()->route('users.index')->with('success', 'Pengguna ditambahkan.');
     }
 
     public function update(Request $request, User $user): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('users.manage'), 403);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
@@ -60,6 +99,13 @@ class UserController extends Controller
             'role_id' => ['required', 'exists:roles,id'],
             'is_active' => ['sometimes', 'boolean'],
             'outlet_ids' => ['nullable', 'array'],
+            'outlet_ids.*' => ['integer', 'exists:outlets,id'],
+        ], [
+            'name.required' => 'Nama wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.unique' => 'Email sudah digunakan.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'role_id.required' => 'Role wajib dipilih.',
         ]);
 
         $user->update([
@@ -76,6 +122,6 @@ class UserController extends Controller
         $user->roles()->sync([$data['role_id']]);
         $user->outlets()->sync($request->input('outlet_ids', []));
 
-        return back()->with('success', 'Pengguna diperbarui.');
+        return redirect()->route('users.index')->with('success', 'Pengguna diperbarui.');
     }
 }

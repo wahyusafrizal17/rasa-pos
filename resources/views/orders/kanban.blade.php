@@ -2,12 +2,7 @@
 @section('title', 'Pickup / Online')
 @section('breadcrumb', 'Orders')
 @section('content')
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4" x-data x-init="setTimeout(() => location.reload(), 15000)">
-        <p class="text-sm text-slate-500">Papan status order pickup dan online. Diperbarui otomatis setiap 15 detik.</p>
-        <a href="{{ route('orders.index') }}" class="btn-ghost">Semua Orders</a>
-    </div>
-
-    <div class="grid gap-4 xl:grid-cols-4">
+    <div class="grid gap-4 xl:grid-cols-4" x-data x-init="setTimeout(() => location.reload(), 15000)">
         @foreach ($columns as $column)
             @php $orders = $grouped[$column->value] ?? collect(); @endphp
             <section class="card flex min-h-[28rem] flex-col p-4">

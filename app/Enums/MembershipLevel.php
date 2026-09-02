@@ -19,6 +19,16 @@ enum MembershipLevel: string
         };
     }
 
+    public function color(): string
+    {
+        return match ($this) {
+            self::Platinum => 'indigo',
+            self::Gold => 'orange',
+            self::Silver => 'blue',
+            self::Regular => 'gray',
+        };
+    }
+
     public function minSpending(): int
     {
         return match ($this) {

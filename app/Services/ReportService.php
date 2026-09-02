@@ -19,31 +19,50 @@ class ReportService
 {
     public function sales(array $filters)
     {
-        return Order::query()
+        return $this->paidOrders($filters, withColumnFilters: true)
             ->with(['outlet', 'customer', 'user'])
-            ->where('payment_status', PaymentStatus::Paid->value)
-            ->when($filters['outlet_id'] ?? null, fn ($q, $id) => $q->where('outlet_id', $id))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))
-            ->when($filters['search'] ?? null, fn ($q, $s) => $q->where('order_number', 'like', "%{$s}%"))
             ->latest()
             ->paginate(20)
             ->withQueryString();
     }
 
+    public function salesStats(array $filters): array
+    {
+        $agg = $this->paidOrders($filters, withColumnFilters: false)
+            ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(grand_total), 0) as total')
+            ->first();
+
+        $count = (int) ($agg->cnt ?? 0);
+        $total = (float) ($agg->total ?? 0);
+
+        return [
+            'count' => $count,
+            'total' => $total,
+            'average' => $count > 0 ? $total / $count : 0,
+        ];
+    }
+
     public function productSales(array $filters)
     {
-        return OrderItem::query()
+        return $this->productSalesBase($filters, withColumnFilters: true)
             ->selectRaw('order_items.product_id, order_items.name, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
-            ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.payment_status', PaymentStatus::Paid->value)
-            ->when($filters['outlet_id'] ?? null, fn ($q, $id) => $q->where('orders.outlet_id', $id))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '<=', $d))
             ->groupBy('order_items.product_id', 'order_items.name')
             ->orderByDesc('qty')
             ->paginate(20)
             ->withQueryString();
+    }
+
+    public function productSalesStats(array $filters): array
+    {
+        $agg = $this->productSalesBase($filters, withColumnFilters: false)
+            ->selectRaw('COUNT(DISTINCT order_items.product_id) as products, COALESCE(SUM(order_items.quantity), 0) as qty, COALESCE(SUM(order_items.total), 0) as total')
+            ->first();
+
+        return [
+            'products' => (int) ($agg->products ?? 0),
+            'qty' => (float) ($agg->qty ?? 0),
+            'total' => (float) ($agg->total ?? 0),
+        ];
     }
 
     public function inventoryValuation(?int $outletId = null)
@@ -143,51 +162,152 @@ class ReportService
 
     public function categorySales(array $filters)
     {
-        return OrderItem::query()
+        return $this->categorySalesBase($filters, withColumnFilters: true)
             ->selectRaw('categories.id as category_id, COALESCE(categories.name, "Tanpa kategori") as name, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
-            ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
-            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
-            ->where('orders.payment_status', PaymentStatus::Paid->value)
-            ->when($filters['outlet_id'] ?? null, fn ($q, $id) => $q->where('orders.outlet_id', $id))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '<=', $d))
             ->groupBy('categories.id', 'categories.name')
             ->orderByDesc('total')
             ->paginate(20)
             ->withQueryString();
     }
 
+    public function categorySalesStats(array $filters): array
+    {
+        $agg = $this->categorySalesBase($filters, withColumnFilters: false)
+            ->selectRaw('COUNT(DISTINCT COALESCE(categories.id, -1)) as categories, COALESCE(SUM(order_items.quantity), 0) as qty, COALESCE(SUM(order_items.total), 0) as total')
+            ->first();
+
+        return [
+            'categories' => (int) ($agg->categories ?? 0),
+            'qty' => (float) ($agg->qty ?? 0),
+            'total' => (float) ($agg->total ?? 0),
+        ];
+    }
+
     public function promoPerformance(array $filters): array
     {
+        return [
+            'discounts' => $this->promoDiscounts($filters),
+            'bundles' => $this->promoBundles($filters),
+        ];
+    }
+
+    public function promoStats(array $filters): array
+    {
         $discounts = Order::query()
-            ->selectRaw('discounts.id, discounts.name, discounts.type, COUNT(orders.id) as usage_count, SUM(orders.discount_amount) as discount_total, SUM(orders.grand_total) as sales_total')
             ->join('discounts', 'discounts.id', '=', 'orders.discount_id')
             ->where('orders.payment_status', PaymentStatus::Paid->value)
-            ->when($filters['outlet_id'] ?? null, fn ($q, $id) => $q->where('orders.outlet_id', $id))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '<=', $d))
-            ->groupBy('discounts.id', 'discounts.name', 'discounts.type')
-            ->orderByDesc('usage_count')
-            ->get();
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->selectRaw('COUNT(orders.id) as usage_count, COALESCE(SUM(orders.discount_amount), 0) as discount, COALESCE(SUM(orders.grand_total), 0) as sales')
+            ->first();
 
         $bundles = OrderItem::query()
-            ->selectRaw('bundles.id, bundles.name, SUM(order_items.quantity) as qty, SUM(order_items.total) as sales_total')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->join('bundles', 'bundles.id', '=', 'order_items.bundle_id')
             ->where('orders.payment_status', PaymentStatus::Paid->value)
             ->whereNotNull('order_items.bundle_id')
-            ->when($filters['outlet_id'] ?? null, fn ($q, $id) => $q->where('orders.outlet_id', $id))
-            ->when($filters['from'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '>=', $d))
-            ->when($filters['to'] ?? null, fn ($q, $d) => $q->whereDate('orders.created_at', '<=', $d))
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->selectRaw('COALESCE(SUM(order_items.quantity), 0) as qty, COALESCE(SUM(order_items.total), 0) as sales')
+            ->first();
+
+        return [
+            'discount_usage' => (int) ($discounts->usage_count ?? 0),
+            'discount_total' => (float) ($discounts->discount ?? 0),
+            'bundle_sales' => (float) ($bundles->sales ?? 0),
+        ];
+    }
+
+    public function promoDiscounts(array $filters)
+    {
+        return $this->promoDiscountsBase($filters, withColumnFilters: true)
+            ->selectRaw('discounts.id, discounts.name, discounts.type, COUNT(orders.id) as usage_count, SUM(orders.discount_amount) as discount_total, SUM(orders.grand_total) as sales_total')
+            ->groupBy('discounts.id', 'discounts.name', 'discounts.type')
+            ->orderByDesc('usage_count')
+            ->get();
+    }
+
+    public function promoBundles(array $filters)
+    {
+        return $this->promoBundlesBase($filters, withColumnFilters: true)
+            ->selectRaw('bundles.id, bundles.name, SUM(order_items.quantity) as qty, SUM(order_items.total) as sales_total')
             ->groupBy('bundles.id', 'bundles.name')
             ->orderByDesc('qty')
             ->get();
+    }
 
-        return [
-            'discounts' => $discounts,
-            'bundles' => $bundles,
-        ];
+    protected function promoDiscountsBase(array $filters, bool $withColumnFilters = true)
+    {
+        $name = $filters['discount'] ?? null;
+
+        return Order::query()
+            ->join('discounts', 'discounts.id', '=', 'orders.discount_id')
+            ->where('orders.payment_status', PaymentStatus::Paid->value)
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->when($withColumnFilters && filled($name), fn ($q) => $q->where('discounts.name', 'like', '%'.$name.'%'));
+    }
+
+    protected function promoBundlesBase(array $filters, bool $withColumnFilters = true)
+    {
+        $name = $filters['bundle'] ?? null;
+
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('bundles', 'bundles.id', '=', 'order_items.bundle_id')
+            ->where('orders.payment_status', PaymentStatus::Paid->value)
+            ->whereNotNull('order_items.bundle_id')
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->when($withColumnFilters && filled($name), fn ($q) => $q->where('bundles.name', 'like', '%'.$name.'%'));
+    }
+
+    protected function categorySalesBase(array $filters, bool $withColumnFilters = true)
+    {
+        $name = $filters['name'] ?? $filters['search'] ?? null;
+
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->where('orders.payment_status', PaymentStatus::Paid->value)
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->when($withColumnFilters && filled($name), fn ($q) => $q->whereRaw('COALESCE(categories.name, "Tanpa kategori") LIKE ?', ['%'.$name.'%']));
+    }
+
+    protected function productSalesBase(array $filters, bool $withColumnFilters = true)
+    {
+        $name = $filters['name'] ?? $filters['search'] ?? null;
+
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.payment_status', PaymentStatus::Paid->value)
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('orders.outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('orders.created_at', '<=', $filters['to']))
+            ->when($withColumnFilters && filled($name), fn ($q) => $q->where('order_items.name', 'like', '%'.$name.'%'));
+    }
+
+    protected function paidOrders(array $filters, bool $withColumnFilters = true)
+    {
+        $number = $filters['number'] ?? $filters['search'] ?? null;
+
+        return Order::query()
+            ->where('payment_status', PaymentStatus::Paid->value)
+            ->when(filled($filters['outlet_id'] ?? null), fn ($q) => $q->where('outlet_id', $filters['outlet_id']))
+            ->when(filled($filters['from'] ?? null), fn ($q) => $q->whereDate('created_at', '>=', $filters['from']))
+            ->when(filled($filters['to'] ?? null), fn ($q) => $q->whereDate('created_at', '<=', $filters['to']))
+            ->when($withColumnFilters && filled($number), fn ($q) => $q->where('order_number', 'like', '%'.$number.'%'))
+            ->when($withColumnFilters && filled($filters['customer'] ?? null), function ($q) use ($filters) {
+                $q->whereHas('customer', fn ($customer) => $customer->where('name', 'like', '%'.$filters['customer'].'%'));
+            })
+            ->when($withColumnFilters && filled($filters['status'] ?? null), fn ($q) => $q->where('status', $filters['status']));
     }
 
     public function range(?string $from, ?string $to, ?string $period = null): array

@@ -12,10 +12,10 @@ enum ProductType: string
     public function label(): string
     {
         return match ($this) {
-            self::Raw => 'Raw Material',
-            self::SemiFinished => 'Semi Finished',
-            self::Finished => 'Finished Goods',
-            self::Package => 'Package / Bundle',
+            self::Raw => 'Bahan baku',
+            self::SemiFinished => 'Semi jadi',
+            self::Finished => 'Menu',
+            self::Package => 'Paket',
         };
     }
 }

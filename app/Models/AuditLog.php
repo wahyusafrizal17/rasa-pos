@@ -30,4 +30,31 @@ class AuditLog extends Model
     {
         return $this->morphTo();
     }
+
+    public function auditableLabel(): string
+    {
+        if (! $this->auditable_type) {
+            return '—';
+        }
+
+        return class_basename($this->auditable_type).' #'.$this->auditable_id;
+    }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing('user');
+
+        return [
+            'id' => $this->id,
+            'action' => $this->action ?? '',
+            'module' => $this->module ?? '',
+            'user_label' => $this->user?->name ?? 'Sistem',
+            'auditable_label' => $this->auditableLabel(),
+            'ip_address' => $this->ip_address ?? '—',
+            'user_agent' => $this->user_agent ?? '—',
+            'created_at' => $this->created_at?->format('d/m/Y H:i') ?? '—',
+            'old_json' => json_encode($this->old_values ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '{}',
+            'new_json' => json_encode($this->new_values ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) ?: '{}',
+        ];
+    }
 }

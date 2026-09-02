@@ -14,12 +14,22 @@ enum WasteReason: string
     public function label(): string
     {
         return match ($this) {
-            self::Damaged => 'Damaged',
-            self::Expired => 'Expired',
-            self::Spoiled => 'Spoiled',
-            self::ProductionWaste => 'Production Waste',
-            self::WrongPreparation => 'Wrong Preparation',
-            self::Other => 'Other',
+            self::Damaged => 'Rusak',
+            self::Expired => 'Kadaluarsa',
+            self::Spoiled => 'Busuk',
+            self::ProductionWaste => 'Sisa produksi',
+            self::WrongPreparation => 'Salah olah',
+            self::Other => 'Lainnya',
+        };
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::Damaged, self::Spoiled => 'red',
+            self::Expired => 'orange',
+            self::WrongPreparation => 'indigo',
+            self::ProductionWaste, self::Other => 'gray',
         };
     }
 }

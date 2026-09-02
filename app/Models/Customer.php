@@ -37,6 +37,37 @@ class Customer extends Model
         return $this->hasMany(CustomerPoint::class);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function toModalArray(): array
+    {
+        $genderLabels = ['male' => 'Laki-laki', 'female' => 'Perempuan', 'other' => 'Lainnya'];
+
+        return [
+            'id' => $this->id,
+            'code' => $this->code,
+            'name' => $this->name,
+            'phone' => $this->phone ?? '',
+            'email' => $this->email ?? '',
+            'birthday' => $this->birthday?->format('Y-m-d') ?? '',
+            'birthday_label' => $this->birthday?->format('d/m/Y') ?? '—',
+            'gender' => $this->gender ?? '',
+            'gender_label' => $genderLabels[$this->gender ?? ''] ?? '—',
+            'address' => $this->address ?? '',
+            'membership_level' => $this->membership_level?->value ?? 'regular',
+            'membership_label' => $this->membership_level?->label() ?? 'Regular',
+            'is_active' => (bool) $this->is_active,
+            'points_label' => number_format((int) $this->points),
+            'total_transaction_label' => money($this->total_transaction),
+            'last_transaction_label' => $this->last_transaction_at?->format('d/m/Y') ?? '—',
+            'update_url' => route('customers.update', $this),
+            'delete_url' => route('customers.destroy', $this),
+            'points_url' => route('customers.points', $this),
+            'rewards_url' => route('customers.rewards', $this),
+        ];
+    }
+
     public function refreshMembership(): void
     {
         $spending = (float) $this->total_transaction;

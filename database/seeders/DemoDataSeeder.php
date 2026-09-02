@@ -73,20 +73,18 @@ class DemoDataSeeder extends Seeder
         $this->seedWastes($outlets['bdg']);
         $this->seedTransfers($outlets);
         $this->seedOpname($outlets['bdg']);
-        $this->seedProduction($outlets['ck']);
+        $this->seedProduction($outlets['jkt']);
         $this->seedAuditLogs($admin);
     }
 
     /**
-     * @return array{bdg: Outlet, jkt: Outlet, bks: Outlet, ck: Outlet}
+     * @return array{bdg: Outlet, jkt: Outlet}
      */
     protected function seedOutlets(): array
     {
         $rows = [
             'bdg' => ['code' => 'BDG', 'name' => 'Outlet Bandung', 'city' => 'Bandung', 'address' => 'Jl. Dago No. 12', 'phone' => '022-555-1001', 'is_central_kitchen' => false],
             'jkt' => ['code' => 'JKT', 'name' => 'Outlet Jakarta', 'city' => 'Jakarta', 'address' => 'Jl. Senopati No. 8', 'phone' => '021-555-2002', 'is_central_kitchen' => false],
-            'bks' => ['code' => 'BKS', 'name' => 'Outlet Bekasi', 'city' => 'Bekasi', 'address' => 'Jl. Ahmad Yani No. 45', 'phone' => '021-555-3003', 'is_central_kitchen' => false],
-            'ck' => ['code' => 'CK', 'name' => 'Central Kitchen Jakarta', 'city' => 'Jakarta', 'address' => 'Kawasan Industri Pulogadung', 'phone' => '021-555-4004', 'is_central_kitchen' => true],
         ];
 
         $outlets = [];
@@ -221,7 +219,6 @@ class DemoDataSeeder extends Seeder
         $plans = [
             'bdg' => ['prefix' => 'T', 'from' => 1, 'to' => 10, 'occupied' => [1, 2]],
             'jkt' => ['prefix' => 'T', 'from' => 11, 'to' => 15, 'occupied' => []],
-            'bks' => ['prefix' => 'T', 'from' => 16, 'to' => 18, 'occupied' => []],
         ];
         $capacities = [2, 4, 6];
         $tables = [];
@@ -508,7 +505,7 @@ class DemoDataSeeder extends Seeder
             ->orderBy('id')
             ->get();
 
-        $saleOutlets = [$outlets['bdg'], $outlets['jkt'], $outlets['bks']];
+        $saleOutlets = [$outlets['bdg'], $outlets['jkt']];
         $cashiers = [$users['admin'], $users['cashier'], $users['manager'], $users['captain']];
         $methods = [PaymentMethod::Cash, PaymentMethod::Card, PaymentMethod::Qris];
         $types = [OrderType::DineIn, OrderType::Pickup, OrderType::Online];
@@ -531,8 +528,7 @@ class DemoDataSeeder extends Seeder
                 if ($type === OrderType::DineIn) {
                     $outletTables = match ($outlet->code) {
                         'BDG' => $tables['bdg'],
-                        'JKT' => $tables['jkt'],
-                        default => $tables['bks'],
+                        default => $tables['jkt'],
                     };
                     $table = $outletTables[$index % $outletTables->count()];
                 }
@@ -747,7 +743,7 @@ class DemoDataSeeder extends Seeder
         $orders->transition($ready->fresh(), OrderStatus::Ready, 'Siap diambil');
 
         $online = $orders->createDraft([
-            'outlet_id' => $outlets['bks']->id,
+            'outlet_id' => $outlets['jkt']->id,
             'order_type' => OrderType::Online->value,
             'channel' => OrderChannel::Online->value,
             'customer_id' => $customers[2]->id,
@@ -811,7 +807,7 @@ class DemoDataSeeder extends Seeder
         $flour = Product::query()->where('name', 'Flour')->firstOrFail();
 
         $transfers->create([
-            'source_outlet_id' => $outlets['ck']->id,
+            'source_outlet_id' => $outlets['jkt']->id,
             'destination_outlet_id' => $outlets['bdg']->id,
             'transfer_date' => now()->toDateString(),
             'notes' => 'Draft restock Bandung',
@@ -821,10 +817,10 @@ class DemoDataSeeder extends Seeder
         ]);
 
         $completed = $transfers->create([
-            'source_outlet_id' => $outlets['ck']->id,
+            'source_outlet_id' => $outlets['jkt']->id,
             'destination_outlet_id' => $outlets['bdg']->id,
             'transfer_date' => now()->toDateString(),
-            'notes' => 'Transfer beras CK ke Bandung',
+            'notes' => 'Transfer beras Jakarta ke Bandung',
             'items' => [
                 ['product_id' => $rice->id, 'quantity' => 12],
             ],
@@ -855,12 +851,12 @@ class DemoDataSeeder extends Seeder
         $opnames->finalize($opname->fresh(['items']));
     }
 
-    protected function seedProduction(Outlet $ck): void
+    protected function seedProduction(Outlet $outlet): void
     {
         $production = app(ProductionService::class);
         $product = Product::query()->where('name', 'Marinated Chicken')->firstOrFail();
         $order = $production->create([
-            'outlet_id' => $ck->id,
+            'outlet_id' => $outlet->id,
             'product_id' => $product->id,
             'bom_id' => $product->activeBom()?->id,
             'quantity_planned' => 10,

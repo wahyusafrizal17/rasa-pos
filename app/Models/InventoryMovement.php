@@ -54,4 +54,46 @@ class InventoryMovement extends Model
     {
         return $this->morphTo();
     }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['product.unit', 'unit', 'user', 'outlet']);
+
+        $unit = $this->product?->unit?->code ?? $this->unit?->code ?? '';
+        $qty = (float) $this->quantity;
+        $before = (float) $this->before_stock;
+        $after = (float) $this->after_stock;
+
+        return [
+            'id' => $this->id,
+            'reference_number' => $this->reference_number ?: '—',
+            'product_name' => $this->product?->name ?? '—',
+            'sku' => $this->product?->sku ?? '—',
+            'type_label' => $this->type?->label() ?? '—',
+            'type_color' => $this->type?->color() ?? 'gray',
+            'quantity' => $qty,
+            'quantity_label' => $this->formatSignedQty($qty, $unit),
+            'quantity_tone' => $qty > 0 ? 'plus' : ($qty < 0 ? 'minus' : 'zero'),
+            'before_label' => $this->formatQty($before, $unit),
+            'after_label' => $this->formatQty($after, $unit),
+            'reason' => $this->reason ?: '—',
+            'user_name' => $this->user?->name ?? '—',
+            'outlet_name' => $this->outlet?->name ?? '—',
+            'created_label' => $this->created_at?->format('d/m/Y H:i') ?? '—',
+        ];
+    }
+
+    protected function formatQty(float $value, string $unit): string
+    {
+        $label = number_format($value, 2);
+
+        return $unit !== '' ? $label.' '.$unit : $label;
+    }
+
+    protected function formatSignedQty(float $value, string $unit): string
+    {
+        $prefix = $value > 0 ? '+' : '';
+
+        return $prefix.$this->formatQty($value, $unit);
+    }
 }

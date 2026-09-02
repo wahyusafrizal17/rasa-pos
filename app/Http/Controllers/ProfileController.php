@@ -14,8 +14,15 @@ class ProfileController extends Controller
 {
     public function edit(Request $request): View
     {
+        $user = $request->user()->load(['roles', 'outlets']);
+
         return view('profile.edit', [
-            'user' => $request->user()->load(['roles', 'outlets']),
+            'user' => $user,
+            'stats' => [
+                'role' => $user->roles->pluck('label')->filter()->join(' · ') ?: 'Pengguna',
+                'outlets' => $user->outlets->count(),
+                'last_login' => $user->last_login_at?->format('d/m/Y H:i') ?? '—',
+            ],
         ]);
     }
 

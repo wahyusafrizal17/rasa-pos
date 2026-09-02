@@ -16,12 +16,12 @@ enum TransferStatus: string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Requested => 'Requested',
-            self::Approved => 'Approved',
-            self::Shipped => 'Shipped',
-            self::Received => 'Received',
-            self::Completed => 'Completed',
-            self::Cancelled => 'Cancelled',
+            self::Requested => 'Diajukan',
+            self::Approved => 'Disetujui',
+            self::Shipped => 'Dikirim',
+            self::Received => 'Diterima',
+            self::Completed => 'Selesai',
+            self::Cancelled => 'Dibatalkan',
         };
     }
 

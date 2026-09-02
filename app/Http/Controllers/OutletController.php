@@ -9,18 +9,48 @@ use Illuminate\View\View;
 
 class OutletController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        abort_unless(auth()->user()->hasPermission('outlets.view'), 403);
+        abort_unless($request->user()->hasPermission('outlets.view'), 403);
+
+        $filters = $request->only(['code', 'name', 'city', 'status']);
+        $query = Outlet::query()->withCount('users');
+
+        if (filled($filters['code'] ?? null)) {
+            $query->where('code', 'like', '%'.$filters['code'].'%');
+        }
+        if (filled($filters['name'] ?? null)) {
+            $query->where('name', 'like', '%'.$filters['name'].'%');
+        }
+        if (filled($filters['city'] ?? null)) {
+            $query->where('city', 'like', '%'.$filters['city'].'%');
+        }
+        if (($filters['status'] ?? '') === 'active') {
+            $query->where('is_active', true);
+        } elseif (($filters['status'] ?? '') === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        $focusOutlet = $request->filled('outlet')
+            ? Outlet::query()->withCount('users')->find($request->integer('outlet'))
+            : null;
 
         return view('outlets.index', [
-            'outlets' => Outlet::query()->withCount('users')->latest()->paginate(20),
+            'outlets' => $query->orderBy('name')->paginate(20)->withQueryString(),
+            'filters' => $filters,
+            'stats' => [
+                'total' => Outlet::query()->count(),
+                'active' => Outlet::query()->where('is_active', true)->count(),
+                'central_kitchen' => Outlet::query()->where('is_central_kitchen', true)->count(),
+            ],
+            'focusPayload' => $focusOutlet?->toModalArray(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('outlets.manage'), 403);
+
         Outlet::query()->create($request->validate([
             'code' => ['required', 'string', 'max:20', 'unique:outlets,code'],
             'name' => ['required', 'string', 'max:120'],
@@ -30,17 +60,22 @@ class OutletController extends Controller
             'is_central_kitchen' => ['sometimes', 'boolean'],
             'opens_at' => ['nullable'],
             'closes_at' => ['nullable'],
+        ], [
+            'code.required' => 'Kode outlet wajib diisi.',
+            'code.unique' => 'Kode outlet sudah digunakan.',
+            'name.required' => 'Nama outlet wajib diisi.',
         ]) + [
             'is_central_kitchen' => $request->boolean('is_central_kitchen'),
             'is_active' => true,
         ]);
 
-        return back()->with('success', 'Outlet ditambahkan.');
+        return redirect()->route('outlets.index')->with('success', 'Outlet ditambahkan.');
     }
 
     public function update(Request $request, Outlet $outlet): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('outlets.manage'), 403);
+
         $outlet->update($request->validate([
             'code' => ['required', 'string', 'max:20', 'unique:outlets,code,'.$outlet->id],
             'name' => ['required', 'string', 'max:120'],
@@ -51,11 +86,15 @@ class OutletController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'opens_at' => ['nullable'],
             'closes_at' => ['nullable'],
+        ], [
+            'code.required' => 'Kode outlet wajib diisi.',
+            'code.unique' => 'Kode outlet sudah digunakan.',
+            'name.required' => 'Nama outlet wajib diisi.',
         ]) + [
             'is_central_kitchen' => $request->boolean('is_central_kitchen'),
             'is_active' => $request->boolean('is_active', $outlet->is_active),
         ]);
 
-        return back()->with('success', 'Outlet diperbarui.');
+        return redirect()->route('outlets.index')->with('success', 'Outlet diperbarui.');
     }
 }

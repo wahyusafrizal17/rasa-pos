@@ -1,19 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Orders')
 @section('breadcrumb', 'Front of house')
+@section('actions')
+    @if (collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty())
+        <a href="{{ route('orders.index') }}" class="btn-ghost">Reset filter</a>
+    @endif
+@endsection
 @section('content')
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-            <p class="text-sm text-slate-500">Daftar transaksi dine-in, pickup, dan online</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            @if (collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty())
-                <a href="{{ route('orders.index') }}" class="btn-ghost">Reset filter</a>
-            @endif
-            <a href="{{ route('orders.kanban') }}" class="btn-ghost">Kanban Pickup / Online</a>
-        </div>
-    </div>
-
     <form method="GET" action="{{ route('orders.index') }}" class="card overflow-hidden">
         <div class="table-wrap">
             <table class="data-table">

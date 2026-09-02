@@ -1,11 +1,17 @@
-<div class="mb-4 flex flex-wrap gap-2 text-sm">
-    <a href="{{ route('reports.sales', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.sales') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Sales</a>
-    <a href="{{ route('reports.products', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.products') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Products</a>
-    <a href="{{ route('reports.categories', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.categories') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Categories</a>
-    <a href="{{ route('reports.promo', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.promo') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Promo</a>
-    <a href="{{ route('reports.inventory') }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.inventory') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Inventory</a>
-    <a href="{{ route('reports.movements', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.movements') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Movements</a>
-    <a href="{{ route('reports.production', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.production') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Production</a>
-    <a href="{{ route('reports.customers') }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.customers') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Customers</a>
-    <a href="{{ route('reports.waste', request()->only(['from', 'to', 'period', 'outlet_id'])) }}" class="rounded-full px-3 py-1.5 {{ request()->routeIs('reports.waste') ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600' }}">Waste</a>
+@php
+    $tab = 'inline-flex items-center rounded-lg px-3 py-1.5 text-[13px] font-medium';
+    $tabOn = 'bg-[#111] text-white';
+    $tabOff = 'bg-[#f5f5f5] text-muted hover:bg-[#ececec]';
+    $scope = request()->only(['from', 'to', 'period', 'outlet_id']);
+@endphp
+<div class="mb-5 flex flex-wrap gap-1.5">
+    <a href="{{ route('reports.sales', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.sales') ? $tabOn : $tabOff }}">Sales</a>
+    <a href="{{ route('reports.products', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.products') ? $tabOn : $tabOff }}">Products</a>
+    <a href="{{ route('reports.categories', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.categories') ? $tabOn : $tabOff }}">Categories</a>
+    <a href="{{ route('reports.promo', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.promo') ? $tabOn : $tabOff }}">Promo</a>
+    <a href="{{ route('reports.inventory') }}" class="{{ $tab }} {{ request()->routeIs('reports.inventory') ? $tabOn : $tabOff }}">Inventory</a>
+    <a href="{{ route('reports.movements', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.movements') ? $tabOn : $tabOff }}">Movements</a>
+    <a href="{{ route('reports.production', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.production') ? $tabOn : $tabOff }}">Production</a>
+    <a href="{{ route('reports.customers') }}" class="{{ $tab }} {{ request()->routeIs('reports.customers') ? $tabOn : $tabOff }}">Customers</a>
+    <a href="{{ route('reports.waste', $scope) }}" class="{{ $tab }} {{ request()->routeIs('reports.waste') ? $tabOn : $tabOff }}">Waste</a>
 </div>

@@ -63,6 +63,161 @@
         @apply rounded-xl border-0 bg-white shadow-[0_4px_18px_rgba(47,43,61,0.10)];
     }
 
+    .card-header {
+        @apply flex flex-wrap items-center justify-between gap-4 px-6 py-5;
+    }
+
+    .card-header-title {
+        @apply m-0 text-[1.25rem] font-semibold text-heading;
+    }
+
+    .card-header-subtitle {
+        @apply mt-1 text-[13px] text-muted;
+    }
+
+    .card-header-actions {
+        @apply flex flex-wrap items-center justify-end gap-2;
+    }
+
+    .btn-excel {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[#e8f8ee] px-3.5 py-2 text-[13px] font-medium text-[#1f9d57] transition hover:bg-[#d9f3e3];
+    }
+
+    .btn-pdf {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[#fde8e8] px-3.5 py-2 text-[13px] font-medium text-brand transition hover:bg-[#f8d4d4];
+    }
+
+    .btn-import {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-line bg-white px-3.5 py-2 text-[13px] font-medium text-heading transition hover:bg-slate-50;
+    }
+
+    .btn-add {
+        @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2.5 text-[13px] font-medium text-white shadow-sm transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-excel svg,
+    .btn-pdf svg,
+    .btn-import svg,
+    .btn-add svg {
+        @apply h-4 w-4;
+    }
+
+    .import-modal {
+        @apply w-full max-w-[560px] rounded-2xl bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.18)];
+    }
+
+    .crud-modal {
+        @apply flex w-full max-w-[640px] max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(17,17,17,0.18)];
+    }
+
+    .crud-modal-body {
+        @apply overflow-y-auto p-6;
+    }
+
+    .crud-modal-footer {
+        @apply flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4;
+    }
+
+    .crud-modal-sm {
+        @apply w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-[0_24px_60px_rgba(17,17,17,0.18)];
+    }
+
+    .modal-close {
+        @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-slate-100 hover:text-heading;
+    }
+
+    .table-action {
+        @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand bg-white text-brand transition hover:bg-white hover:border-brand-dark;
+    }
+
+    .table-action-danger {
+        @apply border-brand bg-brand text-white hover:border-brand-dark hover:bg-brand-dark hover:text-white;
+    }
+
+    .list-table .col-actions {
+        @apply w-[1%] whitespace-nowrap text-right;
+    }
+
+    .import-dropzone {
+        @apply flex min-h-[168px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#d4d4d4] bg-[#fafafa] px-6 py-8 text-center transition hover:border-brand/40 hover:bg-white;
+    }
+
+    .import-dropzone-active {
+        @apply border-brand bg-brand-soft;
+    }
+
+    .stat-kicker {
+        @apply text-[11px] font-semibold uppercase tracking-wider text-muted;
+    }
+
+    .stat-value {
+        @apply mt-2 text-[1.75rem] font-semibold leading-none text-heading;
+    }
+
+    .stat-hint {
+        @apply mt-2 text-[13px] text-muted;
+    }
+
+    .stat-icon {
+        @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg;
+    }
+
+    .stat-icon svg {
+        @apply h-5 w-5;
+    }
+
+    .badge-soft {
+        @apply inline-flex items-center rounded-full bg-[#e8f1ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#3b82f6];
+    }
+
+    .list-table {
+        @apply w-full text-left text-sm;
+    }
+
+    .list-table thead tr:first-child th {
+        @apply bg-[#f6f6f6] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-[#8a8a8a];
+    }
+
+    .list-table thead tr.filter-row th {
+        @apply bg-white px-3 py-2.5 font-normal;
+    }
+
+    .list-table .col-filter {
+        @apply w-full rounded-md border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-[12px] font-normal normal-case tracking-normal text-heading outline-none placeholder:text-[#b0b0b0] focus:border-brand;
+    }
+
+    .list-table td {
+        @apply border-b border-[#f0f0f0] px-4 py-3.5 align-middle text-heading;
+    }
+
+    .list-table td img {
+        width: 2.25rem;
+        height: 2.25rem;
+        max-width: 2.25rem;
+        min-width: 2.25rem;
+        @apply shrink-0 rounded-lg object-cover;
+    }
+
+    .list-table tbody tr:nth-child(even) td {
+        @apply bg-[#fafafa];
+    }
+
+    .list-table tr:last-child td {
+        @apply border-b-0;
+    }
+
+    .list-table .col-no {
+        @apply w-16 text-center text-muted;
+    }
+
+    .page-header {
+        @apply mb-6 flex flex-wrap items-center justify-end gap-3;
+    }
+
+    .page-header-actions {
+        @apply flex flex-wrap items-center gap-2;
+    }
+
     .pay-modal {
         @apply w-full max-w-[440px] overflow-hidden rounded-[28px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.28)];
     }
@@ -129,7 +284,7 @@
     }
 
     .nav-subitem {
-        @apply flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-normal text-[#8d8d8d] transition hover:text-white;
+        @apply flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13.5px] font-normal text-[#8d8d8d] transition hover:text-white;
     }
 
     .nav-subitem-active {

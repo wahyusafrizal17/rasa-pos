@@ -61,4 +61,68 @@ class ProductionOrder extends Model
     {
         return $this->hasOne(ProductionBatch::class);
     }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['outlet', 'product.unit', 'bom.product', 'user', 'batch', 'items.product.unit', 'items.unit']);
+
+        $unit = $this->product?->unit?->code ?? '';
+        $planned = (float) $this->quantity_planned;
+        $produced = (float) ($this->quantity_produced ?? 0);
+        $status = $this->status ?? ProductionStatus::Draft;
+
+        $items = $this->items
+            ->sortBy(fn (ProductionOrderItem $item) => $item->product?->name ?? '')
+            ->values()
+            ->map(function (ProductionOrderItem $item) {
+                $itemUnit = $item->product?->unit?->code ?? $item->unit?->code ?? '';
+                $required = (float) $item->quantity_required;
+                $used = (float) ($item->quantity_used ?? 0);
+
+                return [
+                    'id' => $item->id,
+                    'product_name' => $item->product?->name ?? '—',
+                    'sku' => $item->product?->sku ?? '—',
+                    'unit' => $itemUnit,
+                    'required_label' => $this->formatQty($required, $itemUnit),
+                    'used_label' => $this->formatQty($used, $itemUnit),
+                ];
+            })
+            ->all();
+
+        return [
+            'id' => $this->id,
+            'number' => $this->number,
+            'status' => $status->value,
+            'status_label' => $status->label(),
+            'product_name' => $this->product?->name ?? '—',
+            'sku' => $this->product?->sku ?? '—',
+            'outlet_name' => $this->outlet?->name ?? '—',
+            'bom_label' => $this->bom ? (($this->bom->product?->name ?? 'BOM').' · v'.$this->bom->version) : 'Otomatis',
+            'notes' => $this->notes ?: '—',
+            'user_name' => $this->user?->name ?? '—',
+            'planned' => $planned,
+            'planned_label' => $this->formatQty($planned, $unit),
+            'produced_label' => $this->formatQty($produced, $unit),
+            'produced_input' => (string) ($produced > 0 ? $produced : $planned),
+            'yield_label' => number_format((float) ($this->yield_percentage ?? 0), 1).'%',
+            'batch_number' => $this->batch?->batch_number ?? $this->batch_number ?: '—',
+            'batch_url' => $this->batch ? route('batches.show', $this->batch) : '',
+            'production_date_label' => $this->production_date?->format('d/m/Y') ?? '—',
+            'started_label' => $this->started_at?->format('d/m/Y H:i') ?? '—',
+            'completed_label' => $this->completed_at?->format('d/m/Y H:i') ?? '—',
+            'items_count' => count($items),
+            'items' => $items,
+            'start_url' => route('production.start', $this),
+            'complete_url' => route('production.complete', $this),
+            'cancel_url' => route('production.cancel', $this),
+        ];
+    }
+
+    protected function formatQty(float $value, string $unit): string
+    {
+        $label = number_format($value, 2);
+
+        return $unit !== '' ? $label.' '.$unit : $label;
+    }
 }

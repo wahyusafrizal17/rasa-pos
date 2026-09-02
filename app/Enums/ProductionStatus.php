@@ -14,10 +14,10 @@ enum ProductionStatus: string
     {
         return match ($this) {
             self::Draft => 'Draft',
-            self::Planned => 'Planned',
-            self::InProduction => 'In Production',
-            self::Completed => 'Completed',
-            self::Cancelled => 'Cancelled',
+            self::Planned => 'Direncanakan',
+            self::InProduction => 'Diproduksi',
+            self::Completed => 'Selesai',
+            self::Cancelled => 'Dibatalkan',
         };
     }
 

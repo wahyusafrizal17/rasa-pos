@@ -40,6 +40,106 @@ class Discount extends Model
         return $this->belongsToMany(Outlet::class);
     }
 
+    public function typeLabel(): string
+    {
+        return match ($this->type) {
+            DiscountType::Percentage => 'Persentase',
+            DiscountType::Nominal => 'Nominal',
+            default => '—',
+        };
+    }
+
+    public function scopeLabel(): string
+    {
+        return match ($this->scope) {
+            'order' => 'Pesanan',
+            'item' => 'Produk',
+            'category' => 'Kategori',
+            default => $this->scope ?: '—',
+        };
+    }
+
+    public function valueLabel(): string
+    {
+        return $this->type === DiscountType::Percentage
+            ? rtrim(rtrim(number_format((float) $this->value, 2, ',', '.'), '0'), ',').'%'
+            : money($this->value);
+    }
+
+    public function periodLabel(): string
+    {
+        if (! $this->start_date && ! $this->end_date) {
+            return 'Tanpa periode';
+        }
+
+        return ($this->start_date?->format('d/m/Y') ?? '—').' – '.($this->end_date?->format('d/m/Y') ?? '—');
+    }
+
+    public function timeLabel(): string
+    {
+        $start = $this->clockLabel($this->start_time);
+        $end = $this->clockLabel($this->end_time);
+
+        if (! $start && ! $end) {
+            return 'Sepanjang hari';
+        }
+
+        return ($start ?? '—').' – '.($end ?? '—');
+    }
+
+    public function statusLabel(): string
+    {
+        if (! $this->is_active) {
+            return 'Nonaktif';
+        }
+
+        $today = now()->toDateString();
+
+        if ($this->start_date && $today < $this->start_date->toDateString()) {
+            return 'Terjadwal';
+        }
+
+        if ($this->end_date && $today > $this->end_date->toDateString()) {
+            return 'Berakhir';
+        }
+
+        return 'Aktif';
+    }
+
+    public function statusColor(): string
+    {
+        return match ($this->statusLabel()) {
+            'Aktif' => 'green',
+            'Terjadwal' => 'orange',
+            'Berakhir' => 'red',
+            default => 'gray',
+        };
+    }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['outlets', 'items.product', 'items.category']);
+
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'code' => $this->code ?: '—',
+            'type_label' => $this->typeLabel(),
+            'scope_label' => $this->scopeLabel(),
+            'value_label' => $this->valueLabel(),
+            'minimum_label' => (float) $this->minimum_transaction > 0 ? money($this->minimum_transaction) : 'Tidak ada',
+            'maximum_label' => $this->maximum_discount !== null ? money($this->maximum_discount) : 'Tidak dibatasi',
+            'period_label' => $this->periodLabel(),
+            'time_label' => $this->timeLabel(),
+            'status_label' => $this->statusLabel(),
+            'is_active' => $this->is_active,
+            'outlets_label' => $this->outlets->pluck('name')->filter()->join(', ') ?: 'Semua outlet',
+            'products_label' => $this->items->pluck('product.name')->filter()->join(', ') ?: '—',
+            'categories_label' => $this->items->pluck('category.name')->filter()->join(', ') ?: '—',
+            'toggle_url' => route('marketing.discounts.toggle', $this),
+        ];
+    }
+
     public function isCurrentlyActive(?int $outletId = null): bool
     {
         if (! $this->is_active) {
@@ -67,5 +167,18 @@ class Discount extends Model
         }
 
         return true;
+    }
+
+    private function clockLabel(mixed $time): ?string
+    {
+        if ($time === null || $time === '') {
+            return null;
+        }
+
+        if ($time instanceof \DateTimeInterface) {
+            return $time->format('H:i');
+        }
+
+        return substr((string) $time, 0, 5);
     }
 }

@@ -94,7 +94,9 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/tables/reserve', [TableController::class, 'reserve'])->name('tables.reserve');
 
     Route::resource('products', ProductController::class)->except('show');
-    Route::resource('categories', CategoryController::class)->except('show', 'create', 'edit');
+    Route::resource('categories', CategoryController::class)->except('show');
+    Route::get('/customers/template', [CustomerController::class, 'template'])->name('customers.template');
+    Route::post('/customers/import', [CustomerController::class, 'import'])->name('customers.import');
     Route::resource('customers', CustomerController::class);
     Route::post('/customers/{customer}/points', [CustomerController::class, 'adjustPoints'])->name('customers.points');
     Route::post('/customers/{customer}/rewards', [CustomerController::class, 'redeemReward'])->name('customers.rewards');
@@ -138,10 +140,12 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/marketing/discounts/{discount}/toggle', [MarketingController::class, 'toggleDiscount'])->name('marketing.discounts.toggle');
     Route::get('/marketing/bundles', [MarketingController::class, 'bundles'])->name('marketing.bundles');
     Route::post('/marketing/bundles', [MarketingController::class, 'storeBundle'])->name('marketing.bundles.store');
+    Route::post('/marketing/bundles/{bundle}/toggle', [MarketingController::class, 'toggleBundle'])->name('marketing.bundles.toggle');
 
     Route::get('/loyalty', [LoyaltyController::class, 'index'])->name('loyalty.index');
     Route::get('/loyalty/rewards', [MarketingController::class, 'rewards'])->name('loyalty.rewards');
     Route::post('/loyalty/rewards', [MarketingController::class, 'storeReward'])->name('loyalty.rewards.store');
+    Route::post('/loyalty/rewards/{reward}/toggle', [MarketingController::class, 'toggleReward'])->name('loyalty.rewards.toggle');
 
     Route::get('/printers', [PrinterController::class, 'index'])->name('printers.index');
     Route::post('/printers', [PrinterController::class, 'store'])->name('printers.store');

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
-@section('breadcrumb', 'Overview')
+@section('breadcrumb', 'Dashboard')
 @section('content')
     <div class="mb-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <div class="card overflow-hidden p-6">

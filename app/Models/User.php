@@ -124,4 +124,25 @@ class User extends Authenticatable
 
         return asset('storage/'.$this->avatar);
     }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['roles', 'outlets']);
+        $role = $this->roles->first();
+
+        return [
+            'id' => $this->id,
+            'name' => $this->name ?? '',
+            'email' => $this->email ?? '',
+            'phone' => $this->phone ?? '',
+            'role_id' => $role ? (string) $role->id : '',
+            'role_label' => $role?->label ?? '—',
+            'outlet_ids' => $this->outlets->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+            'outlets_label' => $this->outlets->pluck('name')->join(', ') ?: '—',
+            'is_active' => (bool) $this->is_active,
+            'status_label' => $this->is_active ? 'Aktif' : 'Nonaktif',
+            'initials' => $this->initials(),
+            'update_url' => route('users.update', $this),
+        ];
+    }
 }

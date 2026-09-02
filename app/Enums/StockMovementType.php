@@ -15,13 +15,25 @@ enum StockMovementType: string
     public function label(): string
     {
         return match ($this) {
-            self::In => 'IN',
-            self::Out => 'OUT',
-            self::Production => 'PRODUCTION',
-            self::Sale => 'SALE',
-            self::Waste => 'WASTE',
-            self::Transfer => 'TRANSFER',
-            self::Adjustment => 'ADJUSTMENT',
+            self::In => 'Masuk',
+            self::Out => 'Keluar',
+            self::Production => 'Produksi',
+            self::Sale => 'Penjualan',
+            self::Waste => 'Waste',
+            self::Transfer => 'Transfer',
+            self::Adjustment => 'Penyesuaian',
+        };
+    }
+
+    public function color(): string
+    {
+        return match ($this) {
+            self::In => 'green',
+            self::Out, self::Sale => 'red',
+            self::Production => 'blue',
+            self::Waste => 'orange',
+            self::Transfer => 'gray',
+            self::Adjustment => 'indigo',
         };
     }
 }

@@ -36,52 +36,52 @@
                             ['label' => 'Dashboard', 'route' => 'dashboard', 'perm' => 'dashboard.view', 'icon' => 'home'],
                             ['label' => 'POS', 'route' => 'pos.index', 'perm' => 'pos.access', 'icon' => 'pos'],
                             ['label' => 'Orders', 'route' => 'orders.index', 'perm' => 'orders.view', 'icon' => 'orders', 'children' => [
-                                ['label' => 'All Orders', 'route' => 'orders.index'],
-                                ['label' => 'Pickup / Online', 'route' => 'orders.kanban'],
-                                ['label' => 'Kitchen Checker', 'route' => 'kitchen.index', 'perm' => 'orders.check'],
-                                ['label' => 'Bar Checker', 'route' => 'bar.index', 'perm' => 'orders.check'],
+                                ['label' => 'All Orders', 'route' => 'orders.index', 'icon' => 'clipboard'],
+                                ['label' => 'Pickup / Online', 'route' => 'orders.kanban', 'icon' => 'bag'],
+                                ['label' => 'Kitchen Checker', 'route' => 'kitchen.index', 'perm' => 'orders.check', 'icon' => 'fire'],
+                                ['label' => 'Bar Checker', 'route' => 'bar.index', 'perm' => 'orders.check', 'icon' => 'glass'],
                             ]],
                             ['label' => 'Tables', 'route' => 'tables.index', 'perm' => 'tables.view', 'icon' => 'tables'],
                         ],
                         'Commerce' => [
                             ['label' => 'Customers', 'route' => 'customers.index', 'perm' => 'customers.view', 'icon' => 'customers'],
                             ['label' => 'Marketing', 'route' => 'marketing.discounts', 'perm' => 'marketing.view', 'icon' => 'marketing', 'children' => [
-                                ['label' => 'Discounts', 'route' => 'marketing.discounts'],
-                                ['label' => 'Bundles', 'route' => 'marketing.bundles'],
-                                ['label' => 'Loyalty', 'route' => 'loyalty.index'],
+                                ['label' => 'Discounts', 'route' => 'marketing.discounts', 'icon' => 'tag'],
+                                ['label' => 'Bundles', 'route' => 'marketing.bundles', 'icon' => 'gift'],
+                                ['label' => 'Loyalty', 'route' => 'loyalty.index', 'icon' => 'star'],
                             ]],
                             ['label' => 'Catalog', 'route' => 'products.index', 'perm' => 'products.view', 'icon' => 'products', 'children' => [
-                                ['label' => 'Products', 'route' => 'products.index'],
-                                ['label' => 'Categories', 'route' => 'categories.index'],
+                                ['label' => 'Products', 'route' => 'products.index', 'icon' => 'products'],
+                                ['label' => 'Categories', 'route' => 'categories.index', 'icon' => 'folder'],
                             ]],
                         ],
                         'Supply' => [
                             ['label' => 'Inventory', 'route' => 'inventory.index', 'perm' => 'inventory.view', 'icon' => 'inventory', 'children' => [
-                                ['label' => 'Stock', 'route' => 'inventory.index'],
-                                ['label' => 'Movements', 'route' => 'inventory.movements'],
-                                ['label' => 'Stock Opname', 'route' => 'opnames.index'],
-                                ['label' => 'Waste', 'route' => 'wastes.index'],
-                                ['label' => 'Transfers', 'route' => 'transfers.index'],
+                                ['label' => 'Stock', 'route' => 'inventory.index', 'icon' => 'inventory'],
+                                ['label' => 'Movements', 'route' => 'inventory.movements', 'icon' => 'arrows'],
+                                ['label' => 'Stock Opname', 'route' => 'opnames.index', 'icon' => 'clipboard-check'],
+                                ['label' => 'Waste', 'route' => 'wastes.index', 'icon' => 'trash'],
+                                ['label' => 'Transfers', 'route' => 'transfers.index', 'icon' => 'swap'],
                             ]],
                             ['label' => 'Production', 'route' => 'production.index', 'perm' => 'production.view', 'icon' => 'production', 'children' => [
-                                ['label' => 'Orders', 'route' => 'production.index'],
-                                ['label' => 'BOM', 'route' => 'boms.index'],
-                                ['label' => 'Batches', 'route' => 'batches.index'],
+                                ['label' => 'Orders', 'route' => 'production.index', 'icon' => 'clipboard'],
+                                ['label' => 'BOM', 'route' => 'boms.index', 'icon' => 'list'],
+                                ['label' => 'Batches', 'route' => 'batches.index', 'icon' => 'layers'],
                             ]],
                         ],
                         'System' => [
                             ['label' => 'Reports', 'route' => 'reports.sales', 'perm' => 'reports.view', 'icon' => 'reports', 'children' => [
-                                ['label' => 'Sales', 'route' => 'reports.sales'],
-                                ['label' => 'Products', 'route' => 'reports.products'],
-                                ['label' => 'Categories', 'route' => 'reports.categories'],
-                                ['label' => 'Promo', 'route' => 'reports.promo'],
+                                ['label' => 'Sales', 'route' => 'reports.sales', 'icon' => 'chart'],
+                                ['label' => 'Products', 'route' => 'reports.products', 'icon' => 'products'],
+                                ['label' => 'Categories', 'route' => 'reports.categories', 'icon' => 'folder'],
+                                ['label' => 'Promo', 'route' => 'reports.promo', 'icon' => 'megaphone'],
                             ]],
                             ['label' => 'Printers', 'route' => 'printers.index', 'perm' => 'printers.view', 'icon' => 'printers'],
                             ['label' => 'Settings', 'route' => 'settings.index', 'perm' => 'settings.manage', 'icon' => 'settings', 'children' => [
-                                ['label' => 'General', 'route' => 'settings.index'],
-                                ['label' => 'Outlets', 'route' => 'outlets.index'],
-                                ['label' => 'Users', 'route' => 'users.index'],
-                                ['label' => 'Audit Logs', 'route' => 'audit.index'],
+                                ['label' => 'General', 'route' => 'settings.index', 'icon' => 'settings'],
+                                ['label' => 'Outlets', 'route' => 'outlets.index', 'icon' => 'building'],
+                                ['label' => 'Users', 'route' => 'users.index', 'icon' => 'user'],
+                                ['label' => 'Audit Logs', 'route' => 'audit.index', 'icon' => 'document'],
                             ]],
                         ],
                     ];
@@ -124,9 +124,7 @@
                                                                 && ($otherChildren === [] || ! request()->routeIs(...$otherChildren)));
                                                     @endphp
                                                     <a href="{{ route($child['route']) }}" class="nav-subitem {{ $childActive ? 'nav-subitem-active' : '' }}">
-                                                        <span class="flex h-4 w-4 items-center justify-center">
-                                                            <span class="h-1.5 w-1.5 rounded-full {{ $childActive ? 'bg-white' : 'bg-[#6b6b6b]' }}"></span>
-                                                        </span>
+                                                        @include('layouts.partials.icon', ['name' => $child['icon'] ?? 'clipboard', 'size' => 'h-4 w-4'])
                                                         <span>{{ $child['label'] }}</span>
                                                     </a>
                                                 @endif
@@ -152,10 +150,6 @@
                     <button class="rounded-lg border border-line p-2 text-heading lg:hidden" @click="sidebar = !sidebar">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <div>
-                        <p class="text-[11px] font-medium uppercase tracking-wider text-muted">@yield('breadcrumb', 'Operations')</p>
-                        <h1 class="text-[1.05rem] font-semibold text-heading">@yield('title', 'Dashboard')</h1>
-                    </div>
                 </div>
                 <div class="flex items-center gap-2.5">
                     <div
@@ -197,6 +191,7 @@
             </header>
 
             <main class="flex-1 px-3 py-5 lg:px-6">
+                @include('layouts.partials.page-header')
                 @if (session('success'))
                     <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700" x-data x-init="setTimeout(() => $el.remove(), 3200)">{{ session('success') }}</div>
                 @endif

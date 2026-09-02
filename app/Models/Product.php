@@ -109,4 +109,63 @@ class Product extends Model
 
         return $this->name;
     }
+
+    public function statusLabel(): string
+    {
+        return $this->is_active ? 'Aktif' : 'Nonaktif';
+    }
+
+    public function stationLabel(): string
+    {
+        return match ($this->station) {
+            'kitchen' => 'Dapur',
+            'bar' => 'Bar',
+            'cashier' => 'Kasir',
+            default => '—',
+        };
+    }
+
+    public function toModalArray(): array
+    {
+        $this->loadMissing(['category', 'unit', 'variants']);
+
+        return [
+            'id' => $this->id,
+            'sku' => $this->sku ?? '',
+            'name' => $this->name ?? '',
+            'category_id' => $this->category_id ? (string) $this->category_id : '',
+            'category_label' => $this->category?->name ?? '—',
+            'unit_id' => $this->unit_id ? (string) $this->unit_id : '',
+            'unit_label' => $this->unit ? $this->unit->name.' ('.$this->unit->code.')' : '—',
+            'type' => $this->type?->value ?? ProductType::Finished->value,
+            'type_label' => $this->type?->label() ?? '—',
+            'bom_level' => (int) ($this->bom_level ?? 0),
+            'description' => $this->description ?? '',
+            'image' => $this->image ?? '',
+            'image_url' => $this->imageUrl(),
+            'price' => (float) $this->price,
+            'price_label' => money($this->price),
+            'cost' => (float) ($this->cost ?? 0),
+            'cost_label' => money($this->cost),
+            'is_sellable' => (bool) $this->is_sellable,
+            'is_stockable' => (bool) $this->is_stockable,
+            'is_active' => (bool) $this->is_active,
+            'status_label' => $this->statusLabel(),
+            'minimum_stock' => (float) ($this->minimum_stock ?? 0),
+            'reorder_level' => (float) ($this->reorder_level ?? 0),
+            'maximum_stock' => (float) ($this->maximum_stock ?? 0),
+            'station' => $this->station ?? '',
+            'station_label' => $this->stationLabel(),
+            'prep_minutes' => (int) ($this->prep_minutes ?? 0),
+            'variants' => $this->variants->map(fn (ProductVariant $variant) => [
+                'id' => $variant->id,
+                'name' => $variant->name,
+                'sku' => $variant->sku ?? '',
+                'price_adjustment' => (float) $variant->price_adjustment,
+                'price_adjustment_label' => money($variant->price_adjustment),
+            ])->values()->all(),
+            'update_url' => route('products.update', $this),
+            'delete_url' => route('products.destroy', $this),
+        ];
+    }
 }

@@ -22,14 +22,17 @@ class ReportController extends Controller
         $rows = $this->reports->sales($filters);
 
         return $this->respond('reports.sales', $request, $filters, $rows, [
-            ['No. Order', 'Outlet', 'Total', 'Status', 'Tanggal'],
+            ['No. Order', 'Outlet', 'Pelanggan', 'Total', 'Status', 'Tanggal'],
         ], fn ($order) => [
             $order->order_number,
             $order->outlet?->name,
+            $order->customer?->name ?? 'Walk-in',
             $order->grand_total,
-            $order->status?->value,
+            $order->status?->label() ?? $order->status?->value,
             $order->created_at?->format('d/m/Y H:i'),
-        ], 'sales');
+        ], 'sales', [
+            'stats' => $this->reports->salesStats($filters),
+        ]);
     }
 
     public function products(Request $request): View|BinaryFileResponse|\Illuminate\Http\Response
@@ -40,7 +43,9 @@ class ReportController extends Controller
 
         return $this->respond('reports.products', $request, $filters, $rows, [
             ['Produk', 'Qty', 'Total'],
-        ], fn ($row) => [$row->name, $row->qty, $row->total], 'products');
+        ], fn ($row) => [$row->name, $row->qty, $row->total], 'products', [
+            'stats' => $this->reports->productSalesStats($filters),
+        ]);
     }
 
     public function inventory(Request $request): View|BinaryFileResponse|\Illuminate\Http\Response
@@ -98,7 +103,9 @@ class ReportController extends Controller
 
         return $this->respond('reports.categories', $request, $filters, $rows, [
             ['Kategori', 'Qty', 'Total'],
-        ], fn ($row) => [$row->name, $row->qty, $row->total], 'categories');
+        ], fn ($row) => [$row->name, $row->qty, $row->total], 'categories', [
+            'stats' => $this->reports->categorySalesStats($filters),
+        ]);
     }
 
     public function promo(Request $request): View|BinaryFileResponse|\Illuminate\Http\Response
@@ -111,6 +118,7 @@ class ReportController extends Controller
             'bundles' => $promo['bundles'],
             'filters' => $filters,
             'outlets' => Outlet::query()->orderBy('name')->get(),
+            'stats' => $this->reports->promoStats($filters),
             'exporting' => false,
         ];
 
@@ -139,12 +147,13 @@ class ReportController extends Controller
         ], fn ($row) => [$row->number, $row->product?->name, $row->quantity, $row->reason?->value], 'waste');
     }
 
-    protected function respond(string $view, Request $request, array $filters, $rows, array $headings, callable $map, string $name)
+    protected function respond(string $view, Request $request, array $filters, $rows, array $headings, callable $map, string $name, array $extra = [])
     {
         $payload = [
             'rows' => $rows,
             'filters' => $filters,
             'outlets' => Outlet::query()->orderBy('name')->get(),
+            ...$extra,
         ];
 
         if ($request->export === 'xlsx' && $request->user()->hasPermission('reports.export')) {

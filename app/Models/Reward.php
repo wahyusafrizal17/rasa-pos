@@ -18,4 +18,18 @@ class Reward extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    public function toModalArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description ?: '—',
+            'points_label' => number_format((int) $this->points_required).' poin',
+            'value_label' => $this->value !== null && (float) $this->value > 0 ? money($this->value) : '—',
+            'status_label' => $this->is_active ? 'Aktif' : 'Nonaktif',
+            'is_active' => $this->is_active,
+            'toggle_url' => route('loyalty.rewards.toggle', $this),
+        ];
+    }
 }
