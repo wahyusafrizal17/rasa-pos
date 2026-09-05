@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Reward;
 use App\Services\DiscountService;
+use App\Services\EscPosPrinter;
 use App\Services\InventoryService;
 use App\Services\OrderService;
 use App\Services\PrinterRoutingService;
@@ -67,6 +68,7 @@ class PosController extends Controller
             'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()]),
             'lowStockNames' => $lowStock->take(3)->pluck('name')->join(', '),
             'lowStockExtra' => max(0, $lowStock->count() - 3),
+            'qzPrinter' => setting('qz_printer', ''),
         ]);
     }
 
@@ -203,11 +205,12 @@ class PosController extends Controller
             'table_id' => ['nullable', 'exists:tables,id'],
         ]);
 
-        $submitted = $orders->submit($order, $data)->load(['items.product', 'customer', 'table']);
+        $submitted = $orders->submit($order, $data)->load(['items.product', 'customer', 'table', 'outlet', 'user']);
 
         return response()->json([
             'order' => $submitted,
-            'print_jobs' => $printers->route($submitted),
+            'print_jobs' => $this->escposJobs($printers->route($submitted), $submitted),
+            'qz_printer' => setting('qz_printer', ''),
         ]);
     }
 
@@ -237,11 +240,17 @@ class PosController extends Controller
             'reference' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $completed = $orders->checkout($order, $data);
+        $completed = $orders->checkout($order, $data)->load(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
+
+        $escpos = app(EscPosPrinter::class);
 
         return response()->json([
             'order' => $completed,
-            'print_jobs' => $printers->route($completed),
+            'print_jobs' => $this->escposJobs($printers->route($completed), $completed),
+            'receipt_escpos' => base64_encode($escpos->receipt($completed)),
+            'receipt_html' => $escpos->receiptHtml($completed),
+            'receipt_height_mm' => $escpos->receiptHeightMm($completed),
+            'qz_printer' => setting('qz_printer', ''),
         ]);
     }
 
@@ -259,7 +268,15 @@ class PosController extends Controller
 
     public function receipt(Order $order): View
     {
-        return view('pos.receipt', ['order' => $order->load(['items', 'payments', 'outlet', 'customer', 'table', 'user'])]);
+        $order->load(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
+
+        return view('pos.receipt', [
+            'order' => $order,
+            'receiptEscpos' => base64_encode(app(EscPosPrinter::class)->receipt($order)),
+            'receiptHtml' => app(EscPosPrinter::class)->receiptHtml($order),
+            'receiptHeightMm' => app(EscPosPrinter::class)->receiptHeightMm($order),
+            'qzPrinter' => setting('qz_printer', ''),
+        ]);
     }
 
     public function ticket(Request $request, Order $order, string $station): View
@@ -307,5 +324,19 @@ class PosController extends Controller
             'held_at' => $order->held_at?->toIso8601String(),
             'status' => $order->status?->value,
         ];
+    }
+
+    protected function escposJobs(array $jobs, $order): array
+    {
+        $escpos = app(EscPosPrinter::class);
+
+        return array_map(function (array $job) use ($escpos, $order) {
+            $station = $job['payload']['station'] ?? 'cashier';
+            $job['escpos'] = base64_encode($escpos->ticket($order, $station, $job['items']));
+            $job['html'] = $escpos->ticketHtml($order, $station, $job['items']);
+            $job['height_mm'] = $escpos->ticketHeightMm($job['items']);
+
+            return $job;
+        }, $jobs);
     }
 }

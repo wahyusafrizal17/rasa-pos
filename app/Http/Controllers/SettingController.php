@@ -17,6 +17,7 @@ class SettingController extends Controller
         'points_redeem_value',
         'company_name',
         'receipt_footer',
+        'qz_printer',
     ];
 
     protected array $defaults = [
@@ -26,6 +27,7 @@ class SettingController extends Controller
         'points_redeem_value' => 100,
         'company_name' => 'Rasa',
         'receipt_footer' => 'Terima kasih',
+        'qz_printer' => '',
     ];
 
     public function index(): View
@@ -57,6 +59,7 @@ class SettingController extends Controller
             'points_redeem_value' => ['required', 'integer', 'min:1'],
             'company_name' => ['nullable', 'string', 'max:150'],
             'receipt_footer' => ['nullable', 'string', 'max:255'],
+            'qz_printer' => ['nullable', 'string', 'max:120'],
         ], [
             'tax_rate.required' => 'Tarif pajak wajib diisi.',
             'tax_rate.max' => 'Tarif pajak maksimal 100%.',

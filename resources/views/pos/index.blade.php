@@ -551,11 +551,12 @@ function posApp() {
                     }),
                 });
                 this.order = data.order || data;
-                (data.print_jobs || []).forEach((job) => {
-                    const station = job.payload?.station || job.printer?.station;
-                    if (station) window.open(`/pos/${this.order.id}/ticket/${station}`, '_blank');
-                });
-                this.notice = 'Order dikirim ke dapur.';
+                const qzOk = window.RasaQz?.printTickets
+                    ? await window.RasaQz.printTickets(data)
+                    : false;
+                this.notice = qzOk
+                    ? 'Order dikirim ke dapur.'
+                    : 'Order tersimpan. QZ Tray belum cetak — jalankan QZ Tray, jangan print dari Chrome.';
             } catch (e) {
                 this.notice = e.message || 'Gagal mengirim ke dapur.';
             } finally {
@@ -576,11 +577,12 @@ function posApp() {
                 })});
                 this.payOpen = false;
                 if (data.order) {
-                    window.open(`/pos/${data.order.id}/receipt`, '_blank');
-                    (data.print_jobs || []).forEach((job) => {
-                        const station = job.payload?.station || job.printer?.station;
-                        if (station) window.open(`/pos/${this.order.id}/ticket/${station}`, '_blank');
-                    });
+                    const qzOk = window.RasaQz?.printReceipt
+                        ? await window.RasaQz.printReceipt(data)
+                        : false;
+                    this.notice = qzOk
+                        ? 'Pembayaran berhasil, struk dicetak.'
+                        : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
                     this.order = null;
                     this.points = 0;
                     this.tendered = 0;

@@ -227,7 +227,8 @@
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
                                 <div class="sm:col-span-2">
                                     <label class="label">Nama</label>
-                                    <input class="input" name="name" required maxlength="80" x-model="form.name">
+                                    <input class="input" name="name" required maxlength="80" x-model="form.name" placeholder="GEZHI micro-printer">
+                                    <p class="mt-1 text-[12px] text-muted">Samakan dengan nama printer di sistem (QZ Tray).</p>
                                     @error('name')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>

@@ -94,6 +94,12 @@
                         <input class="input" type="text" name="receipt_footer" maxlength="255" value="{{ $settings['receipt_footer'] }}">
                         @error('receipt_footer')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
+                    <div class="sm:col-span-2">
+                        <label class="label">Nama printer QZ Tray</label>
+                        <input class="input" type="text" name="qz_printer" maxlength="120" value="{{ $settings['qz_printer'] }}" placeholder="GEZHI micro-printer">
+                        <p class="mt-1 text-[12px] text-muted">Harus sama persis dengan nama di Windows, contoh GEZHI micro-printer. Di driver printer set Paper Size ke 80mm / Roll Paper, jangan Letter/A4.</p>
+                        @error('qz_printer')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
                 </div>
             </section>
         </div>

@@ -12,6 +12,7 @@ use App\Models\Inventory;
 use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\EscPosPrinter;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\SeedsPosFixture;
@@ -100,5 +101,34 @@ class OrderCheckoutTest extends TestCase
         );
         $this->assertEquals((float) $order->grand_total, (float) $this->customer->total_transaction);
         $this->assertNotNull($this->customer->last_transaction_at);
+    }
+
+    public function test_escpos_receipt_is_raw_bytes_and_cuts_paper(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+
+        $service = app(OrderService::class);
+        $order = $service->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+        $service->addItem($order, [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 2,
+        ]);
+        $order = $service->checkout($order->fresh(), [
+            'method' => PaymentMethod::Cash->value,
+            'tendered' => 100000,
+        ]);
+
+        $raw = app(EscPosPrinter::class)->receipt($order);
+
+        $html = app(EscPosPrinter::class)->receiptHtml($order);
+
+        $this->assertStringStartsWith("\x1B\x40", $raw);
+        $this->assertStringContainsString($order->order_number, $raw);
+        $this->assertStringContainsString("\x1D\x56\x00", $raw);
+        $this->assertStringContainsString($order->order_number, $html);
+        $this->assertLessThanOrEqual(180, app(EscPosPrinter::class)->receiptHeightMm($order));
     }
 }

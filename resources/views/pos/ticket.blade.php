@@ -308,15 +308,18 @@
         }
 
         @media print {
-            body { background: #fff; }
+            @page { size: 80mm auto; margin: 0; }
+            html, body { width: 80mm; background: #fff; }
             .toolbar { display: none !important; }
             .sheet {
-                width: 100%;
+                width: 80mm;
                 margin: 0;
                 border-radius: 0;
                 box-shadow: none;
             }
-            @page { margin: 10mm; }
+            .hero { padding: 8px 10px; }
+            .hero img { display: none; }
+            .body { padding: 8px 10px; }
         }
     </style>
 </head>
