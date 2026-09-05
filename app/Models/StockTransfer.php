@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'number', 'source_outlet_id', 'destination_outlet_id', 'requested_by', 'approved_by',
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class StockTransfer extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

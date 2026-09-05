@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'number', 'outlet_id', 'product_id', 'bom_id', 'user_id', 'quantity_planned',
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class ProductionOrder extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['name', 'description', 'points_required', 'value', 'is_active'])]
 class Reward extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

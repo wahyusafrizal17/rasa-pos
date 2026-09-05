@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['stock_transfer_id', 'product_id', 'quantity', 'received_quantity'])]
 class StockTransferItem extends Model
 {
+    use AppliesFillableAttribute;
+
     public $timestamps = false;
 
     protected function casts(): array

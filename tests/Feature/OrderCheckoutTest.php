@@ -10,6 +10,7 @@ use App\Enums\StockMovementType;
 use App\Models\CustomerPoint;
 use App\Models\Inventory;
 use App\Models\InventoryMovement;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,6 +26,11 @@ class OrderCheckoutTest extends TestCase
     {
         parent::setUp();
         $this->seedPosFixture();
+    }
+
+    public function test_order_number_is_mass_assignable(): void
+    {
+        $this->assertTrue((new Order)->isFillable('order_number'));
     }
 
     public function test_checkout_completes_order_decreases_stock_and_earns_points(): void

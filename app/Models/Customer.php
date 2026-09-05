@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'code', 'name', 'phone', 'email', 'birthday', 'gender', 'address',
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class Customer extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

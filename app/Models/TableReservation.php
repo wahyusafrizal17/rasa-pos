@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'outlet_id', 'table_id', 'customer_id', 'guest_name', 'guest_phone',
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class TableReservation extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'order_number', 'outlet_id', 'user_id', 'customer_id', 'table_id', 'discount_id',
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class Order extends Model
 {
-    use SoftDeletes;
+    use AppliesFillableAttribute, SoftDeletes;
 
     protected function casts(): array
     {

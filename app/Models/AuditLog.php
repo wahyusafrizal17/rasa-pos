@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'user_id', 'action', 'module', 'auditable_type', 'auditable_id',
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 ])]
 class AuditLog extends Model
 {
+    use AppliesFillableAttribute;
+
     protected function casts(): array
     {
         return [

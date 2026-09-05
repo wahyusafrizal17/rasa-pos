@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['customer_id', 'order_id', 'user_id', 'type', 'points', 'balance_after', 'reason'])]
 class CustomerPoint extends Model
 {
+    use AppliesFillableAttribute;
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

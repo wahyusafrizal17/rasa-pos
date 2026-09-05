@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['production_order_id', 'product_id', 'unit_id', 'quantity_required', 'quantity_used'])]
 class ProductionOrderItem extends Model
 {
+    use AppliesFillableAttribute;
+
     public $timestamps = false;
 
     protected function casts(): array

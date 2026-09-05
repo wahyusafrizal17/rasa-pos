@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'batch_number', 'production_order_id', 'product_id', 'outlet_id',
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class ProductionBatch extends Model
 {
+    use AppliesFillableAttribute;
+
     protected function casts(): array
     {
         return [

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'order_id', 'product_id', 'product_variant_id', 'bundle_id', 'batch_id', 'name',
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class OrderItem extends Model
 {
+    use AppliesFillableAttribute;
+
     protected $appends = ['image_url'];
 
     protected function casts(): array

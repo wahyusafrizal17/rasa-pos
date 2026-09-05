@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'reference_number', 'outlet_id', 'product_id', 'unit_id', 'user_id',
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 ])]
 class InventoryMovement extends Model
 {
+    use AppliesFillableAttribute;
+
     protected function casts(): array
     {
         return [

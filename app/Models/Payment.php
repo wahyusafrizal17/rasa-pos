@@ -6,10 +6,13 @@ use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['order_id', 'user_id', 'method', 'amount', 'tendered', 'change_amount', 'reference', 'status'])]
 class Payment extends Model
 {
+    use AppliesFillableAttribute;
+
     protected function casts(): array
     {
         return [

@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable(['table_id', 'order_id', 'opened_by', 'guest_count', 'opened_at', 'closed_at'])]
 class TableSession extends Model
 {
+    use AppliesFillableAttribute;
+
     protected function casts(): array
     {
         return [
