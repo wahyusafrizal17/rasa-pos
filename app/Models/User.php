@@ -19,6 +19,9 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
 
+    // ponytail: $fillable kept — some hosts run Laravel that ignores #[Fillable]
+    protected $fillable = ['name', 'email', 'phone', 'avatar', 'password', 'is_active', 'last_login_at'];
+
     protected function casts(): array
     {
         return [
