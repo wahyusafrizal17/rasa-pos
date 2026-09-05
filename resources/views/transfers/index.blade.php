@@ -335,7 +335,7 @@
                                         <div class="grid gap-3 rounded-xl border border-line p-4 sm:grid-cols-12">
                                             <div class="sm:col-span-8">
                                                 <label class="label">Produk</label>
-                                                <select class="input" :name="'items[' + index + '][product_id]'" x-model="item.product_id" required>
+                                                <select class="input js-product-select" :name="'items[' + index + '][product_id]'" x-model="item.product_id" required>
                                                     <option value="">Pilih produk</option>
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>

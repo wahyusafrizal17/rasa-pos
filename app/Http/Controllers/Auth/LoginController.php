@@ -30,7 +30,13 @@ class LoginController extends Controller
             session(['current_outlet_id' => $outlet->id]);
         }
 
-        return redirect()->intended(route('dashboard'));
+        $home = match (true) {
+            $user->hasRole('kitchen') => 'kitchen.index',
+            $user->hasRole('bar') => 'bar.index',
+            default => 'dashboard',
+        };
+
+        return redirect()->intended(route($home));
     }
 
     public function destroy(Request $request): RedirectResponse

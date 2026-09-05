@@ -55,7 +55,6 @@ class PosController extends Controller
                 ->get()
                 ->map(fn (Order $order) => $this->heldOrderPayload($order))
                 ->values(),
-            'canCheckout' => $request->user()->hasPermission('orders.checkout'),
             'canRegisterCustomer' => $request->user()->hasPermission('customers.manage'),
             'lowStock' => $lowStock,
             'pointsRedeemValue' => points_redeem_value(),
@@ -238,6 +237,8 @@ class PosController extends Controller
             'amount' => ['nullable', 'numeric', 'min:0'],
             'tendered' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],
+            'order_type' => ['nullable', 'in:dine_in,pickup,online'],
+            'table_id' => ['nullable', 'exists:tables,id'],
         ]);
 
         $completed = $orders->checkout($order, $data)->load(['items', 'payments', 'outlet', 'customer', 'table', 'user']);

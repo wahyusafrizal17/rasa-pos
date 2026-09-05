@@ -227,7 +227,17 @@ class OrderService
 
         $this->recalculate($order);
 
-        return $this->transition($order, OrderStatus::New, 'Order dikirim ke dapur');
+        $order = $this->transition($order, OrderStatus::New, 'Order dikirim ke dapur');
+
+        $orderId = $order->id;
+        dispatch(function () use ($orderId) {
+            $fresh = Order::query()->find($orderId);
+            if ($fresh) {
+                app(PrinterRoutingService::class)->dispatchNetworkTickets($fresh);
+            }
+        })->afterResponse();
+
+        return $order;
     }
 
     public function transition(Order $order, OrderStatus $status, ?string $notes = null): Order
@@ -262,7 +272,7 @@ class OrderService
             $this->recalculate($order);
 
             if (in_array($order->status, [OrderStatus::Draft, OrderStatus::Held], true)) {
-                $this->transition($order, OrderStatus::New, 'Order masuk antrian');
+                $order = $this->submit($order, $payment);
             }
 
             $amount = (float) ($payment['amount'] ?? $order->grand_total);
@@ -285,10 +295,6 @@ class OrderService
                 ? PaymentStatus::Paid
                 : ($paid > 0 ? PaymentStatus::Partial : PaymentStatus::Unpaid);
             $order->save();
-
-            if ($order->payment_status === PaymentStatus::Paid) {
-                $this->complete($order->fresh(['items.product', 'customer']));
-            }
 
             return $order->fresh(['items', 'payments', 'customer', 'table']);
         });
@@ -440,6 +446,11 @@ class OrderService
         }
 
         if ($statuses->every(fn ($status) => $status === 'served')) {
+            $order = $order->fresh(['items.product', 'customer', 'payments']);
+            if ($order->payment_status === PaymentStatus::Paid) {
+                return $this->complete($order);
+            }
+
             return $this->transition($order, OrderStatus::Ready, 'Semua item dikonfirmasi checker');
         }
 

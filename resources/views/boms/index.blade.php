@@ -283,7 +283,7 @@
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <label class="label">Produk jadi</label>
-                                    <select name="product_id" class="input" required x-model="form.product_id">
+                                    <select name="product_id" class="input js-product-select" required x-model="form.product_id">
                                         <option value="">Pilih produk</option>
                                         @foreach ($products as $product)
                                             <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>
@@ -340,7 +340,7 @@
                                         <div class="grid gap-3 rounded-xl border border-line p-4 sm:grid-cols-12">
                                             <div class="sm:col-span-4">
                                                 <label class="label">Komponen</label>
-                                                <select class="input" :name="'items[' + index + '][component_id]'" x-model="item.component_id" required>
+                                                <select class="input js-product-select" :name="'items[' + index + '][component_id]'" x-model="item.component_id" required>
                                                     <option value="">Pilih bahan</option>
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>

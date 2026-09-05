@@ -81,7 +81,7 @@ class OperationsGapTest extends TestCase
         $this->assertEquals(10000, (float) $order->fresh()->points_value);
     }
 
-    public function test_captain_cannot_checkout(): void
+    public function test_captain_can_checkout_and_send_to_kitchen(): void
     {
         $captain = $this->makeUser('Captain', 'captain@example.com', 'captain', [$this->outlet]);
         $this->actingAsAtOutlet($captain);
@@ -94,9 +94,11 @@ class OperationsGapTest extends TestCase
         $orders->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
 
         $this->postJson(route('pos.checkout', $order), [
-            'method' => 'cash',
+            'method' => 'card',
             'tendered' => 50000,
-        ])->assertForbidden();
+        ])->assertOk()
+            ->assertJsonPath('order.status', 'new')
+            ->assertJsonPath('order.payment_status', 'paid');
     }
 
     public function test_kitchen_checker_can_confirm_item(): void
@@ -211,6 +213,90 @@ class OperationsGapTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('name', 'Siti Member');
+    }
+
+    public function test_merge_moves_items_and_frees_source_table(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $orders = app(OrderService::class);
+
+        $source = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'table_id' => $this->tableA->id,
+            'order_type' => OrderType::DineIn->value,
+        ]);
+        $sourceItem = $orders->addItem($source, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
+
+        $target = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'table_id' => $this->tableB->id,
+            'order_type' => OrderType::DineIn->value,
+        ]);
+        $targetItem = $orders->addItem($target, ['product_id' => $this->sellableProduct->id, 'quantity' => 2]);
+
+        $this->post(route('tables.merge'), [
+            'source_id' => $this->tableA->id,
+            'target_id' => $this->tableB->id,
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame(TableStatus::Available, $this->tableA->fresh()->status);
+        $this->assertSame(TableStatus::Occupied, $this->tableB->fresh()->status);
+        $this->assertTrue($target->fresh()->items->contains('id', $sourceItem->id));
+        $this->assertTrue($target->fresh()->items->contains('id', $targetItem->id));
+        $this->assertSame(OrderStatus::Cancelled, $source->fresh()->status);
+
+        $html = $this->get(route('tables.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('2 item', $html);
+        $this->assertStringContainsString('Gabung dari T-01', $html);
+    }
+
+    public function test_merge_requires_active_orders_on_both_tables(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+        DiningTable::query()->whereKey($this->tableA->id)->update(['status' => TableStatus::Occupied]);
+
+        $this->from(route('tables.index'))
+            ->post(route('tables.merge'), [
+                'source_id' => $this->tableA->id,
+                'target_id' => $this->tableB->id,
+            ])
+            ->assertRedirect(route('tables.index'))
+            ->assertSessionHasErrors();
+
+        $this->assertSame(TableStatus::Occupied, $this->tableA->fresh()->status);
+        $this->assertSame(TableStatus::Available, $this->tableB->fresh()->status);
+    }
+
+    public function test_tables_index_lists_active_reservations(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+
+        app(TableService::class)->reserve([
+            'outlet_id' => $this->outlet->id,
+            'table_id' => $this->tableA->id,
+            'guest_name' => 'Budi Reservasi',
+            'guest_phone' => '0812555000',
+            'guest_count' => 3,
+            'reserved_at' => now()->addHour(),
+            'notes' => 'Ulang tahun',
+        ]);
+
+        $this->get(route('tables.index'))
+            ->assertOk()
+            ->assertSee('Daftar reservasi')
+            ->assertSee('Budi Reservasi')
+            ->assertSee('T-01')
+            ->assertSee('Ulang tahun');
+    }
+
+    public function test_table_move_script_uses_generated_url(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+
+        $html = $this->get(route('tables.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(url('/tables'), $html);
+        $this->assertStringNotContainsString("fetch('/tables/'", $html);
     }
 
     public function test_split_route_requires_items(): void

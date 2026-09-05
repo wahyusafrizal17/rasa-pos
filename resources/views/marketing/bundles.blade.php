@@ -295,12 +295,14 @@
                                     <div class="space-y-2">
                                         <template x-for="(item, index) in items" :key="index">
                                             <div class="grid grid-cols-12 items-center gap-2">
-                                                <select class="input col-span-8" :name="`items[${index}][product_id]`" x-model="item.product_id" required>
-                                                    <option value="">Pilih produk</option>
-                                                    @foreach ($products as $product)
-                                                        <option value="{{ $product->id }}">{{ $product->name }}</option>
-                                                    @endforeach
-                                                </select>
+                                                <div class="col-span-8 min-w-0">
+                                                    <select class="input js-product-select" :name="`items[${index}][product_id]`" x-model="item.product_id" required>
+                                                        <option value="">Pilih produk</option>
+                                                        @foreach ($products as $product)
+                                                            <option value="{{ $product->id }}">{{ $product->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                                 <input class="input col-span-3" type="number" min="1" step="1" :name="`items[${index}][quantity]`" x-model="item.quantity" required>
                                                 <button type="button" class="btn-ghost col-span-1 !px-2" @click="items.length > 2 && items.splice(index, 1)">×</button>
                                             </div>

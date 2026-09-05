@@ -34,7 +34,7 @@ class OrderCheckoutTest extends TestCase
         $this->assertTrue((new Order)->isFillable('order_number'));
     }
 
-    public function test_checkout_completes_order_decreases_stock_and_earns_points(): void
+    public function test_checkout_sends_to_kitchen_then_completes_when_served(): void
     {
         $this->actingAsAtOutlet($this->cashier);
 
@@ -53,7 +53,7 @@ class OrderCheckoutTest extends TestCase
 
         $this->assertSame(OrderStatus::Draft, $order->status);
 
-        $service->addItem($order, [
+        $item = $service->addItem($order, [
             'product_id' => $this->sellableProduct->id,
             'quantity' => 2,
         ]);
@@ -63,23 +63,27 @@ class OrderCheckoutTest extends TestCase
             'tendered' => 100000,
         ]);
 
-        $this->assertSame(OrderStatus::Completed, $order->status);
+        $this->assertSame(OrderStatus::New, $order->status);
         $this->assertSame(PaymentStatus::Paid, $order->payment_status);
         $this->assertTrue(
             Payment::query()->where('order_id', $order->id)->where('status', 'paid')->exists()
         );
 
         $expectedSubtotal = 35000 * 2;
-        $expectedTax = round($expectedSubtotal * 0.11, 2);
         $this->assertEquals($expectedSubtotal, (float) $order->subtotal);
-        $this->assertEquals($expectedSubtotal + $expectedTax, (float) $order->grand_total);
-
-        $stockAfter = (float) Inventory::query()
+        $this->assertEquals($expectedSubtotal + round($expectedSubtotal * 0.11, 2), (float) $order->grand_total);
+        $this->assertEquals($stockBefore, (float) Inventory::query()
             ->where('outlet_id', $this->outlet->id)
             ->where('product_id', $this->sellableProduct->id)
-            ->value('quantity');
-        $this->assertEquals($stockBefore - 2, $stockAfter);
+            ->value('quantity'));
 
+        $order = $service->updateItemStatus($item->fresh(), 'served');
+
+        $this->assertSame(OrderStatus::Completed, $order->status);
+        $this->assertEquals($stockBefore - 2, (float) Inventory::query()
+            ->where('outlet_id', $this->outlet->id)
+            ->where('product_id', $this->sellableProduct->id)
+            ->value('quantity'));
         $this->assertTrue(
             InventoryMovement::query()
                 ->where('outlet_id', $this->outlet->id)
@@ -101,6 +105,37 @@ class OrderCheckoutTest extends TestCase
         );
         $this->assertEquals((float) $order->grand_total, (float) $this->customer->total_transaction);
         $this->assertNotNull($this->customer->last_transaction_at);
+    }
+
+    public function test_dine_in_checkout_requires_a_table(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $service = app(OrderService::class);
+        $order = $service->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::DineIn->value,
+        ]);
+        $service->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
+
+        try {
+            $service->checkout($order->fresh(), [
+                'method' => PaymentMethod::Cash->value,
+                'tendered' => 100000,
+            ]);
+            $this->fail('Dine-in checkout without a table should fail.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('table_id', $e->errors());
+        }
+
+        $order = $service->checkout($order->fresh(), [
+            'method' => PaymentMethod::Cash->value,
+            'tendered' => 100000,
+            'table_id' => $this->tableA->id,
+        ]);
+
+        $this->assertSame(OrderStatus::New, $order->status);
+        $this->assertSame($this->tableA->id, $order->table_id);
+        $this->assertSame(PaymentStatus::Paid, $order->payment_status);
     }
 
     public function test_escpos_receipt_is_raw_bytes_and_cuts_paper(): void

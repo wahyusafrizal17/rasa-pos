@@ -175,20 +175,13 @@
                     <span class="text-lg font-semibold" x-text="formatMoney(order?.grand_total || 0)"></span>
                 </div>
                 <p class="text-xs font-medium text-brand" x-show="notice" x-text="notice" x-cloak></p>
-                <p class="text-[11px] text-muted" x-show="needsTable()" x-cloak>Pilih meja dulu untuk dine-in sebelum kirim ke dapur.</p>
+                <p class="text-[11px] text-muted" x-show="needsTable()" x-cloak>Pilih meja dulu untuk dine-in sebelum bayar.</p>
                 <div class="grid grid-cols-2 gap-2">
                     <button class="inline-flex items-center justify-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-4 py-2.5 text-sm font-medium text-heading transition hover:bg-neutral-50" @click="openHeldList()">
                         Order Hold
                         <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold leading-none text-white" x-show="heldCount() > 0" x-text="heldCount()" x-cloak></span>
                     </button>
-                    <button class="rounded-xl border border-[#e5e5e5] bg-white px-4 py-2.5 text-sm font-medium text-heading transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40" @click="submitOrder()" :disabled="!canSendKitchen()">
-                        <span x-text="alreadySent() ? 'Sudah dikirim' : 'Kirim dapur'"></span>
-                    </button>
-                    @if ($canCheckout)
-                        <button class="col-span-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40" @click="openPay()" :disabled="!order?.items?.length">Bayar</button>
-                    @else
-                        <p class="col-span-2 text-center text-[11px] text-muted">Captain Order hanya mengirim pesanan. Pembayaran di kasir.</p>
-                    @endif
+                    <button class="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40" @click="openPay()" :disabled="!canPay()">Bayar</button>
                 </div>
             </div>
         </aside>
@@ -337,7 +330,7 @@ function posApp() {
         },
         async loadHeld() {
             try {
-                this.heldOrders = await this.request('{{ route('pos.held') }}', { headers: await this.csrf() });
+                this.heldOrders = await this.request('{{ route('pos.held', absolute: false) }}', { headers: await this.csrf() });
             } catch (e) {}
         },
         channel() {
@@ -368,8 +361,11 @@ function posApp() {
         tenderedAmount() { return Number(this.tendered || 0); },
         changeDue() { return Math.max(0, this.tenderedAmount() - this.grandTotal()); },
         cashShort() { return this.method === 'cash' && this.tenderedAmount() < this.grandTotal(); },
+        canPay() {
+            return !!this.order?.items?.length && !this.busy && !this.needsTable();
+        },
         canCompletePay() {
-            if (this.busy || !this.order?.items?.length) return false;
+            if (!this.canPay()) return false;
             if (this.method === 'cash') return this.tenderedAmount() >= this.grandTotal();
             return true;
         },
@@ -379,6 +375,10 @@ function posApp() {
             return [total, ...steps.filter((amount) => amount > total).slice(0, 3)];
         },
         openPay() {
+            if (!this.canPay()) {
+                this.notice = this.needsTable() ? 'Pilih meja terlebih dahulu.' : 'Tambah item dulu.';
+                return;
+            }
             this.notice = '';
             this.method = 'cash';
             this.tendered = this.grandTotal();
@@ -425,9 +425,17 @@ function posApp() {
             }
         },
         async csrf() { return { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' }; },
+        appUrl(url) {
+            if (!url.startsWith('/') || url.startsWith('//')) return url;
+            const fromLaravel = @json(rtrim((string) request()->getBasePath(), '/'));
+            const path = window.location.pathname;
+            const posAt = path.indexOf('/pos');
+            const fromWindow = posAt > 0 ? path.slice(0, posAt) : '';
+            return (fromLaravel || fromWindow) + url;
+        },
         async request(url, options) {
             if (!this.online) throw new Error('offline');
-            const res = await fetch(url, options);
+            const res = await fetch(this.appUrl(url), options);
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Request gagal');
@@ -436,7 +444,7 @@ function posApp() {
         },
         async ensureOrder() {
             if (this.order) return this.order;
-            this.order = await this.request('{{ route('pos.draft') }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
+            this.order = await this.request('{{ route('pos.draft', absolute: false) }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
                 order_type: this.order_type, table_id: this.table_id || null, customer_id: this.customer_id || null, channel: this.channel()
             })});
             return this.order;
@@ -486,7 +494,7 @@ function posApp() {
         async registerMember() {
             this.busy = true;
             try {
-                const customer = await this.request('{{ route('pos.customers.store') }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify(this.member) });
+                const customer = await this.request('{{ route('pos.customers.store', absolute: false) }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify(this.member) });
                 const created = { id: customer.id, name: customer.name, phone: customer.phone, points: customer.points || 0 };
                 this.customers.unshift(created);
                 this.extraCustomers.unshift(created);
@@ -526,43 +534,6 @@ function posApp() {
         needsTable() {
             return this.order_type === 'dine_in' && !this.table_id && !!this.order?.items?.length && !this.alreadySent();
         },
-        canSendKitchen() {
-            return !!this.order?.items?.length && !this.busy && !this.alreadySent() && !this.needsTable();
-        },
-        async submitOrder() {
-            if (!this.order?.items?.length || this.busy) return;
-            if (this.alreadySent()) {
-                this.notice = 'Order sudah dikirim ke dapur.';
-                return;
-            }
-            if (this.needsTable()) {
-                this.notice = 'Pilih meja terlebih dahulu.';
-                return;
-            }
-            this.busy = true;
-            this.notice = '';
-            try {
-                const data = await this.request(`/pos/${this.order.id}/submit`, {
-                    method: 'POST',
-                    headers: await this.csrf(),
-                    body: JSON.stringify({
-                        order_type: this.order_type,
-                        table_id: this.table_id || null,
-                    }),
-                });
-                this.order = data.order || data;
-                const qzOk = window.RasaQz?.printTickets
-                    ? await window.RasaQz.printTickets(data)
-                    : false;
-                this.notice = qzOk
-                    ? 'Order dikirim ke dapur.'
-                    : 'Order tersimpan. QZ Tray belum cetak — jalankan QZ Tray, jangan print dari Chrome.';
-            } catch (e) {
-                this.notice = e.message || 'Gagal mengirim ke dapur.';
-            } finally {
-                this.busy = false;
-            }
-        },
         async checkout() {
             if (!this.canCompletePay()) {
                 this.notice = this.cashShort() ? 'Uang diterima masih kurang dari total.' : 'Tidak bisa menyelesaikan pembayaran.';
@@ -573,7 +544,8 @@ function posApp() {
             try {
                 const paid = this.method === 'cash' ? this.tenderedAmount() : this.grandTotal();
                 const data = await this.request(`/pos/${this.order.id}/checkout`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                    method: this.method, amount: this.grandTotal(), tendered: paid
+                    method: this.method, amount: this.grandTotal(), tendered: paid,
+                    order_type: this.order_type, table_id: this.table_id || null,
                 })});
                 this.payOpen = false;
                 if (data.order) {

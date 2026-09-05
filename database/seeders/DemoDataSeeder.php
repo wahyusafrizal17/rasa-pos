@@ -141,7 +141,7 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Sari Bar',
                 'email' => 'bar@example.com',
                 'role' => 'bar',
-                'outlets' => [$outlets['jkt']],
+                'outlets' => [$outlets['bdg'], $outlets['jkt']],
             ],
         ];
 

@@ -31,10 +31,6 @@
                 @endif
                 <a href="{{ route('dashboard') }}" class="btn-ghost !px-3 !py-2 text-xs">Dashboard</a>
                 <a href="{{ route('orders.index') }}" class="btn-ghost !px-3 !py-2 text-xs">Orders</a>
-                @can('orders.check')
-                    <a href="{{ route('kitchen.index') }}" class="btn-ghost !px-3 !py-2 text-xs">Kitchen</a>
-                    <a href="{{ route('bar.index') }}" class="btn-ghost !px-3 !py-2 text-xs">Bar</a>
-                @endcan
                 @include('layouts.partials.user-menu')
             </div>
         </header>

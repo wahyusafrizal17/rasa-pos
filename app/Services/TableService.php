@@ -110,14 +110,22 @@ class TableService
                 ->first();
 
             if (! $sourceOrder || ! $targetOrder) {
-                throw ValidationException::withMessages(['tables' => 'Kedua meja harus memiliki order aktif.']);
+                throw ValidationException::withMessages(['tables' => 'Kedua meja harus punya order aktif. Pilih dua meja Occupied.']);
             }
+
+            $sourceCode = DiningTable::query()->whereKey($sourceId)->value('code');
 
             foreach ($sourceOrder->items as $item) {
                 $item->update(['order_id' => $targetOrder->id]);
             }
 
             app(OrderService::class)->recalculate($targetOrder->fresh(['items', 'discount']));
+            $targetOrder->update([
+                'notes' => trim(implode(' · ', array_filter([
+                    $targetOrder->notes,
+                    $sourceCode ? 'Gabung dari '.$sourceCode : null,
+                ]))),
+            ]);
             $sourceOrder->update([
                 'status' => OrderStatus::Cancelled,
                 'cancel_reason' => 'Digabung ke '.$targetOrder->order_number,

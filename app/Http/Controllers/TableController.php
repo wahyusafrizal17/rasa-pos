@@ -17,13 +17,26 @@ class TableController extends Controller
         abort_unless($request->user()->hasPermission('tables.view'), 403);
 
         $outletId = current_outlet_id();
+        $tables = DiningTable::query()
+            ->with([
+                'activeSession',
+                'reservations' => fn ($q) => $q->where('status', 'reserved'),
+                'orders' => fn ($q) => $q->whereNotIn('status', ['completed', 'cancelled'])->withCount('items')->latest('id'),
+            ])
+            ->where('outlet_id', $outletId)
+            ->where('is_active', true)
+            ->get()
+            ->each(fn (DiningTable $table) => $table->setAttribute(
+                'open_minutes',
+                $table->activeSession?->durationMinutes()
+            ));
 
         return view('tables.index', [
-            'tables' => DiningTable::query()
-                ->with(['activeSession', 'reservations' => fn ($q) => $q->where('status', 'reserved')])
-                ->where('outlet_id', $outletId)
-                ->where('is_active', true)
-                ->get(),
+            'tables' => $tables,
+            'reservations' => $tables
+                ->flatMap(fn (DiningTable $table) => $table->reservations->each(fn ($reservation) => $reservation->setRelation('table', $table)))
+                ->sortBy('reserved_at')
+                ->values(),
             'customers' => Customer::query()->where('is_active', true)->orderBy('name')->get(),
         ]);
     }
@@ -100,9 +113,11 @@ class TableController extends Controller
             'source_id' => ['required', 'exists:tables,id'],
             'target_id' => ['required', 'exists:tables,id', 'different:source_id'],
         ]);
+        $source = DiningTable::query()->find($data['source_id']);
+        $target = DiningTable::query()->find($data['target_id']);
         $tables->merge((int) $data['source_id'], (int) $data['target_id']);
 
-        return back()->with('success', 'Meja digabung.');
+        return back()->with('success', ($source?->code ?? 'Meja sumber').' digabung ke '.($target?->code ?? 'meja target').'. '.($source?->code ?? 'Meja sumber').' sekarang kosong.');
     }
 
     public function split(Request $request, TableService $tables): RedirectResponse

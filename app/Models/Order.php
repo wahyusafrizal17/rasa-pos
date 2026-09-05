@@ -19,6 +19,7 @@ use App\Models\Concerns\AppliesFillableAttribute;
     'tax_amount', 'tax_rate', 'service_charge', 'points_redeemed', 'points_value',
     'grand_total', 'guest_count', 'notes', 'estimated_ready_at', 'held_at',
     'completed_at', 'cancelled_at', 'cancel_reason',
+    'kitchen_printed_at', 'bar_printed_at',
 ])]
 class Order extends Model
 {
@@ -42,6 +43,8 @@ class Order extends Model
             'held_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'kitchen_printed_at' => 'datetime',
+            'bar_printed_at' => 'datetime',
         ];
     }
 
@@ -93,5 +96,13 @@ class Order extends Model
     public function balanceDue(): float
     {
         return max(0, (float) $this->grand_total - $this->paidTotal());
+    }
+
+    public function allItemsReady(): bool
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        return $items->isNotEmpty()
+            && $items->every(fn ($item) => in_array($item->status, ['ready', 'served'], true));
     }
 }

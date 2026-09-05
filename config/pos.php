@@ -73,7 +73,7 @@ return [
         'outlet_manager' => [
             'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout', 'orders.check', 'orders.cancel',
             'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
-            'marketing.view', 'loyalty.view', 'products.view',
+            'marketing.view', 'marketing.manage', 'loyalty.view', 'products.view',
             'inventory.view', 'inventory.manage', 'inventory.approve',
             'production.view', 'production.manage', 'printers.view',
             'reports.view', 'reports.export',
@@ -83,7 +83,7 @@ return [
             'tables.view', 'customers.view', 'customers.manage',
         ],
         'captain' => [
-            'dashboard.view', 'pos.access', 'orders.view', 'orders.manage',
+            'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout',
             'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
         ],
         'kitchen' => [

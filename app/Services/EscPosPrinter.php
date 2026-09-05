@@ -184,6 +184,24 @@ class EscPosPrinter
             .'</body></html>';
     }
 
+    public function send(string $ip, int $port, string $bytes): bool
+    {
+        if ($ip === '' || $bytes === '') {
+            return false;
+        }
+
+        $socket = @stream_socket_client('tcp://'.$ip.':'.$port, $errno, $errstr, 0.4);
+        if (! $socket) {
+            return false;
+        }
+
+        stream_set_timeout($socket, 1);
+        $ok = fwrite($socket, $bytes) !== false;
+        fclose($socket);
+
+        return $ok;
+    }
+
     public function ticketHeightMm(iterable $items): int
     {
         $count = 0;

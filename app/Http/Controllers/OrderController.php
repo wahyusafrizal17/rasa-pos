@@ -8,6 +8,7 @@ use App\Models\Outlet;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -34,30 +35,20 @@ class OrderController extends Controller
         return view('orders.index', [
             'orders' => $orders,
             'outlets' => Outlet::query()->orderBy('name')->get(),
-            'filters' => $request->all(),
+            'filters' => $request->only([
+                'order_number', 'date', 'outlet_id', 'customer', 'table',
+                'order_type', 'status', 'payment_status', 'cashier',
+            ]),
+            'stats' => [
+                'total' => Order::query()->count(),
+                'today' => Order::query()->whereDate('created_at', today())->count(),
+                'kitchen' => Order::query()->whereIn('status', [
+                    OrderStatus::New->value,
+                    OrderStatus::Processing->value,
+                    OrderStatus::Preparing->value,
+                ])->count(),
+            ],
         ]);
-    }
-
-    public function kanban(Request $request): View
-    {
-        abort_unless($request->user()->hasPermission('orders.view'), 403);
-
-        $outletId = current_outlet_id();
-        $columns = [OrderStatus::New, OrderStatus::Processing, OrderStatus::Ready, OrderStatus::Completed];
-
-        $grouped = [];
-        foreach ($columns as $status) {
-            $grouped[$status->value] = Order::query()
-                ->with(['customer', 'table', 'items'])
-                ->where('outlet_id', $outletId)
-                ->where('status', $status)
-                ->whereIn('channel', ['online', 'pickup'])
-                ->latest()
-                ->limit(40)
-                ->get();
-        }
-
-        return view('orders.kanban', ['grouped' => $grouped, 'columns' => $columns]);
     }
 
     public function show(Order $order): View
@@ -65,18 +56,24 @@ class OrderController extends Controller
         abort_unless(auth()->user()->hasPermission('orders.view'), 403);
 
         return view('orders.show', [
-            'order' => $order->load(['items.product', 'items.batch', 'payments', 'histories.user', 'customer', 'outlet', 'table', 'user', 'discount']),
+            'order' => $order->load(['items.product', 'items.batch', 'payments', 'customer', 'outlet', 'table', 'user', 'discount']),
         ]);
     }
 
     public function status(Request $request, Order $order, OrderService $orders): RedirectResponse
     {
-        abort_unless($request->user()->hasPermission('orders.manage'), 403);
+        abort_unless($request->user()->can('orders.manage') || $request->user()->can('orders.check'), 403);
 
         $data = $request->validate([
             'status' => ['required', 'in:new,processing,preparing,ready,completed,cancelled'],
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
+
+        if ($data['status'] === 'ready' && ! $order->allItemsReady()) {
+            throw ValidationException::withMessages([
+                'status' => 'Tandai semua item siap di Daftar item sebelum lanjut ke Siap.',
+            ]);
+        }
 
         $orders->transition($order, OrderStatus::from($data['status']), $data['notes'] ?? null);
 

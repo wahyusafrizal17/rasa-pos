@@ -292,7 +292,7 @@
                                 </div>
                                 <div>
                                     <label class="label">Produk</label>
-                                    <select name="product_id" class="input" required x-model="form.product_id" @change="onProductChange()">
+                                    <select name="product_id" class="input js-product-select" required x-model="form.product_id" @change="onProductChange()">
                                         <option value="">Pilih produk</option>
                                         @foreach ($products as $product)
                                             <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>

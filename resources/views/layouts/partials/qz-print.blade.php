@@ -19,11 +19,20 @@
     }
 
     async function resolvePrinter(preferred) {
-        if (preferred) {
-            return preferred;
-        }
         var listed = await qz.printers.find();
         var names = Array.isArray(listed) ? listed : [listed];
+        if (preferred && names.indexOf(preferred) !== -1) {
+            return preferred;
+        }
+        if (preferred) {
+            var needle = String(preferred).toLowerCase();
+            var fuzzy = names.find(function (name) {
+                return (name || '').toLowerCase().indexOf(needle) !== -1;
+            });
+            if (fuzzy) {
+                return fuzzy;
+            }
+        }
         var match = names.find(function (name) {
             return /gezhi|eppos|thermal|receipt|80\s?mm/i.test(name || '');
         });
@@ -77,7 +86,6 @@
                 throw new Error('Struk ESC/POS tidak tersedia.');
             }
             await printRaw(printer, payload.receipt_escpos);
-            await jobs(payload.print_jobs || [], { skipCashier: true, printer: printer });
             return true;
         } catch (error) {
             notice(error.message || 'QZ Tray gagal. Jangan cetak lewat Chrome — itu yang bikin kertas PostScript.');

@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="login-page">
-    <div class="login-backdrop"></div>
+    <div class="login-backdrop" style="background-image: url('{{ asset('images/login-bg.png') }}')"></div>
     <div class="login-card">
         <aside class="login-visual">
             <img src="{{ asset('images/login-visual.png') }}" alt="Rasa POS" class="login-visual-image">

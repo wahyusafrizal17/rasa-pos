@@ -34,12 +34,9 @@
                         'Operations' => [
                             ['label' => 'Dashboard', 'route' => 'dashboard', 'perm' => 'dashboard.view', 'icon' => 'home'],
                             ['label' => 'POS', 'route' => 'pos.index', 'perm' => 'pos.access', 'icon' => 'pos'],
-                            ['label' => 'Orders', 'route' => 'orders.index', 'perm' => 'orders.view', 'icon' => 'orders', 'children' => [
-                                ['label' => 'All Orders', 'route' => 'orders.index', 'icon' => 'clipboard'],
-                                ['label' => 'Pickup / Online', 'route' => 'orders.kanban', 'icon' => 'bag'],
-                                ['label' => 'Kitchen Checker', 'route' => 'kitchen.index', 'perm' => 'orders.check', 'icon' => 'fire'],
-                                ['label' => 'Bar Checker', 'route' => 'bar.index', 'perm' => 'orders.check', 'icon' => 'glass'],
-                            ]],
+                            ['label' => 'Orders', 'route' => 'orders.index', 'perm' => 'orders.view', 'icon' => 'orders'],
+                            ['label' => 'Kitchen', 'route' => 'kitchen.index', 'perm' => 'orders.check', 'icon' => 'fire', 'hide_role' => 'bar'],
+                            ['label' => 'Bar', 'route' => 'bar.index', 'perm' => 'orders.check', 'icon' => 'glass', 'hide_role' => 'kitchen'],
                             ['label' => 'Tables', 'route' => 'tables.index', 'perm' => 'tables.view', 'icon' => 'tables'],
                         ],
                         'Commerce' => [
@@ -88,12 +85,13 @@
 
                 @foreach ($groups as $section => $items)
                     @php
-                        $visible = collect($items)->contains(fn ($item) => auth()->user()->hasPermission($item['perm']));
+                        $visible = collect($items)->contains(fn ($item) => auth()->user()->hasPermission($item['perm'])
+                            && (empty($item['hide_role']) || ! auth()->user()->hasRole($item['hide_role'])));
                     @endphp
                     @if ($visible)
                         <p class="nav-section" x-show="!collapsed">{{ $section }}</p>
                         @foreach ($items as $item)
-                            @if (auth()->user()->hasPermission($item['perm']))
+                            @if (auth()->user()->hasPermission($item['perm']) && (empty($item['hide_role']) || ! auth()->user()->hasRole($item['hide_role'])))
                                 @php
                                     $children = $item['children'] ?? [];
                                     $childRoutes = collect($children)->pluck('route')->all();
@@ -204,13 +202,30 @@
 
     <nav class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white px-2 py-2 lg:hidden">
         <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('dashboard') ? 'text-brand' : 'text-muted' }}">Home</a>
-        @can('pos.access')<a href="{{ route('pos.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('pos.*') ? 'text-brand' : 'text-muted' }}">POS</a>@endcan
+        @if (auth()->user()?->hasRole('kitchen'))
+            <a href="{{ route('kitchen.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('kitchen.*') ? 'text-brand' : 'text-muted' }}">Dapur</a>
+        @elseif (auth()->user()?->hasRole('bar'))
+            <a href="{{ route('bar.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('bar.*') ? 'text-brand' : 'text-muted' }}">Bar</a>
+        @elseif (auth()->user()?->can('pos.access'))
+            <a href="{{ route('pos.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('pos.*') ? 'text-brand' : 'text-muted' }}">POS</a>
+        @endif
         @can('orders.view')<a href="{{ route('orders.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('orders.*') ? 'text-brand' : 'text-muted' }}">Orders</a>@endcan
         @can('tables.view')<a href="{{ route('tables.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('tables.*') ? 'text-brand' : 'text-muted' }}">Tables</a>@endcan
         <a href="{{ route('profile.edit') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('profile.*') ? 'text-brand' : 'text-muted' }}">Me</a>
     </nav>
 
+    @if (auth()->user()?->hasRole(['kitchen', 'bar']))
+        <script>window.RasaQz = { printer: '' };</script>
+        <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
+        @include('layouts.partials.qz-print')
+        @include('layouts.partials.station-autoprint')
+    @endif
+    @include('layouts.partials.select2')
     @livewireScripts
+    <script>
+        document.querySelector('script[data-update-uri="/livewire/update"]')
+            ?.setAttribute('data-update-uri', @json(parse_url(url('/livewire/update'), PHP_URL_PATH)));
+    </script>
     <script>
         function lowStockAlerts() {
             return {

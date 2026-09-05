@@ -4,8 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Enums\PrinterStation;
+use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Printer;
+use App\Models\User;
 use App\Services\OrderService;
+use App\Services\PrinterRoutingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,12 +19,50 @@ class CheckerController extends Controller
 {
     public function kitchen(Request $request): View
     {
-        return $this->board($request, PrinterStation::Kitchen->value, 'Kitchen Checker');
+        return $this->board($request, PrinterStation::Kitchen->value, 'Kitchen');
     }
 
     public function bar(Request $request): View
     {
-        return $this->board($request, PrinterStation::Bar->value, 'Bar Checker');
+        return $this->board($request, PrinterStation::Bar->value, 'Bar');
+    }
+
+    public function pendingJobs(Request $request, PrinterRoutingService $printers): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('orders.check'), 403);
+
+        $station = $this->checkerStation($request->user());
+        abort_unless($station, 403);
+
+        $outletId = current_outlet_id();
+        $printer = Printer::query()
+            ->where('outlet_id', $outletId)
+            ->where('station', $station)
+            ->where('is_active', true)
+            ->value('name');
+
+        return response()->json([
+            'station' => $station,
+            'printer' => $printer ?: '',
+            'jobs' => $printers->pendingJobs($outletId, $station),
+        ]);
+    }
+
+    public function ackJob(Request $request, Order $order, PrinterRoutingService $printers): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('orders.check'), 403);
+
+        $station = $this->checkerStation($request->user());
+        abort_unless($station, 403);
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+
+        if ($printers->stationItems($order, $station)->isEmpty()) {
+            abort(403);
+        }
+
+        $printers->markPrinted($order, $station);
+
+        return response()->json(['ok' => true]);
     }
 
     public function updateItem(Request $request, OrderItem $item, OrderService $orders): RedirectResponse
@@ -48,6 +91,8 @@ class CheckerController extends Controller
     protected function board(Request $request, string $station, string $title): View
     {
         abort_unless($request->user()->hasPermission('orders.check'), 403);
+        abort_if($request->user()->hasRole('kitchen') && $station !== PrinterStation::Kitchen->value, 403);
+        abort_if($request->user()->hasRole('bar') && $station !== PrinterStation::Bar->value, 403);
 
         $outletId = current_outlet_id();
 
@@ -97,5 +142,22 @@ class CheckerController extends Controller
                 'items' => $grouped->flatten()->count(),
             ],
         ]);
+    }
+
+    protected function checkerStation(?User $user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        if ($user->hasRole('kitchen')) {
+            return PrinterStation::Kitchen->value;
+        }
+
+        if ($user->hasRole('bar')) {
+            return PrinterStation::Bar->value;
+        }
+
+        return null;
     }
 }
