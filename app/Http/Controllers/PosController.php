@@ -49,7 +49,14 @@ class PosController extends Controller
                 ->get()
                 ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId))
                 ->values(),
-            'discounts' => $discounts->activeForOutlet($outletId),
+            'discounts' => $activeDiscounts = $discounts->activeForOutlet($outletId),
+            'discountCatalog' => $activeDiscounts->map(fn ($discount) => [
+                'id' => $discount->id,
+                'name' => $discount->name,
+                'value_label' => $discount->valueLabel(),
+                'minimum' => (float) $discount->minimum_transaction,
+                'maximum' => $discount->maximum_discount !== null ? (float) $discount->maximum_discount : null,
+            ])->values(),
             'rewards' => Reward::query()->where('is_active', true)->orderBy('points_required')->get(),
             'heldOrders' => $this->heldOrdersQuery($outletId)
                 ->get()

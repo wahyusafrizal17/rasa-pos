@@ -62,54 +62,30 @@ class MarketingController extends Controller
     public function storeDiscount(Request $request): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('marketing.manage'), 403);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'code' => ['nullable', 'string', 'max:40'],
-            'type' => ['required', 'in:percentage,nominal'],
-            'scope' => ['required', 'in:order,item,category'],
-            'value' => ['required', 'numeric', 'min:0'],
-            'minimum_transaction' => ['nullable', 'numeric', 'min:0'],
-            'maximum_discount' => ['nullable', 'numeric', 'min:0'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'start_time' => ['nullable'],
-            'end_time' => ['nullable'],
-            'outlet_ids' => ['nullable', 'array'],
-            'outlet_ids.*' => ['integer', 'exists:outlets,id'],
-            'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'exists:products,id'],
-            'category_ids' => ['nullable', 'array'],
-            'category_ids.*' => ['integer', 'exists:categories,id'],
-        ], [
-            'name.required' => 'Nama wajib diisi.',
-            'value.required' => 'Nilai wajib diisi.',
-            'type.required' => 'Tipe wajib dipilih.',
-            'scope.required' => 'Cakupan wajib dipilih.',
-            'end_date.after_or_equal' => 'Tanggal selesai harus pada atau setelah tanggal mulai.',
-        ]);
+        [$fields, $relations] = $this->validatedDiscount($request);
 
-        $data['code'] = filled($data['code'] ?? null) ? $data['code'] : null;
-        $outletIds = $data['outlet_ids'] ?? [];
-        $productIds = $data['product_ids'] ?? [];
-        $categoryIds = $data['category_ids'] ?? [];
-        unset($data['outlet_ids'], $data['product_ids'], $data['category_ids']);
-
-        $discount = Discount::query()->create($data + ['is_active' => true]);
-        $discount->outlets()->sync($outletIds);
-
-        if ($data['scope'] === 'item') {
-            foreach ($productIds as $id) {
-                $discount->items()->create(['product_id' => $id]);
-            }
-        }
-
-        if ($data['scope'] === 'category') {
-            foreach ($categoryIds as $id) {
-                $discount->items()->create(['category_id' => $id]);
-            }
-        }
+        $discount = Discount::query()->create($fields + ['is_active' => true]);
+        $this->syncDiscountRelations($discount, $fields['scope'], $relations);
 
         return redirect()->route('marketing.discounts')->with('success', 'Diskon dibuat.');
+    }
+
+    public function updateDiscount(Request $request, Discount $discount): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('marketing.manage'), 403);
+        [$fields, $relations] = $this->validatedDiscount($request);
+        $discount->update($fields);
+        $this->syncDiscountRelations($discount, $fields['scope'], $relations);
+
+        return redirect()->route('marketing.discounts')->with('success', 'Diskon diperbarui.');
+    }
+
+    public function destroyDiscount(Request $request, Discount $discount): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('marketing.manage'), 403);
+        $discount->delete();
+
+        return redirect()->route('marketing.discounts')->with('success', 'Diskon dihapus.');
     }
 
     public function toggleDiscount(Request $request, Discount $discount): RedirectResponse
@@ -260,5 +236,69 @@ class MarketingController extends Controller
         $reward->update(['is_active' => ! $reward->is_active]);
 
         return back()->with('success', 'Status reward diperbarui.');
+    }
+
+    /**
+     * @return array{0: array<string, mixed>, 1: array{outlet_ids: array<int, int>, product_ids: array<int, int>, category_ids: array<int, int>}}
+     */
+    private function validatedDiscount(Request $request): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'code' => ['nullable', 'string', 'max:40'],
+            'type' => ['required', 'in:percentage,nominal'],
+            'scope' => ['required', 'in:order,item,category'],
+            'value' => ['required', 'numeric', 'min:0'],
+            'minimum_transaction' => ['nullable', 'numeric', 'min:0'],
+            'maximum_discount' => ['nullable', 'numeric', 'min:0'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_time' => ['nullable'],
+            'end_time' => ['nullable'],
+            'outlet_ids' => ['nullable', 'array'],
+            'outlet_ids.*' => ['integer', 'exists:outlets,id'],
+            'product_ids' => ['nullable', 'array'],
+            'product_ids.*' => ['integer', 'exists:products,id'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', 'exists:categories,id'],
+        ], [
+            'name.required' => 'Nama wajib diisi.',
+            'value.required' => 'Nilai wajib diisi.',
+            'type.required' => 'Tipe wajib dipilih.',
+            'scope.required' => 'Cakupan wajib dipilih.',
+            'end_date.after_or_equal' => 'Tanggal selesai harus pada atau setelah tanggal mulai.',
+        ]);
+
+        $data['code'] = filled($data['code'] ?? null) ? $data['code'] : null;
+
+        return [
+            collect($data)->except(['outlet_ids', 'product_ids', 'category_ids'])->all(),
+            [
+                'outlet_ids' => $data['outlet_ids'] ?? [],
+                'product_ids' => $data['product_ids'] ?? [],
+                'category_ids' => $data['category_ids'] ?? [],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{outlet_ids: array<int, int>, product_ids: array<int, int>, category_ids: array<int, int>}  $relations
+     */
+    private function syncDiscountRelations(Discount $discount, string $scope, array $relations): void
+    {
+        $discount->outlets()->sync($relations['outlet_ids']);
+        $discount->items()->delete();
+
+        if ($scope === 'item') {
+            foreach ($relations['product_ids'] as $id) {
+                $discount->items()->create(['product_id' => $id]);
+            }
+        }
+
+        if ($scope === 'category') {
+            foreach ($relations['category_ids'] as $id) {
+                $discount->items()->create(['category_id' => $id]);
+            }
+        }
     }
 }

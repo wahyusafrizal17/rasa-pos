@@ -140,6 +140,8 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
 
     Route::get('/marketing/discounts', [MarketingController::class, 'discounts'])->name('marketing.discounts');
     Route::post('/marketing/discounts', [MarketingController::class, 'storeDiscount'])->name('marketing.discounts.store');
+    Route::put('/marketing/discounts/{discount}', [MarketingController::class, 'updateDiscount'])->name('marketing.discounts.update');
+    Route::delete('/marketing/discounts/{discount}', [MarketingController::class, 'destroyDiscount'])->name('marketing.discounts.destroy');
     Route::post('/marketing/discounts/{discount}/toggle', [MarketingController::class, 'toggleDiscount'])->name('marketing.discounts.toggle');
     Route::get('/marketing/bundles', [MarketingController::class, 'bundles'])->name('marketing.bundles');
     Route::post('/marketing/bundles', [MarketingController::class, 'storeBundle'])->name('marketing.bundles.store');

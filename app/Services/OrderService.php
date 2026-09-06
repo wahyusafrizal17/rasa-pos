@@ -129,26 +129,10 @@ class OrderService
     {
         $this->assertMutable($order);
         $order->discount_id = $discountId;
+        $order->discount_amount = $discountId ? $order->discount_amount : max(0, $manual);
         $order->save();
 
-        $order = $order->fresh(['items', 'discount']);
-        if ($discountId && $order->discount) {
-            $amount = $this->discounts->calculate(
-                $order->discount,
-                (float) $order->items->sum(fn ($i) => $i->unit_price * $i->quantity),
-                $order->items->map(fn ($i) => [
-                    'product_id' => $i->product_id,
-                    'quantity' => $i->quantity,
-                    'unit_price' => $i->unit_price,
-                ])->all(),
-            );
-            $order->discount_amount = $amount;
-        } else {
-            $order->discount_amount = max(0, $manual);
-        }
-        $order->save();
-
-        return $this->recalculate($order->fresh(['items', 'discount']));
+        return $this->recalculate($order->fresh(['items', 'discount.items']));
     }
 
     public function applyPoints(Order $order, int $points): Order
@@ -175,8 +159,22 @@ class OrderService
 
     public function recalculate(Order $order): Order
     {
+        $order->loadMissing(['items', 'discount.items']);
         $subtotal = (float) $order->items->sum(fn ($item) => (float) $item->unit_price * (float) $item->quantity);
         $discount = (float) $order->discount_amount;
+
+        if ($order->discount_id && $order->discount) {
+            $discount = $this->discounts->calculate(
+                $order->discount,
+                $subtotal,
+                $order->items->map(fn ($item) => [
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                ])->all(),
+            );
+        }
+
         $taxable = max(0, $subtotal - $discount);
         $tax = round($taxable * ((float) $order->tax_rate / 100), 2);
         $pointsValue = (float) $order->points_value;
@@ -186,12 +184,13 @@ class OrderService
 
         $order->update([
             'subtotal' => $subtotal,
+            'discount_amount' => $discount,
             'tax_amount' => $tax,
             'grand_total' => $grand,
             'estimated_ready_at' => now()->addMinutes((int) $maxPrep),
         ]);
 
-        return $order->fresh(['items.product', 'customer', 'table', 'payments']);
+        return $order->fresh(['items.product', 'customer', 'table', 'payments', 'discount']);
     }
 
     public function hold(Order $order): Order

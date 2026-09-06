@@ -4,10 +4,27 @@
 @section('content')
     @php
         $formError = $errors->any();
-        $formScope = old('scope', 'order');
-        $oldOutlets = array_map('strval', (array) old('outlet_ids', []));
-        $oldProducts = array_map('strval', (array) old('product_ids', []));
-        $oldCategories = array_map('strval', (array) old('category_ids', []));
+        $editId = old('_discount_id');
+        $formOld = [
+            'id' => $editId,
+            'mode' => old('_form_mode', 'create'),
+            'name' => old('name', ''),
+            'code' => old('code', ''),
+            'type' => old('type', 'percentage'),
+            'scope' => old('scope', 'order'),
+            'value' => old('value', ''),
+            'minimum_transaction' => old('minimum_transaction', ''),
+            'maximum_discount' => old('maximum_discount', ''),
+            'start_date' => old('start_date', ''),
+            'end_date' => old('end_date', ''),
+            'start_time' => old('start_time', ''),
+            'end_time' => old('end_time', ''),
+            'outlet_ids' => array_map('strval', (array) old('outlet_ids', [])),
+            'product_ids' => array_map('strval', (array) old('product_ids', [])),
+            'category_ids' => array_map('strval', (array) old('category_ids', [])),
+            'update_url' => $editId ? route('marketing.discounts.update', $editId) : '',
+            'delete_url' => $editId ? route('marketing.discounts.destroy', $editId) : '',
+        ];
     @endphp
     <div x-data="discountPage()" @keydown.escape.window="closeTop()">
         <div class="mb-5 grid gap-4 md:grid-cols-3">
@@ -131,6 +148,9 @@
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.3 12S6 6 12 6s9.7 6 9.7 6-3.7 6-9.7 6S2.3 12 2.3 12z"/><circle cx="12" cy="12" r="2.5" stroke-width="1.8"/></svg>
                                         </button>
                                         @can('marketing.manage')
+                                            <button type="button" class="table-action" title="Edit" @click="openEdit({{ Js::from($row) }})">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                                            </button>
                                             <form method="POST" action="{{ route('marketing.discounts.toggle', $discount) }}">
                                                 @csrf
                                                 <button type="submit" class="table-action {{ $discount->is_active ? '' : 'table-action-danger' }}" title="{{ $discount->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
@@ -141,6 +161,9 @@
                                                     @endif
                                                 </button>
                                             </form>
+                                            <button type="button" class="table-action table-action-danger" title="Hapus" @click="confirmDelete({{ Js::from($row) }})">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M9 7V5h6v2m-7 0v12a1 1 0 001 1h6a1 1 0 001-1V7"/></svg>
+                                            </button>
                                         @endcan
                                     </div>
                                 </td>
@@ -223,11 +246,8 @@
                 </div>
                 @can('marketing.manage')
                     <div class="crud-modal-footer">
-                        <button type="button" class="btn-ghost" @click="viewOpen = false">Tutup</button>
-                        <form method="POST" :action="viewing?.toggle_url">
-                            @csrf
-                            <button class="btn-add" type="submit" x-text="viewing?.is_active ? 'Nonaktifkan' : 'Aktifkan'"></button>
-                        </form>
+                        <button type="button" class="btn-ghost" @click="confirmDelete(viewing)">Hapus</button>
+                        <button type="button" class="btn-add" @click="openEdit(viewing)">Edit</button>
                     </div>
                 @endcan
             </div>
@@ -236,12 +256,17 @@
         @can('marketing.manage')
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="formOpen" x-cloak @click.self="formOpen = false">
                 <div class="crud-modal">
-                    <form class="flex min-h-0 flex-1 flex-col" method="POST" action="{{ route('marketing.discounts.store') }}">
+                    <form class="flex min-h-0 flex-1 flex-col" method="POST" :action="formMode === 'edit' ? form.update_url : storeUrl">
                         @csrf
+                        <input type="hidden" name="_form_mode" :value="formMode">
+                        <input type="hidden" name="_discount_id" :value="form.id || ''">
+                        <template x-if="formMode === 'edit'">
+                            <input type="hidden" name="_method" value="PUT">
+                        </template>
                         <div class="crud-modal-body">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-heading">Tambah Diskon</h3>
+                                    <h3 class="text-lg font-semibold text-heading" x-text="formMode === 'edit' ? 'Edit Diskon' : 'Tambah Diskon'"></h3>
                                     <p class="mt-1 text-[13px] text-muted">Promo yang aktif akan muncul di kasir sesuai cakupan dan periode.</p>
                                 </div>
                                 <button type="button" class="modal-close" @click="formOpen = false">
@@ -252,24 +277,24 @@
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
                                 <div class="sm:col-span-2">
                                     <label class="label">Nama</label>
-                                    <input class="input" name="name" required maxlength="120" value="{{ old('name') }}" placeholder="Contoh: Promo weekday 10%">
-                                    @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    <input class="input" name="name" required maxlength="120" x-model="form.name" placeholder="Contoh: Promo weekday 10%">
+                                    @error('name')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="label">Kode</label>
-                                    <input class="input" name="code" maxlength="40" value="{{ old('code') }}" placeholder="Opsional">
-                                    @error('code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    <input class="input" name="code" maxlength="40" x-model="form.code" placeholder="Opsional">
+                                    @error('code')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="label">Tipe</label>
-                                    <select name="type" class="input" required>
-                                        <option value="percentage" @selected(old('type', 'percentage') === 'percentage')>Persentase</option>
-                                        <option value="nominal" @selected(old('type') === 'nominal')>Nominal</option>
+                                    <select name="type" class="input" required x-model="form.type">
+                                        <option value="percentage">Persentase</option>
+                                        <option value="nominal">Nominal</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="label">Cakupan</label>
-                                    <select name="scope" class="input" required x-model="scope">
+                                    <select name="scope" class="input" required x-model="form.scope">
                                         <option value="order">Pesanan</option>
                                         <option value="item">Produk</option>
                                         <option value="category">Kategori</option>
@@ -277,41 +302,41 @@
                                 </div>
                                 <div>
                                     <label class="label">Nilai</label>
-                                    <input class="input" type="number" step="0.01" min="0" name="value" required value="{{ old('value') }}" placeholder="10 atau 5000">
+                                    <input class="input" type="number" step="0.01" min="0" name="value" required x-model="form.value" placeholder="10 atau 5000">
                                     <p class="mt-1 text-[12px] text-muted">Persentase: 10 untuk 10%. Nominal: jumlah potongan.</p>
-                                    @error('value')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    @error('value')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="label">Min. transaksi</label>
-                                    <input class="input" type="number" step="0.01" min="0" name="minimum_transaction" value="{{ old('minimum_transaction') }}" placeholder="0">
+                                    <input class="input" type="number" step="0.01" min="0" name="minimum_transaction" x-model="form.minimum_transaction" placeholder="0">
                                 </div>
                                 <div>
                                     <label class="label">Maks. diskon</label>
-                                    <input class="input" type="number" step="0.01" min="0" name="maximum_discount" value="{{ old('maximum_discount') }}" placeholder="Opsional">
+                                    <input class="input" type="number" step="0.01" min="0" name="maximum_discount" x-model="form.maximum_discount" placeholder="Opsional">
                                 </div>
                                 <div>
                                     <label class="label">Mulai</label>
-                                    <input class="input" type="date" name="start_date" value="{{ old('start_date') }}">
+                                    <input class="input" type="date" name="start_date" x-model="form.start_date">
                                 </div>
                                 <div>
                                     <label class="label">Selesai</label>
-                                    <input class="input" type="date" name="end_date" value="{{ old('end_date') }}">
-                                    @error('end_date')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                    <input class="input" type="date" name="end_date" x-model="form.end_date">
+                                    @error('end_date')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="label">Jam mulai</label>
-                                    <input class="input" type="time" name="start_time" value="{{ old('start_time') }}">
+                                    <input class="input" type="time" name="start_time" x-model="form.start_time">
                                 </div>
                                 <div>
                                     <label class="label">Jam selesai</label>
-                                    <input class="input" type="time" name="end_time" value="{{ old('end_time') }}">
+                                    <input class="input" type="time" name="end_time" x-model="form.end_time">
                                 </div>
                                 <div class="sm:col-span-2">
                                     <label class="label">Outlet</label>
                                     <div class="max-h-36 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-[#fafafa] p-2">
                                         @forelse ($outlets as $outlet)
                                             <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-white">
-                                                <input type="checkbox" name="outlet_ids[]" value="{{ $outlet->id }}" class="rounded border-line text-brand focus:ring-brand/20" @checked(in_array((string) $outlet->id, $oldOutlets, true))>
+                                                <input type="checkbox" name="outlet_ids[]" value="{{ $outlet->id }}" class="rounded border-line text-brand focus:ring-brand/20" x-model="form.outlet_ids">
                                                 {{ $outlet->name }}
                                             </label>
                                         @empty
@@ -320,13 +345,13 @@
                                     </div>
                                     <p class="mt-1.5 text-[12px] text-muted">Kosongkan untuk berlaku di semua outlet.</p>
                                 </div>
-                                <div class="sm:col-span-2" x-show="scope === 'item'" x-cloak>
+                                <div class="sm:col-span-2" x-show="form.scope === 'item'" x-cloak>
                                     <label class="label">Produk</label>
                                     <input class="input mb-2" type="search" x-model="productQuery" placeholder="Cari produk...">
                                     <div class="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-[#fafafa] p-2">
                                         @forelse ($products as $product)
                                             <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-white" x-show="matchName({{ Js::from($product->name) }}, productQuery)">
-                                                <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" class="rounded border-line text-brand focus:ring-brand/20" @checked(in_array((string) $product->id, $oldProducts, true))>
+                                                <input type="checkbox" name="product_ids[]" value="{{ $product->id }}" class="rounded border-line text-brand focus:ring-brand/20" x-model="form.product_ids">
                                                 {{ $product->name }}
                                             </label>
                                         @empty
@@ -334,13 +359,13 @@
                                         @endforelse
                                     </div>
                                 </div>
-                                <div class="sm:col-span-2" x-show="scope === 'category'" x-cloak>
+                                <div class="sm:col-span-2" x-show="form.scope === 'category'" x-cloak>
                                     <label class="label">Kategori</label>
                                     <input class="input mb-2" type="search" x-model="categoryQuery" placeholder="Cari kategori...">
                                     <div class="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-[#fafafa] p-2">
                                         @forelse ($categories as $category)
                                             <label class="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-white" x-show="matchName({{ Js::from($category->name) }}, categoryQuery)">
-                                                <input type="checkbox" name="category_ids[]" value="{{ $category->id }}" class="rounded border-line text-brand focus:ring-brand/20" @checked(in_array((string) $category->id, $oldCategories, true))>
+                                                <input type="checkbox" name="category_ids[]" value="{{ $category->id }}" class="rounded border-line text-brand focus:ring-brand/20" x-model="form.category_ids">
                                                 {{ $category->name }}
                                             </label>
                                         @empty
@@ -352,8 +377,23 @@
                         </div>
                         <div class="crud-modal-footer">
                             <button type="button" class="btn-ghost" @click="formOpen = false">Batal</button>
-                            <button class="btn-add" type="submit">Simpan</button>
+                            <button class="btn-add" type="submit" x-text="formMode === 'edit' ? 'Simpan perubahan' : 'Simpan'"></button>
                         </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" x-show="deleteOpen" x-cloak @click.self="deleteOpen = false">
+                <div class="crud-modal-sm">
+                    <h3 class="text-lg font-semibold text-heading">Hapus Diskon</h3>
+                    <p class="mt-2 text-sm text-muted">
+                        Hapus <span class="font-medium text-heading" x-text="pendingDelete?.name"></span>? Data akan diarsipkan.
+                    </p>
+                    <form method="POST" class="mt-6 flex justify-end gap-2" :action="pendingDelete?.delete_url">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn-ghost" @click="deleteOpen = false">Batal</button>
+                        <button class="btn-danger" type="submit">Hapus</button>
                     </form>
                 </div>
             </div>
@@ -364,18 +404,59 @@
 @push('scripts')
     <script>
         function discountPage() {
+            const emptyForm = () => ({
+                id: null,
+                name: '',
+                code: '',
+                type: 'percentage',
+                scope: 'order',
+                value: '',
+                minimum_transaction: '',
+                maximum_discount: '',
+                start_date: '',
+                end_date: '',
+                start_time: '',
+                end_time: '',
+                outlet_ids: [],
+                product_ids: [],
+                category_ids: [],
+                update_url: '',
+                delete_url: '',
+            });
+
             const formError = @json($formError);
-            const formScope = @json($formScope);
+            const formOld = @json($formOld);
+            let form = emptyForm();
+            if (formError) {
+                form = { ...form, ...formOld };
+            }
 
             return {
+                storeUrl: @json(route('marketing.discounts.store')),
                 formOpen: formError,
+                formMode: formError ? formOld.mode : 'create',
+                form,
                 viewOpen: false,
                 viewing: null,
-                scope: formScope,
+                deleteOpen: false,
+                pendingDelete: null,
+                serverFormError: formError,
                 productQuery: '',
                 categoryQuery: '',
                 openCreate() {
+                    this.formMode = 'create';
+                    this.form = emptyForm();
                     this.viewOpen = false;
+                    this.serverFormError = false;
+                    this.formOpen = true;
+                },
+                openEdit(row) {
+                    if (! row) return;
+                    this.formMode = 'edit';
+                    this.form = { ...emptyForm(), ...row };
+                    this.viewOpen = false;
+                    this.deleteOpen = false;
+                    this.serverFormError = false;
                     this.formOpen = true;
                 },
                 openView(row) {
@@ -384,8 +465,14 @@
                     this.formOpen = false;
                     this.viewOpen = true;
                 },
+                confirmDelete(row) {
+                    if (! row) return;
+                    this.pendingDelete = row;
+                    this.deleteOpen = true;
+                },
                 closeTop() {
-                    if (this.formOpen) this.formOpen = false;
+                    if (this.deleteOpen) this.deleteOpen = false;
+                    else if (this.formOpen) this.formOpen = false;
                     else if (this.viewOpen) this.viewOpen = false;
                 },
                 matchName(name, query) {

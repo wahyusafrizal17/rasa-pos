@@ -124,7 +124,19 @@ class Discount extends Model
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'code' => $this->code ?: '—',
+            'code' => $this->code ?? '',
+            'type' => $this->type instanceof DiscountType ? $this->type->value : (string) $this->type,
+            'scope' => $this->scope,
+            'value' => (float) $this->value,
+            'minimum_transaction' => (float) $this->minimum_transaction ?: '',
+            'maximum_discount' => $this->maximum_discount !== null ? (float) $this->maximum_discount : '',
+            'start_date' => $this->start_date?->format('Y-m-d') ?? '',
+            'end_date' => $this->end_date?->format('Y-m-d') ?? '',
+            'start_time' => $this->clockLabel($this->start_time) ?? '',
+            'end_time' => $this->clockLabel($this->end_time) ?? '',
+            'outlet_ids' => $this->outlets->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+            'product_ids' => $this->items->pluck('product_id')->filter()->map(fn ($id) => (string) $id)->values()->all(),
+            'category_ids' => $this->items->pluck('category_id')->filter()->map(fn ($id) => (string) $id)->values()->all(),
             'type_label' => $this->typeLabel(),
             'scope_label' => $this->scopeLabel(),
             'value_label' => $this->valueLabel(),
@@ -138,6 +150,8 @@ class Discount extends Model
             'products_label' => $this->items->pluck('product.name')->filter()->join(', ') ?: '—',
             'categories_label' => $this->items->pluck('category.name')->filter()->join(', ') ?: '—',
             'toggle_url' => route('marketing.discounts.toggle', $this),
+            'update_url' => route('marketing.discounts.update', $this),
+            'delete_url' => route('marketing.discounts.destroy', $this),
         ];
     }
 

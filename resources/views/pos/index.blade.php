@@ -149,14 +149,18 @@
                     <span>Subtotal</span>
                     <span class="font-medium text-heading" x-text="formatMoney(order?.subtotal || 0)"></span>
                 </div>
-                <div class="order-row text-muted">
-                    <span>Discount</span>
-                    <select class="h-8 rounded-lg border border-[#e5e5e5] bg-white px-2 text-xs text-heading outline-none" x-model="discount_id" @change="applyDiscount()">
+                <div class="space-y-1.5">
+                    <div class="order-row text-muted">
+                        <span>Diskon</span>
+                        <span class="font-medium" :class="Number(order?.discount_amount || 0) > 0 ? 'text-brand' : 'text-heading'" x-text="discountLine()"></span>
+                    </div>
+                    <select class="h-8 w-full rounded-lg border border-[#e5e5e5] bg-white px-2 text-xs text-heading outline-none" x-model="discount_id" @change="applyDiscount()">
                         <option value="">Tanpa diskon</option>
                         @foreach ($discounts as $discount)
-                            <option value="{{ $discount->id }}">{{ $discount->name }}</option>
+                            <option value="{{ $discount->id }}">{{ $discount->name }} · {{ $discount->valueLabel() }}</option>
                         @endforeach
                     </select>
+                    <p class="text-[11px] text-[#c2410c]" x-show="discountHint()" x-text="discountHint()" x-cloak></p>
                 </div>
                 <div class="order-row text-muted">
                     <span>Tax</span>
@@ -197,6 +201,9 @@
                     </div>
                     <p class="shrink-0 text-[20px] font-semibold leading-none tracking-tight text-white" x-text="formatMoney(grandTotal())"></p>
                 </div>
+                <p class="mt-2 text-[12px] text-white/50" x-show="Number(order?.discount_amount || 0) > 0">
+                    Diskon <span x-text="discountLine()"></span>
+                </p>
                 <p class="mt-2 text-[12px] text-white/50" x-show="order?.points_value > 0">
                     Poin <span x-text="order?.points_redeemed || 0"></span> · potongan <span x-text="formatMoney(order?.points_value || 0)"></span>
                 </p>
@@ -307,6 +314,7 @@ function posApp() {
         extraCustomers: [],
         images: @json($productImages),
         placeholder: @json(asset('images/menu/placeholder.svg')),
+        discountCatalog: @json($discountCatalog),
         init() {
             window.addEventListener('online', () => { this.online = true; this.flushQueue(); });
             window.addEventListener('offline', () => { this.online = false; });
@@ -347,6 +355,26 @@ function posApp() {
         productMatch(name) { return !this.search || name.includes(this.search.toLowerCase()); },
         itemImage(item) { return item.image_url || this.images[item.product_id] || this.placeholder; },
         formatMoney(v) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v || 0); },
+        selectedDiscount() {
+            return (this.discountCatalog || []).find((d) => String(d.id) === String(this.discount_id)) || null;
+        },
+        discountLine() {
+            const amount = Number(this.order?.discount_amount || 0);
+            return amount > 0 ? '- ' + this.formatMoney(amount) : this.formatMoney(0);
+        },
+        discountHint() {
+            const promo = this.selectedDiscount();
+            if (!promo || !this.order) return '';
+            const amount = Number(this.order.discount_amount || 0);
+            const subtotal = Number(this.order.subtotal || 0);
+            if (promo.minimum > 0 && subtotal < promo.minimum) {
+                return 'Belum dapat diskon. Min. transaksi ' + this.formatMoney(promo.minimum);
+            }
+            if (amount > 0 && promo.maximum !== null && amount >= promo.maximum) {
+                return promo.value_label + ' · dipotong maks ' + this.formatMoney(promo.maximum);
+            }
+            return amount > 0 ? 'Potongan ' + promo.value_label : '';
+        },
         parseRupiah(value) {
             return Number(String(value ?? '').replace(/[^\d]/g, '')) || 0;
         },
