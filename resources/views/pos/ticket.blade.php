@@ -4,28 +4,35 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ strtoupper($station) }} · {{ $order->order_number }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=fira-sans:400,500,600,700&display=swap" rel="stylesheet">
+    <style>
+        @font-face { font-family: 'Juana'; src: url('/fonts/juana/Juana-Medium.otf') format('opentype'); font-weight: 500; font-style: normal; font-display: swap; }
+        @font-face { font-family: 'Juana'; src: url('/fonts/juana/Juana-Bold.otf') format('opentype'); font-weight: 700; font-style: normal; font-display: swap; }
+    </style>
     <style>
         :root {
-            --brand: #e02020;
-            --brand-soft: #fde8e8;
+            --brand: #6f1715;
+            --brand-soft: #f3e6e4;
             --ink: #171717;
             --heading: #111111;
             --muted: #737373;
             --line: #e5e5e5;
-            --canvas: #f5f5f5;
+            --canvas: #efe7de;
         }
 
         * { box-sizing: border-box; }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Juana', ui-serif, Georgia, serif;
+        }
 
         body {
             margin: 0;
             min-height: 100vh;
             background: var(--canvas);
             color: var(--ink);
-            font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+            font-family: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -73,13 +80,13 @@
             gap: 16px;
             padding: 22px 28px;
             background:
-                radial-gradient(520px 140px at 100% 0%, rgba(224, 32, 32, 0.42), transparent 58%),
+                radial-gradient(520px 140px at 100% 0%, rgba(111, 23, 21, 0.42), transparent 58%),
                 linear-gradient(180deg, #171717 0%, #0a0a0a 100%);
             color: #fff;
         }
 
         .hero img {
-            height: 42px;
+            height: 72px;
             width: auto;
             object-fit: contain;
         }
@@ -345,7 +352,7 @@
 
     <article class="sheet">
         <header class="hero">
-            <img src="{{ asset('images/logo/logo-white.png') }}" alt="Rasa POS">
+            <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS">
             <div class="hero-copy">
                 <p class="hero-kicker">{{ $stationKicker }}</p>
                 <h1 class="hero-title">{{ $stationLabel }}</h1>

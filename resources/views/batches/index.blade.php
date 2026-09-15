@@ -33,7 +33,7 @@
                     <p class="stat-value">{{ number_format($stats['expired']) }}</p>
                     <p class="stat-hint">Sudah lewat tanggal</p>
                 </div>
-                <span class="stat-icon bg-[#fde8e8] text-brand">
+                <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
             </div>

@@ -2,7 +2,7 @@
 @section('title', 'Password Baru')
 @section('content')
 <div class="login-form">
-    <img src="{{ asset('images/logo/logo.png') }}" alt="Rasa POS" class="login-form-logo">
+    <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="login-form-logo">
     <h2 class="mt-6 text-xl font-semibold text-heading">Buat password baru</h2>
     <form method="POST" action="{{ route('password.update') }}" class="mt-8 space-y-4">
         @csrf

@@ -48,7 +48,7 @@
                     <p class="stat-value">{{ number_format($stats['email']) }}</p>
                     <p class="stat-hint">Alamat email tercatat</p>
                 </div>
-                <span class="stat-icon bg-[#fde8e8] text-brand">
+                <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16v12H4zM4 8l8 6 8-6"/></svg>
                 </span>
             </div>

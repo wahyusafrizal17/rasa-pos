@@ -7,7 +7,7 @@
                 <span class="font-medium text-[#d97706]">Mode offline — order akan dikirim saat koneksi kembali.</span>
             </div>
             @if ($lowStock->isNotEmpty())
-                <div class="border-b border-[#fde8e8] bg-[#fff6f6] px-3 py-2 text-xs text-brand">
+                <div class="border-b border-brand-soft bg-brand-soft px-3 py-2 text-xs text-brand">
                     Stok menipis: {{ $lowStockNames }}@if ($lowStockExtra > 0) +{{ $lowStockExtra }} lagi @endif
                 </div>
             @endif
@@ -258,7 +258,7 @@
             </div>
             <div class="mt-4 max-h-80 space-y-2 overflow-y-auto">
                 <template x-for="held in visibleHeld()" :key="held.id">
-                    <button type="button" class="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-4 py-3 text-left transition hover:border-brand hover:bg-[#fff6f6]" @click="recall(held.id)">
+                    <button type="button" class="flex w-full items-center justify-between gap-3 rounded-xl border border-line px-4 py-3 text-left transition hover:border-brand hover:bg-brand-soft" @click="recall(held.id)">
                         <span>
                             <span class="block text-sm font-semibold text-heading" x-text="held.order_number"></span>
                             <span class="mt-0.5 block text-xs text-muted" x-text="heldMeta(held)"></span>

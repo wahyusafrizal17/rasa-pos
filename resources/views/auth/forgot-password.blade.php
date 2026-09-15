@@ -2,7 +2,7 @@
 @section('title', 'Lupa Password')
 @section('content')
 <div class="login-form">
-    <img src="{{ asset('images/logo/logo.png') }}" alt="Rasa POS" class="login-form-logo">
+    <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="login-form-logo">
     <h2 class="mt-6 text-xl font-semibold text-heading">Reset password</h2>
     <p class="mt-2 text-sm text-muted">Masukkan email akun Anda. Link reset akan dikirim jika email terdaftar.</p>
     @if (session('status'))

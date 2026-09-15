@@ -38,7 +38,7 @@
                     <p class="stat-value">{{ number_format($stats['out']) }}</p>
                     <p class="stat-hint">Tidak ada stok</p>
                 </div>
-                <span class="stat-icon bg-[#fde8e8] text-brand">
+                <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                 </span>
             </div>

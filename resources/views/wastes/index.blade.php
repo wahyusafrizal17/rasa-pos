@@ -39,7 +39,7 @@
                     <p class="stat-value">{{ number_format($stats['expired']) }}</p>
                     <p class="stat-hint">Alasan kadaluarsa</p>
                 </div>
-                <span class="stat-icon bg-[#fde8e8] text-brand">
+                <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.3 4.2L2.6 17.5A2 2 0 004.3 20.5h15.4a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z"/></svg>
                 </span>
             </div>

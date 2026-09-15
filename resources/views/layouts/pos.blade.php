@@ -14,7 +14,7 @@
     <div class="flex h-screen flex-col">
         <header class="flex h-14 shrink-0 items-center justify-between border-b border-line bg-white px-4">
             <div class="flex items-center gap-3">
-                <img src="{{ asset('images/logo/logo.png') }}" alt="Rasa POS" class="h-11 w-auto max-w-[180px] object-contain">
+                <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="h-14 w-auto max-w-[180px] object-contain">
             </div>
             <div class="flex items-center gap-2.5">
                 @if (auth()->user()->canSwitchOutlet())

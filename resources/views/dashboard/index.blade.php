@@ -170,7 +170,7 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const palette = ['#111111', '#E02020', '#525252', '#F04343', '#A3A3A3', '#8B1414', '#171717', '#FDE8E8'];
+        const palette = ['#111111', '#6f1715', '#525252', '#8a1c1a', '#A3A3A3', '#591211', '#171717', '#efe7de'];
         const grid = { color: 'rgba(17,17,17,.08)' };
         const make = (id, type, labels, data, extra = {}) => new window.Chart(document.getElementById(id), {
             type,
@@ -178,13 +178,13 @@
                 labels,
                 datasets: [{
                     data,
-                    backgroundColor: type === 'line' ? 'rgba(224,32,32,.12)' : palette,
-                    borderColor: '#E02020',
+                    backgroundColor: type === 'line' ? 'rgba(111,23,21,.12)' : palette,
+                    borderColor: '#6f1715',
                     fill: type === 'line',
                     tension: .4,
                     borderWidth: type === 'line' ? 3 : 0,
                     borderRadius: 8,
-                    pointBackgroundColor: '#E02020',
+                    pointBackgroundColor: '#6f1715',
                     pointRadius: type === 'line' ? 3 : 0,
                 }]
             },

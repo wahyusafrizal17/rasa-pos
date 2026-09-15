@@ -47,7 +47,7 @@
                     <p class="stat-value">{{ number_format($stats['inactive']) }}</p>
                     <p class="stat-hint">Akun dinonaktifkan</p>
                 </div>
-                <span class="stat-icon bg-[#fde8e8] text-brand">
+                <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                 </span>
             </div>
@@ -118,7 +118,7 @@
                                 <td class="col-no">{{ $users->firstItem() + $loop->index }}</td>
                                 <td>
                                     <div class="flex items-center gap-3">
-                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fde8e8] text-sm font-semibold text-brand">{{ $user->initials() }}</span>
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-sm font-semibold text-brand">{{ $user->initials() }}</span>
                                         <button type="button" class="text-left font-semibold hover:underline" @click="openView({{ Js::from($row) }})">{{ $user->name }}</button>
                                     </div>
                                 </td>
@@ -177,7 +177,7 @@
                 <div class="crud-modal-body">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-start gap-3">
-                            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#fde8e8] text-base font-semibold text-brand" x-text="viewing?.initials || 'U'"></span>
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-soft text-base font-semibold text-brand" x-text="viewing?.initials || 'U'"></span>
                             <div>
                                 <h3 class="text-lg font-semibold text-heading" x-text="viewing?.name || 'Detail Pengguna'"></h3>
                                 <p class="mt-1 text-[13px] text-muted">
