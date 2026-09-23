@@ -87,22 +87,15 @@ class Inventory extends Model
             'category_label' => $this->product?->category?->name ?? '—',
             'unit_code' => $unit,
             'quantity' => $qty,
-            'quantity_label' => $this->formatQty($qty, $unit),
+            'quantity_label' => qty_label($qty, $unit),
             'reserved' => $reserved,
-            'reserved_label' => $this->formatQty($reserved, $unit),
+            'reserved_label' => qty_label($reserved, $unit),
             'available' => $available,
-            'available_label' => $this->formatQty($available, $unit),
+            'available_label' => qty_label($available, $unit),
             'reorder_level' => $reorder,
-            'reorder_label' => $this->formatQty($reorder, $unit),
+            'reorder_label' => qty_label($reorder, $unit),
             'status' => $this->stockStatus(),
             'status_label' => $this->statusLabel(),
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

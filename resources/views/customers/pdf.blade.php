@@ -21,7 +21,6 @@
                 <th>Nama</th>
                 <th>No. HP</th>
                 <th>Email</th>
-                <th>Level</th>
                 <th>Alamat</th>
             </tr>
         </thead>
@@ -33,7 +32,6 @@
                     <td>{{ $customer->name }}</td>
                     <td>{{ $customer->phone ?: '—' }}</td>
                     <td>{{ $customer->email ?: '—' }}</td>
-                    <td>{{ $customer->membership_level?->label() }}</td>
                     <td>{{ $customer->address ?: '—' }}</td>
                 </tr>
             @endforeach

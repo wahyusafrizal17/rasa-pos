@@ -13,8 +13,6 @@ class SettingController extends Controller
     protected array $keys = [
         'tax_rate',
         'service_charge',
-        'points_earn_per_amount',
-        'points_redeem_value',
         'company_name',
         'receipt_footer',
         'qz_printer',
@@ -23,8 +21,6 @@ class SettingController extends Controller
     protected array $defaults = [
         'tax_rate' => 11,
         'service_charge' => 0,
-        'points_earn_per_amount' => 10000,
-        'points_redeem_value' => 100,
         'company_name' => 'Rasa',
         'receipt_footer' => 'Terima kasih',
         'qz_printer' => '',
@@ -44,7 +40,7 @@ class SettingController extends Controller
             'stats' => [
                 'tax_rate' => (float) $settings['tax_rate'],
                 'service_charge' => (float) $settings['service_charge'],
-                'points_earn_per_amount' => (int) $settings['points_earn_per_amount'],
+                'company_name' => (string) $settings['company_name'],
             ],
         ]);
     }
@@ -55,16 +51,12 @@ class SettingController extends Controller
         $data = $request->validate([
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'service_charge' => ['nullable', 'numeric', 'min:0'],
-            'points_earn_per_amount' => ['required', 'integer', 'min:1'],
-            'points_redeem_value' => ['required', 'integer', 'min:1'],
             'company_name' => ['nullable', 'string', 'max:150'],
             'receipt_footer' => ['nullable', 'string', 'max:255'],
             'qz_printer' => ['nullable', 'string', 'max:120'],
         ], [
             'tax_rate.required' => 'Tarif pajak wajib diisi.',
             'tax_rate.max' => 'Tarif pajak maksimal 100%.',
-            'points_earn_per_amount.required' => 'Nominal poin wajib diisi.',
-            'points_redeem_value.required' => 'Nilai tukar poin wajib diisi.',
         ]);
 
         foreach ($data as $key => $value) {

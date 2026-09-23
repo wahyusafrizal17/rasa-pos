@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\ProductType;
 use App\Enums\TableStatus;
 use App\Models\DiningTable;
+use App\Models\Product;
 use App\Models\Unit;
 use App\Services\OrderService;
 use App\Services\ProductionService;
@@ -49,7 +51,17 @@ class OperationsGapTest extends TestCase
             'order_type' => OrderType::DineIn->value,
         ]);
         $first = $orders->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
-        $second = $orders->addItem($order->fresh(), ['product_id' => $this->sellableProduct->id, 'quantity' => 2]);
+        $other = Product::query()->create([
+            'sku' => 'PRD-SPLIT-2',
+            'name' => 'Es Teh',
+            'category_id' => $this->foodCategory->id,
+            'unit_id' => $this->unitPcs->id,
+            'type' => ProductType::Finished,
+            'price' => 8000,
+            'is_sellable' => true,
+            'is_active' => true,
+        ]);
+        $second = $orders->addItem($order->fresh(), ['product_id' => $other->id, 'quantity' => 2]);
 
         $split = app(TableService::class)->split($this->tableA->id, $this->tableB->id, [$second->id]);
 
@@ -59,26 +71,6 @@ class OperationsGapTest extends TestCase
         $this->assertFalse($order->fresh()->items->contains('id', $second->id));
         $this->assertSame(TableStatus::Occupied, $this->tableA->fresh()->status);
         $this->assertSame(TableStatus::Occupied, $this->tableB->fresh()->status);
-    }
-
-    public function test_apply_points_from_pos_route(): void
-    {
-        $this->actingAsAtOutlet($this->cashier);
-        $this->customer->update(['points' => 200]);
-
-        $orders = app(OrderService::class);
-        $order = $orders->createDraft([
-            'outlet_id' => $this->outlet->id,
-            'customer_id' => $this->customer->id,
-            'order_type' => OrderType::Pickup->value,
-        ]);
-        $orders->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 2]);
-
-        $this->postJson(route('pos.points', $order), ['points' => 100])
-            ->assertOk()
-            ->assertJsonPath('points_redeemed', 100);
-
-        $this->assertEquals(10000, (float) $order->fresh()->points_value);
     }
 
     public function test_captain_can_checkout_and_send_to_kitchen(): void
@@ -204,17 +196,6 @@ class OperationsGapTest extends TestCase
             ->assertJsonPath('status', 'held');
     }
 
-    public function test_pos_can_register_member(): void
-    {
-        $this->actingAsAtOutlet($this->cashier)
-            ->postJson(route('pos.customers.store'), [
-                'name' => 'Siti Member',
-                'phone' => '0812000111',
-            ])
-            ->assertCreated()
-            ->assertJsonPath('name', 'Siti Member');
-    }
-
     public function test_merge_moves_items_and_frees_source_table(): void
     {
         $this->actingAsAtOutlet($this->cashier);
@@ -310,5 +291,118 @@ class OperationsGapTest extends TestCase
             'target_id' => $this->tableB->id,
             'item_ids' => [],
         ])->assertSessionHasErrors();
+    }
+
+    public function test_adding_the_same_product_increments_qty(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $orders = app(OrderService::class);
+        $order = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+
+        $this->postJson(route('pos.items.store', $order), [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 1,
+        ])->assertOk();
+        $this->postJson(route('pos.items.store', $order), [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 1,
+        ])->assertOk();
+
+        $items = $order->fresh()->items()->whereNull('parent_id')->get();
+        $this->assertCount(1, $items);
+        $this->assertEquals(2, (float) $items->first()->quantity);
+    }
+
+    public function test_pos_adds_selected_addons_under_the_parent_item(): void
+    {
+        $addon = $this->makeAddonProduct();
+        $this->sellableProduct->addons()->attach($addon->id);
+        $this->actingAsAtOutlet($this->cashier);
+        $orders = app(OrderService::class);
+        $order = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+
+        $this->postJson(route('pos.items.store', $order), [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 2,
+            'addon_ids' => [$addon->id],
+        ])->assertOk();
+
+        $order->refresh()->load('items');
+        $parent = $order->items->firstWhere('product_id', $this->sellableProduct->id);
+        $child = $order->items->firstWhere('product_id', $addon->id);
+
+        $this->assertNotNull($parent);
+        $this->assertNotNull($child);
+        $this->assertSame($parent->id, $child->parent_id);
+        $this->assertEquals(2, (float) $child->quantity);
+        $this->assertEquals(35000 * 2 + 5000 * 2, (float) $order->subtotal);
+
+        $this->deleteJson(route('pos.items.destroy', [$order, $parent]))->assertOk();
+        $this->assertCount(0, $order->fresh()->items);
+    }
+
+    public function test_pos_ignores_addons_not_linked_to_the_product(): void
+    {
+        $addon = $this->makeAddonProduct();
+        $this->actingAsAtOutlet($this->cashier);
+        $orders = app(OrderService::class);
+        $order = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+
+        $this->postJson(route('pos.items.store', $order), [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 1,
+            'addon_ids' => [$addon->id],
+        ])->assertOk();
+
+        $this->assertNull($order->fresh()->items->firstWhere('product_id', $addon->id));
+    }
+
+    public function test_pos_only_offers_addons_assigned_to_each_menu(): void
+    {
+        $addon = $this->makeAddonProduct();
+        $this->sellableProduct->addons()->attach($addon->id);
+        $this->actingAsAtOutlet($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertViewHas('productAddons', function ($map) use ($addon) {
+                $forBurger = collect($map[(string) $this->sellableProduct->id] ?? []);
+
+                return $forBurger->pluck('id')->contains($addon->id);
+            });
+    }
+
+    public function test_pos_menu_hides_addon_products(): void
+    {
+        $addon = $this->makeAddonProduct();
+        $this->actingAsAtOutlet($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertDontSee('addProduct('.$addon->id, false);
+    }
+
+    protected function makeAddonProduct(): Product
+    {
+        return Product::query()->create([
+            'sku' => 'ADD-TEST-EGG',
+            'name' => 'Extra Telur',
+            'category_id' => $this->foodCategory->id,
+            'unit_id' => $this->unitPcs->id,
+            'type' => ProductType::Finished,
+            'price' => 5000,
+            'is_sellable' => true,
+            'is_stockable' => false,
+            'is_addon' => true,
+            'is_active' => true,
+            'station' => 'kitchen',
+        ]);
     }
 }

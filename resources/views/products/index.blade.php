@@ -19,6 +19,8 @@
             'price' => old('price', data_get($focusPayload, 'price', 0)),
             'cost' => old('cost', data_get($focusPayload, 'cost', 0)),
             'is_sellable' => old('is_sellable', data_get($focusPayload, 'is_sellable', true) ? '1' : '0') !== '0',
+            'is_addon' => old('is_addon', data_get($focusPayload, 'is_addon', false) ? '1' : '0') !== '0',
+            'addon_ids' => array_map('strval', (array) old('addon_ids', data_get($focusPayload, 'addon_ids', []))),
             'is_stockable' => old('is_stockable', data_get($focusPayload, 'is_stockable', true) ? '1' : '0') !== '0',
             'is_active' => old('is_active', data_get($focusPayload, 'is_active', true) ? '1' : '0') !== '0',
             'minimum_stock' => old('minimum_stock', data_get($focusPayload, 'minimum_stock', 0)),
@@ -376,6 +378,11 @@
                                         Dapat dijual
                                     </label>
                                     <label class="flex items-center gap-2.5 text-sm">
+                                        <input type="hidden" name="is_addon" :value="form.is_addon ? 1 : 0">
+                                        <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_addon">
+                                        Add-on
+                                    </label>
+                                    <label class="flex items-center gap-2.5 text-sm">
                                         <input type="hidden" name="is_stockable" :value="form.is_stockable ? 1 : 0">
                                         <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_stockable">
                                         Pantau stok
@@ -385,6 +392,22 @@
                                         <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_active">
                                         Aktif
                                     </label>
+                                </div>
+                                <div class="sm:col-span-2" x-show="!form.is_addon" x-cloak>
+                                    <label class="label">Add-on untuk menu ini</label>
+                                    <div class="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-[#fafafa] p-2">
+                                        @forelse ($addonProducts as $addon)
+                                            <label class="flex items-center justify-between gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-white">
+                                                <span class="flex items-center gap-2.5">
+                                                    <input type="checkbox" name="addon_ids[]" value="{{ $addon->id }}" class="rounded border-line text-brand focus:ring-brand/20" x-model="form.addon_ids">
+                                                    {{ $addon->name }}
+                                                </span>
+                                                <span class="text-muted">{{ money($addon->price) }}</span>
+                                            </label>
+                                        @empty
+                                            <p class="px-2 py-3 text-[13px] text-muted">Tandai produk sebagai Add-on dulu, lalu pilih di sini.</p>
+                                        @endforelse
+                                    </div>
                                 </div>
 
                                 <p class="sm:col-span-2 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Varian</p>
@@ -457,6 +480,8 @@
                 price: 0,
                 cost: 0,
                 is_sellable: true,
+                is_addon: false,
+                addon_ids: [],
                 is_stockable: true,
                 is_active: true,
                 minimum_stock: 0,

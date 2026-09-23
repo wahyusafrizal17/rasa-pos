@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Enums\DiscountType;
-use App\Enums\MembershipLevel;
 use App\Enums\OrderChannel;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
@@ -19,7 +18,6 @@ use App\Models\Bom;
 use App\Models\Bundle;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\CustomerPoint;
 use App\Models\DiningTable;
 use App\Models\Discount;
 use App\Models\Inventory;
@@ -31,7 +29,6 @@ use App\Models\Outlet;
 use App\Models\Payment;
 use App\Models\Printer;
 use App\Models\Product;
-use App\Models\Reward;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\TableReservation;
@@ -60,7 +57,6 @@ class DemoDataSeeder extends Seeder
         $this->attachCatalogToOutlets($outlets);
         $tables = $this->seedTables($outlets);
         $customers = $this->seedCustomers();
-        $this->seedRewards();
         $this->seedInventories($outlets);
         $this->seedBoms();
         $this->seedBundle($outlets);
@@ -177,8 +173,6 @@ class DemoDataSeeder extends Seeder
         $settings = [
             'tax_rate' => '11',
             'service_charge' => '0',
-            'points_earn_per_amount' => '10000',
-            'points_redeem_value' => '100',
             'company_name' => 'Rasa',
             'receipt_footer' => 'Terima kasih',
         ];
@@ -256,15 +250,15 @@ class DemoDataSeeder extends Seeder
     protected function seedCustomers()
     {
         $rows = [
-            ['code' => 'CUS-001', 'name' => 'Andi Wijaya', 'phone' => '081234567001', 'email' => 'andi@example.com', 'birthday' => '1990-03-12', 'gender' => 'male', 'membership_level' => MembershipLevel::Gold, 'points' => 420, 'total_transaction' => 6200000],
-            ['code' => 'CUS-002', 'name' => 'Siti Rahma', 'phone' => '081234567002', 'email' => 'siti@example.com', 'birthday' => '1994-07-21', 'gender' => 'female', 'membership_level' => MembershipLevel::Silver, 'points' => 180, 'total_transaction' => 1850000],
-            ['code' => 'CUS-003', 'name' => 'Budi Santoso', 'phone' => '081234567003', 'email' => 'budi@example.com', 'birthday' => '1988-11-02', 'gender' => 'male', 'membership_level' => MembershipLevel::Regular, 'points' => 40, 'total_transaction' => 320000],
-            ['code' => 'CUS-004', 'name' => 'Maya Putri', 'phone' => '081234567004', 'email' => 'maya@example.com', 'birthday' => '1996-01-18', 'gender' => 'female', 'membership_level' => MembershipLevel::Gold, 'points' => 510, 'total_transaction' => 7800000],
-            ['code' => 'CUS-005', 'name' => 'Rudi Hartono', 'phone' => '081234567005', 'email' => 'rudi@example.com', 'birthday' => '1992-09-30', 'gender' => 'male', 'membership_level' => MembershipLevel::Silver, 'points' => 150, 'total_transaction' => 1420000],
-            ['code' => 'CUS-006', 'name' => 'Dewi Lestari', 'phone' => '081234567006', 'email' => 'dewi@example.com', 'birthday' => '1998-05-08', 'gender' => 'female', 'membership_level' => MembershipLevel::Regular, 'points' => 20, 'total_transaction' => 185000],
-            ['code' => 'CUS-007', 'name' => 'Farhan Malik', 'phone' => '081234567007', 'email' => 'farhan@example.com', 'birthday' => '1985-12-25', 'gender' => 'male', 'membership_level' => MembershipLevel::Gold, 'points' => 260, 'total_transaction' => 5400000],
-            ['code' => 'CUS-008', 'name' => 'Nina Kusuma', 'phone' => '081234567008', 'email' => 'nina@example.com', 'birthday' => '1993-04-14', 'gender' => 'female', 'membership_level' => MembershipLevel::Silver, 'points' => 95, 'total_transaction' => 1100000],
-            ['code' => 'CUS-009', 'name' => 'Agus Pratama', 'phone' => '081234567009', 'email' => 'agus@example.com', 'birthday' => '1991-08-03', 'gender' => 'male', 'membership_level' => MembershipLevel::Regular, 'points' => 10, 'total_transaction' => 95000],
+            ['code' => 'CUS-001', 'name' => 'Andi Wijaya', 'phone' => '081234567001', 'email' => 'andi@example.com', 'birthday' => '1990-03-12', 'gender' => 'male', 'total_transaction' => 6200000],
+            ['code' => 'CUS-002', 'name' => 'Siti Rahma', 'phone' => '081234567002', 'email' => 'siti@example.com', 'birthday' => '1994-07-21', 'gender' => 'female', 'total_transaction' => 1850000],
+            ['code' => 'CUS-003', 'name' => 'Budi Santoso', 'phone' => '081234567003', 'email' => 'budi@example.com', 'birthday' => '1988-11-02', 'gender' => 'male', 'total_transaction' => 320000],
+            ['code' => 'CUS-004', 'name' => 'Maya Putri', 'phone' => '081234567004', 'email' => 'maya@example.com', 'birthday' => '1996-01-18', 'gender' => 'female', 'total_transaction' => 7800000],
+            ['code' => 'CUS-005', 'name' => 'Rudi Hartono', 'phone' => '081234567005', 'email' => 'rudi@example.com', 'birthday' => '1992-09-30', 'gender' => 'male', 'total_transaction' => 1420000],
+            ['code' => 'CUS-006', 'name' => 'Dewi Lestari', 'phone' => '081234567006', 'email' => 'dewi@example.com', 'birthday' => '1998-05-08', 'gender' => 'female', 'total_transaction' => 185000],
+            ['code' => 'CUS-007', 'name' => 'Farhan Malik', 'phone' => '081234567007', 'email' => 'farhan@example.com', 'birthday' => '1985-12-25', 'gender' => 'male', 'total_transaction' => 5400000],
+            ['code' => 'CUS-008', 'name' => 'Nina Kusuma', 'phone' => '081234567008', 'email' => 'nina@example.com', 'birthday' => '1993-04-14', 'gender' => 'female', 'total_transaction' => 1100000],
+            ['code' => 'CUS-009', 'name' => 'Agus Pratama', 'phone' => '081234567009', 'email' => 'agus@example.com', 'birthday' => '1991-08-03', 'gender' => 'male', 'total_transaction' => 95000],
         ];
 
         return collect($rows)->map(function (array $row) {
@@ -277,22 +271,6 @@ class DemoDataSeeder extends Seeder
                 ],
             );
         });
-    }
-
-    protected function seedRewards(): void
-    {
-        $rewards = [
-            ['name' => 'Free Iced Tea', 'description' => 'Gratis Iced Lemon Tea', 'points_required' => 80, 'value' => 15000],
-            ['name' => 'Diskon 20K', 'description' => 'Potongan Rp 20.000', 'points_required' => 150, 'value' => 20000],
-            ['name' => 'Free Dessert', 'description' => 'Gratis dessert pilihan', 'points_required' => 200, 'value' => 32000],
-        ];
-
-        foreach ($rewards as $reward) {
-            Reward::query()->updateOrCreate(
-                ['name' => $reward['name']],
-                $reward + ['is_active' => true],
-            );
-        }
     }
 
     /**
@@ -457,9 +435,30 @@ class DemoDataSeeder extends Seeder
             ],
         );
 
+        $bogo = Discount::query()->updateOrCreate(
+            ['code' => 'BOGO-BURGER'],
+            [
+                'name' => 'Buy 1 Get 1 Burger',
+                'type' => DiscountType::Bogo,
+                'scope' => 'item',
+                'value' => 0,
+                'buy_qty' => 1,
+                'get_qty' => 1,
+                'minimum_transaction' => 0,
+                'maximum_discount' => null,
+                'is_active' => true,
+            ],
+        );
+        $bogo->items()->delete();
+        $burgerId = Product::query()->where('name', 'Chicken Burger')->value('id');
+        if ($burgerId) {
+            $bogo->items()->create(['product_id' => $burgerId]);
+        }
+
         $ids = collect($outlets)->pluck('id');
         $weekday->outlets()->sync($ids);
         $happyHour->outlets()->sync($ids);
+        $bogo->outlets()->sync($ids);
     }
 
     protected function seedPrinters(Outlet $bandung): void
@@ -630,24 +629,6 @@ class DemoDataSeeder extends Seeder
                 if ($customer) {
                     $customer->increment('total_transaction', $grand);
                     $customer->update(['last_transaction_at' => $order->completed_at]);
-
-                    $points = (int) floor($grand / 10000);
-                    if ($points > 0) {
-                        $balance = (int) $customer->points + $points;
-                        $customer->update(['points' => $balance]);
-                        CustomerPoint::query()->create([
-                            'customer_id' => $customer->id,
-                            'order_id' => $order->id,
-                            'user_id' => $user->id,
-                            'type' => 'earn',
-                            'points' => $points,
-                            'balance_after' => $balance,
-                            'reason' => 'Pembelian '.$order->order_number,
-                            'created_at' => $order->completed_at,
-                            'updated_at' => $order->completed_at,
-                        ]);
-                    }
-                    $customer->refreshMembership();
                 }
 
                 $index++;

@@ -16,7 +16,7 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.view'), 403);
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
-        $query = Product::query()->with(['category', 'unit', 'variants']);
+        $query = Product::query()->with(['category', 'unit', 'variants', 'addons']);
 
         if (filled($filters['sku'] ?? null)) {
             $query->where('sku', 'like', '%'.$filters['sku'].'%');
@@ -37,7 +37,7 @@ class ProductController extends Controller
         }
 
         $focusProduct = $request->filled('product')
-            ? Product::query()->with(['category', 'unit', 'variants'])->find($request->integer('product'))
+            ? Product::query()->with(['category', 'unit', 'variants', 'addons'])->find($request->integer('product'))
             : null;
 
         return view('products.index', [
@@ -45,6 +45,7 @@ class ProductController extends Controller
             'filters' => $filters,
             'categories' => Category::query()->orderBy('name')->get(),
             'units' => Unit::query()->orderBy('name')->get(),
+            'addonProducts' => Product::query()->where('is_addon', true)->orderBy('name')->get(),
             'stats' => [
                 'total' => Product::query()->count(),
                 'sellable' => Product::query()->where('is_sellable', true)->where('is_active', true)->count(),
@@ -66,6 +67,7 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.manage'), 403);
         $product = Product::query()->create($this->payload($request));
         $this->syncVariants($product, $request->input('variants', []));
+        $this->syncAddons($product, $request);
 
         return redirect()->route('products.index')->with('success', 'Produk ditambahkan.');
     }
@@ -82,6 +84,7 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.manage'), 403);
         $product->update($this->payload($request, $product));
         $this->syncVariants($product, $request->input('variants', []));
+        $this->syncAddons($product, $request);
 
         return redirect()->route('products.index')->with('success', 'Produk diperbarui.');
     }
@@ -97,7 +100,7 @@ class ProductController extends Controller
     protected function payload(Request $request, ?Product $product = null): array
     {
         $data = $this->validated($request, $product?->id);
-        unset($data['image_file'], $data['variants']);
+        unset($data['image_file'], $data['variants'], $data['addon_ids']);
 
         if ($request->hasFile('image_file')) {
             $data['image'] = $request->file('image_file')->store('products', 'public');
@@ -133,6 +136,22 @@ class ProductController extends Controller
         $product->variants()->whereNotIn('id', $keep ?: [0])->delete();
     }
 
+    protected function syncAddons(Product $product, Request $request): void
+    {
+        if ($product->is_addon) {
+            $product->addons()->sync([]);
+
+            return;
+        }
+
+        $ids = Product::query()
+            ->where('is_addon', true)
+            ->whereIn('id', $request->input('addon_ids', []))
+            ->pluck('id');
+
+        $product->addons()->sync($ids);
+    }
+
     protected function validated(Request $request, ?int $id = null): array
     {
         return $request->validate([
@@ -148,6 +167,7 @@ class ProductController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'cost' => ['nullable', 'numeric', 'min:0'],
             'is_sellable' => ['sometimes', 'boolean'],
+            'is_addon' => ['sometimes', 'boolean'],
             'is_stockable' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
             'minimum_stock' => ['nullable', 'numeric', 'min:0'],
@@ -155,6 +175,8 @@ class ProductController extends Controller
             'maximum_stock' => ['nullable', 'numeric', 'min:0'],
             'station' => ['nullable', 'in:kitchen,bar,cashier'],
             'prep_minutes' => ['nullable', 'integer', 'min:0'],
+            'addon_ids' => ['nullable', 'array'],
+            'addon_ids.*' => ['integer', 'exists:products,id'],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['nullable'],
             'variants.*.name' => ['nullable', 'string', 'max:80'],
@@ -169,6 +191,7 @@ class ProductController extends Controller
             'price.required' => 'Harga jual wajib diisi.',
         ]) + [
             'is_sellable' => $request->boolean('is_sellable'),
+            'is_addon' => $request->boolean('is_addon'),
             'is_stockable' => $request->boolean('is_stockable'),
             'is_active' => $request->boolean('is_active'),
         ];

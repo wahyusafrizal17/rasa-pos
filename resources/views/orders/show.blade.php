@@ -131,7 +131,7 @@
                                 <tr class="{{ $itemDone ? 'item-ready' : 'item-wait' }}">
                                     <td class="col-no">{{ $loop->iteration }}</td>
                                     <td>
-                                        <p class="font-semibold">{{ $item->name }}</p>
+                                        <p class="font-semibold">{{ $item->parent_id ? '+ ' : '' }}{{ $item->name }}</p>
                                         @if ($item->notes)
                                             <p class="text-xs text-muted">{{ $item->notes }}</p>
                                         @endif
@@ -217,7 +217,6 @@
                     <div class="flex justify-between text-muted"><span>Diskon {{ $order->discount?->name }}</span><span class="font-medium {{ $order->discount_amount > 0 ? 'text-[#ff9f43]' : 'text-heading' }}">{{ money($order->discount_amount) }}</span></div>
                     <div class="flex justify-between text-muted"><span>Pajak</span><span class="font-medium text-heading">{{ money($order->tax_amount) }}</span></div>
                     <div class="flex justify-between text-muted"><span>Service</span><span class="font-medium text-heading">{{ money($order->service_charge) }}</span></div>
-                    <div class="flex justify-between text-muted"><span>Poin</span><span class="font-medium text-heading">- {{ money($order->points_value) }}</span></div>
                     <div class="flex justify-between text-muted"><span>Terbayar</span><span class="font-medium text-heading">{{ money($order->paidTotal()) }}</span></div>
                     <div class="flex justify-between text-muted"><span>Sisa</span><span class="font-medium text-heading">{{ money($order->balanceDue()) }}</span></div>
                     <div class="flex items-center justify-between rounded-lg bg-heading px-4 py-3 text-white">

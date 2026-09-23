@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'sku', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
-    'price', 'cost', 'is_sellable', 'is_stockable', 'is_active',
+    'price', 'cost', 'is_sellable', 'is_addon', 'is_stockable', 'is_active',
     'minimum_stock', 'reorder_level', 'maximum_stock', 'station', 'prep_minutes',
 ])]
 class Product extends Model
@@ -27,6 +28,7 @@ class Product extends Model
             'price' => 'decimal:2',
             'cost' => 'decimal:2',
             'is_sellable' => 'boolean',
+            'is_addon' => 'boolean',
             'is_stockable' => 'boolean',
             'is_active' => 'boolean',
             'minimum_stock' => 'decimal:3',
@@ -48,6 +50,11 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public function addons(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'product_addon', 'product_id', 'addon_id');
     }
 
     public function inventories(): HasMany
@@ -128,7 +135,7 @@ class Product extends Model
 
     public function toModalArray(): array
     {
-        $this->loadMissing(['category', 'unit', 'variants']);
+        $this->loadMissing(['category', 'unit', 'variants', 'addons']);
 
         return [
             'id' => $this->id,
@@ -149,6 +156,8 @@ class Product extends Model
             'cost' => (float) ($this->cost ?? 0),
             'cost_label' => money($this->cost),
             'is_sellable' => (bool) $this->is_sellable,
+            'is_addon' => (bool) $this->is_addon,
+            'addon_ids' => $this->addons->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
             'is_stockable' => (bool) $this->is_stockable,
             'is_active' => (bool) $this->is_active,
             'status_label' => $this->statusLabel(),

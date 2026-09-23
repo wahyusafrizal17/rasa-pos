@@ -5,18 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Models\Bundle;
 use App\Models\Category;
-use App\Models\Customer;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Reward;
 use App\Services\DiscountService;
 use App\Services\EscPosPrinter;
 use App\Services\InventoryService;
 use App\Services\OrderService;
 use App\Services\PrinterRoutingService;
 use App\Services\TableService;
-use Illuminate\Support\Str;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,8 +27,8 @@ class PosController extends Controller
 
         $outletId = current_outlet_id();
 
-        $customers = Customer::query()->where('is_active', true)->orderBy('name')->limit(200)->get();
-        $products = Product::query()->sellable()->with(['category', 'unit', 'variants'])->orderBy('name')->get();
+        $products = Product::query()->sellable()->where('is_addon', false)->with(['category', 'unit', 'variants', 'addons'])->orderBy('name')->get();
+        $addons = Product::query()->sellable()->where('is_addon', true)->orderBy('name')->get();
         $lowStock = app(InventoryService::class)->lowStock($outletId);
 
         return view('pos.index', [
@@ -42,7 +39,6 @@ class PosController extends Controller
                 ->get(),
             'products' => $products,
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
-            'customers' => $customers,
             'bundles' => Bundle::query()
                 ->where('is_active', true)
                 ->with(['product', 'items.product', 'outlets'])
@@ -57,21 +53,23 @@ class PosController extends Controller
                 'minimum' => (float) $discount->minimum_transaction,
                 'maximum' => $discount->maximum_discount !== null ? (float) $discount->maximum_discount : null,
             ])->values(),
-            'rewards' => Reward::query()->where('is_active', true)->orderBy('points_required')->get(),
             'heldOrders' => $this->heldOrdersQuery($outletId)
                 ->get()
                 ->map(fn (Order $order) => $this->heldOrderPayload($order))
                 ->values(),
-            'canRegisterCustomer' => $request->user()->hasPermission('customers.manage'),
             'lowStock' => $lowStock,
-            'pointsRedeemValue' => points_redeem_value(),
-            'customerOptions' => $customers->map(fn ($customer) => [
-                'id' => $customer->id,
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'points' => $customer->points,
-            ])->values(),
-            'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()]),
+            'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])
+                ->union($addons->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])),
+            'productAddons' => $products->mapWithKeys(fn ($product) => [
+                (string) $product->id => $product->addons
+                    ->filter(fn ($addon) => $addon->is_sellable && $addon->is_active)
+                    ->map(fn ($addon) => [
+                        'id' => $addon->id,
+                        'name' => $addon->name,
+                        'price' => (float) $addon->price,
+                    ])
+                    ->values(),
+            ]),
             'lowStockNames' => $lowStock->take(3)->pluck('name')->join(', '),
             'lowStockExtra' => max(0, $lowStock->count() - 3),
             'qzPrinter' => setting('qz_printer', ''),
@@ -107,6 +105,8 @@ class PosController extends Controller
             'bundle_id' => ['nullable', 'exists:bundles,id'],
             'quantity' => ['nullable', 'numeric', 'min:0.01'],
             'notes' => ['nullable', 'string', 'max:255'],
+            'addon_ids' => ['nullable', 'array'],
+            'addon_ids.*' => ['integer', 'exists:products,id'],
         ]);
 
         $orders->addItem($order, $data);
@@ -169,39 +169,6 @@ class PosController extends Controller
         return response()->json($order->load(['items.product', 'customer', 'table', 'discount']));
     }
 
-    public function points(Request $request, Order $order, OrderService $orders): JsonResponse
-    {
-        $data = $request->validate([
-            'points' => ['required', 'integer', 'min:0'],
-        ]);
-
-        return response()->json($orders->applyPoints($order, (int) $data['points']));
-    }
-
-    public function customer(Request $request, Order $order, OrderService $orders): JsonResponse
-    {
-        $data = $request->validate([
-            'customer_id' => ['nullable', 'exists:customers,id'],
-        ]);
-
-        return response()->json($orders->assignCustomer($order, $data['customer_id'] ?? null));
-    }
-
-    public function storeCustomer(Request $request): JsonResponse
-    {
-        abort_unless($request->user()->hasPermission('customers.manage'), 403);
-
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'email' => ['nullable', 'email'],
-        ]);
-        $data['code'] = 'CUS-'.strtoupper(Str::random(6));
-        $data['is_active'] = true;
-
-        return response()->json(Customer::query()->create($data), 201);
-    }
-
     public function submit(Request $request, Order $order, OrderService $orders, PrinterRoutingService $printers): JsonResponse
     {
         abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
@@ -240,7 +207,7 @@ class PosController extends Controller
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
 
         $data = $request->validate([
-            'method' => ['required', 'in:cash,card,qris,transfer,points'],
+            'method' => ['required', 'in:cash,card,qris,transfer'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'tendered' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],

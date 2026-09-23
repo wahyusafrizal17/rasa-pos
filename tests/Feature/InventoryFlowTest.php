@@ -140,4 +140,22 @@ class InventoryFlowTest extends TestCase
             ->where('reference_id', $completed->id)
             ->count());
     }
+
+    public function test_inventory_index_hides_trailing_stock_decimals(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+
+        Inventory::query()
+            ->where('outlet_id', $this->outlet->id)
+            ->where('product_id', $this->rawChicken->id)
+            ->update(['quantity' => 35, 'reserved_quantity' => 0]);
+
+        $this->get(route('inventory.index'))
+            ->assertOk()
+            ->assertSee('35 KG', false)
+            ->assertDontSee('35.00', false);
+
+        $this->assertSame('35 KG', qty_label(35.00, 'KG'));
+        $this->assertSame('0.05 KG', qty_label(0.05, 'KG'));
+    }
 }

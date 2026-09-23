@@ -81,6 +81,9 @@
     <div class="row"><span>Subtotal</span><span>{{ money($order->subtotal) }}</span></div>
     <div class="row"><span>Diskon</span><span>{{ money($order->discount_amount) }}</span></div>
     <div class="row"><span>Pajak</span><span>{{ money($order->tax_amount) }}</span></div>
+    @if ((float) $order->service_charge > 0)
+        <div class="row"><span>Service</span><span>{{ money($order->service_charge) }}</span></div>
+    @endif
     <div class="row total"><span>Total</span><span>{{ money($order->grand_total) }}</span></div>
     @foreach ($order->payments as $payment)
         <div class="row"><span>{{ $payment->method->label() }}</span><span>{{ money($payment->amount) }}</span></div>

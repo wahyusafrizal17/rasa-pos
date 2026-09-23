@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DiscountType;
 use App\Enums\OrderType;
 use App\Enums\TableStatus;
+use App\Models\Discount;
 use App\Services\DiscountService;
-use App\Services\LoyaltyService;
 use App\Services\OrderService;
 use App\Services\TableService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,12 +61,25 @@ class LoyaltyDiscountTableTest extends TestCase
         $this->assertEquals(20000, $service->calculate($this->weekdayPromo, 300000));
     }
 
-    public function test_loyalty_redeem_value_uses_configured_rate(): void
+    public function test_bogo_discounts_cheapest_eligible_units(): void
     {
-        $service = app(LoyaltyService::class);
+        $promo = Discount::query()->create([
+            'name' => 'Buy 1 Get 1 Burger',
+            'type' => DiscountType::Bogo,
+            'scope' => 'item',
+            'value' => 0,
+            'buy_qty' => 1,
+            'get_qty' => 1,
+            'is_active' => true,
+        ]);
+        $promo->items()->create(['product_id' => $this->sellableProduct->id]);
 
-        $this->assertEquals(10000, $service->redeemValue(100));
-        $this->assertEquals(15000, $service->redeemValue(150));
+        $service = app(DiscountService::class);
+        $two = [['product_id' => $this->sellableProduct->id, 'quantity' => 2, 'unit_price' => 35000]];
+        $three = [['product_id' => $this->sellableProduct->id, 'quantity' => 3, 'unit_price' => 35000]];
+
+        $this->assertEquals(35000, $service->calculate($promo, 70000, $two));
+        $this->assertEquals(35000, $service->calculate($promo, 105000, $three));
     }
 
     public function test_table_transfer_moves_open_order(): void

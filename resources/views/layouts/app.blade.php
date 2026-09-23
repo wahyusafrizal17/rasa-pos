@@ -44,7 +44,6 @@
                             ['label' => 'Marketing', 'route' => 'marketing.discounts', 'perm' => 'marketing.view', 'icon' => 'marketing', 'children' => [
                                 ['label' => 'Discounts', 'route' => 'marketing.discounts', 'icon' => 'tag'],
                                 ['label' => 'Bundles', 'route' => 'marketing.bundles', 'icon' => 'gift'],
-                                ['label' => 'Loyalty', 'route' => 'loyalty.index', 'icon' => 'star'],
                             ]],
                             ['label' => 'Catalog', 'route' => 'products.index', 'perm' => 'products.view', 'icon' => 'products', 'children' => [
                                 ['label' => 'Products', 'route' => 'products.index', 'icon' => 'products'],

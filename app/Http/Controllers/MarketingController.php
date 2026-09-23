@@ -7,7 +7,6 @@ use App\Models\Category;
 use App\Models\Discount;
 use App\Models\Outlet;
 use App\Models\Product;
-use App\Models\Reward;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -181,63 +180,6 @@ class MarketingController extends Controller
         return back()->with('success', 'Status bundle diperbarui.');
     }
 
-    public function rewards(Request $request): View
-    {
-        abort_unless(auth()->user()->hasPermission('loyalty.view'), 403);
-
-        $filters = $request->only(['name', 'status']);
-        $query = Reward::query();
-
-        if (filled($filters['name'] ?? null)) {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
-        }
-        if (($filters['status'] ?? '') === 'active') {
-            $query->where('is_active', true);
-        } elseif (($filters['status'] ?? '') === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        return view('loyalty.rewards', [
-            'rewards' => $query->latest()->paginate(20)->withQueryString(),
-            'filters' => $filters,
-            'stats' => [
-                'total' => Reward::query()->count(),
-                'active' => Reward::query()->where('is_active', true)->count(),
-                'inactive' => Reward::query()->where('is_active', false)->count(),
-            ],
-        ]);
-    }
-
-    public function storeReward(Request $request): RedirectResponse
-    {
-        abort_unless($request->user()->hasPermission('loyalty.manage'), 403);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'description' => ['nullable', 'string'],
-            'points_required' => ['required', 'integer', 'min:1'],
-            'value' => ['nullable', 'numeric', 'min:0'],
-        ], [
-            'name.required' => 'Nama wajib diisi.',
-            'points_required.required' => 'Poin dibutuhkan wajib diisi.',
-            'points_required.min' => 'Poin dibutuhkan minimal 1.',
-        ]);
-
-        $data['description'] = filled($data['description'] ?? null) ? $data['description'] : null;
-        $data['value'] = filled($data['value'] ?? null) ? $data['value'] : null;
-
-        Reward::query()->create($data + ['is_active' => true]);
-
-        return redirect()->route('loyalty.rewards')->with('success', 'Reward ditambahkan.');
-    }
-
-    public function toggleReward(Request $request, Reward $reward): RedirectResponse
-    {
-        abort_unless($request->user()->hasPermission('loyalty.manage'), 403);
-        $reward->update(['is_active' => ! $reward->is_active]);
-
-        return back()->with('success', 'Status reward diperbarui.');
-    }
-
     /**
      * @return array{0: array<string, mixed>, 1: array{outlet_ids: array<int, int>, product_ids: array<int, int>, category_ids: array<int, int>}}
      */
@@ -246,9 +188,11 @@ class MarketingController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'code' => ['nullable', 'string', 'max:40'],
-            'type' => ['required', 'in:percentage,nominal'],
+            'type' => ['required', 'in:percentage,nominal,bogo'],
             'scope' => ['required', 'in:order,item,category'],
-            'value' => ['required', 'numeric', 'min:0'],
+            'value' => [$request->input('type') === 'bogo' ? 'nullable' : 'required', 'numeric', 'min:0'],
+            'buy_qty' => ['nullable', 'integer', 'min:1'],
+            'get_qty' => ['nullable', 'integer', 'min:1'],
             'minimum_transaction' => ['nullable', 'numeric', 'min:0'],
             'maximum_discount' => ['nullable', 'numeric', 'min:0'],
             'start_date' => ['nullable', 'date'],
@@ -270,6 +214,11 @@ class MarketingController extends Controller
         ]);
 
         $data['code'] = filled($data['code'] ?? null) ? $data['code'] : null;
+        if (($data['type'] ?? '') === 'bogo') {
+            $data['value'] = $data['value'] ?? 0;
+            $data['buy_qty'] = $data['buy_qty'] ?? 1;
+            $data['get_qty'] = $data['get_qty'] ?? 1;
+        }
 
         return [
             collect($data)->except(['outlet_ids', 'product_ids', 'category_ids'])->all(),

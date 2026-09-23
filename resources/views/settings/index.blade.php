@@ -25,12 +25,12 @@
         </div>
         <div class="stat-card">
             <div>
-                <p class="stat-kicker">Poin per transaksi</p>
-                <p class="stat-value">{{ money($stats['points_earn_per_amount']) }}</p>
-                <p class="stat-hint">Nominal belanja = 1 poin</p>
+                <p class="stat-kicker">Nama perusahaan</p>
+                <p class="stat-value">{{ $stats['company_name'] ?: '—' }}</p>
+                <p class="stat-hint">Tampil di struk</p>
             </div>
-            <span class="stat-icon bg-[#fff3e8] text-[#ff9f43]">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 2l2.9 6.9L22 9.8l-5.2 4.5 1.6 6.9L12 17.8 5.6 21.2 7.2 14.3 2 9.8l7.1-.9L12 2z"/></svg>
+            <span class="stat-icon bg-brand-soft text-brand">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16v12H4zM4 8l8 6 8-6"/></svg>
             </span>
         </div>
     </div>
@@ -59,24 +59,6 @@
                         <label class="label">Service charge (%)</label>
                         <input class="input" type="number" step="0.01" min="0" name="service_charge" value="{{ $settings['service_charge'] }}">
                         @error('service_charge')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-            </section>
-
-            <section class="border-t border-line pt-8">
-                <h6 class="mb-4 text-sm font-semibold text-heading">Program loyalitas</h6>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="label">Nominal belanja per 1 poin</label>
-                        <input class="input" type="number" min="1" name="points_earn_per_amount" value="{{ $settings['points_earn_per_amount'] }}" required>
-                        <p class="mt-1 text-[12px] text-muted">Contoh: 10.000 berarti setiap Rp 10.000 transaksi = 1 poin.</p>
-                        @error('points_earn_per_amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="label">Nilai tukar 1 poin (Rp)</label>
-                        <input class="input" type="number" min="1" name="points_redeem_value" value="{{ $settings['points_redeem_value'] }}" required>
-                        <p class="mt-1 text-[12px] text-muted">Contoh: 100 berarti 1 poin = potongan Rp 100.</p>
-                        @error('points_redeem_value')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
             </section>

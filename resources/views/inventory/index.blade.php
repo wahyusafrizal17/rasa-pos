@@ -117,8 +117,8 @@
                                     <button type="button" class="font-semibold hover:underline" @click="openView({{ Js::from($row) }})">{{ $stock->product?->name }}</button>
                                 </td>
                                 <td>{{ $stock->product?->category?->name ?? '—' }}</td>
-                                <td class="font-semibold">{{ number_format((float) $stock->quantity, 2) }} {{ $stock->product?->unit?->code }}</td>
-                                <td>{{ number_format((float) $stock->reserved_quantity, 2) }}</td>
+                                <td class="font-semibold">{{ $row['quantity_label'] }}</td>
+                                <td>{{ $row['reserved_label'] }}</td>
                                 <td>
                                     <x-status :value="$stock->statusTone()">{{ $stock->statusLabel() }}</x-status>
                                 </td>

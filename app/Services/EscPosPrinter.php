@@ -39,6 +39,9 @@ class EscPosPrinter
         $out .= $this->cols('Subtotal', money($order->subtotal));
         $out .= $this->cols('Diskon', money($order->discount_amount));
         $out .= $this->cols('Pajak', money($order->tax_amount));
+        if ((float) $order->service_charge > 0) {
+            $out .= $this->cols('Service', money($order->service_charge));
+        }
         $out .= $this->bold(true);
         $out .= $this->cols('Total', money($order->grand_total));
         $out .= $this->bold(false);
@@ -99,6 +102,7 @@ class EscPosPrinter
             .$this->htmlRow('Subtotal', money($order->subtotal))
             .$this->htmlRow('Diskon', money($order->discount_amount))
             .$this->htmlRow('Pajak', money($order->tax_amount))
+            .((float) $order->service_charge > 0 ? $this->htmlRow('Service', money($order->service_charge)) : '')
             .'<div class="b">'.$this->htmlRow('Total', money($order->grand_total)).'</div>'
             .$pays
             .'<hr class="hr">'

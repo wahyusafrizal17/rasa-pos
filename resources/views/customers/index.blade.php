@@ -14,7 +14,6 @@
             'birthday' => old('birthday', data_get($focusPayload, 'birthday', '')),
             'gender' => old('gender', data_get($focusPayload, 'gender', '')),
             'address' => old('address', data_get($focusPayload, 'address', '')),
-            'membership_level' => old('membership_level', data_get($focusPayload, 'membership_level', 'regular')),
             'is_active' => old('is_active', data_get($focusPayload, 'is_active', true) ? '1' : '0') !== '0',
             'id' => old('_customer_id', data_get($focusPayload, 'id')),
             'mode' => old('_form_mode', 'create'),
@@ -92,7 +91,6 @@
                             <th>Nama pelanggan</th>
                             <th>No. HP</th>
                             <th>Email</th>
-                            <th>Level</th>
                             <th>Alamat</th>
                             <th class="col-actions"></th>
                         </tr>
@@ -111,14 +109,6 @@
                                 <input form="customer-filters" class="col-filter" type="search" name="email" value="{{ $filters['email'] ?? '' }}" placeholder="Email..." onchange="this.form.submit()">
                             </th>
                             <th>
-                                <select form="customer-filters" class="col-filter" name="membership_level" onchange="this.form.submit()">
-                                    <option value="">Semua</option>
-                                    @foreach (\App\Enums\MembershipLevel::cases() as $level)
-                                        <option value="{{ $level->value }}" @selected(($filters['membership_level'] ?? '') === $level->value)>{{ $level->label() }}</option>
-                                    @endforeach
-                                </select>
-                            </th>
-                            <th>
                                 <input form="customer-filters" class="col-filter" type="search" name="address" value="{{ $filters['address'] ?? '' }}" placeholder="Alamat..." onchange="this.form.submit()">
                             </th>
                             <th></th>
@@ -135,13 +125,6 @@
                                 </td>
                                 <td>{{ $customer->phone ?: '—' }}</td>
                                 <td>{{ $customer->email ?: '—' }}</td>
-                                <td>
-                                    @if ($customer->membership_level)
-                                        <span class="badge-soft">{{ $customer->membership_level->label() }}</span>
-                                    @else
-                                        —
-                                    @endif
-                                </td>
                                 <td>{{ $customer->address ?: '—' }}</td>
                                 <td class="col-actions">
                                     <div class="flex items-center justify-end gap-1.5">
@@ -161,7 +144,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="py-16 text-center text-sm text-slate-400">Tidak ada pelanggan yang cocok dengan filter kolom ini.</td>
+                                <td colspan="7" class="py-16 text-center text-sm text-slate-400">Tidak ada pelanggan yang cocok dengan filter kolom ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -180,8 +163,6 @@
                             <h3 class="text-lg font-semibold text-heading" x-text="viewing?.name || 'Detail Pelanggan'"></h3>
                             <p class="mt-1 text-[13px] text-muted">
                                 <span x-text="viewing?.code || '—'"></span>
-                                ·
-                                <span x-text="viewing?.membership_label || '—'"></span>
                             </p>
                         </div>
                         <button type="button" class="modal-close" @click="viewOpen = false">
@@ -189,11 +170,7 @@
                         </button>
                     </div>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div class="rounded-xl bg-[#fafafa] px-4 py-3">
-                            <p class="stat-kicker">Poin</p>
-                            <p class="mt-1 text-lg font-semibold" x-text="viewing?.points_label || '0'"></p>
-                        </div>
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
                         <div class="rounded-xl bg-[#fafafa] px-4 py-3">
                             <p class="stat-kicker">Total transaksi</p>
                             <p class="mt-1 text-lg font-semibold" x-text="viewing?.total_transaction_label || '—'"></p>
@@ -292,14 +269,6 @@
                                     <option value="other">Lainnya</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="label">Level</label>
-                                <select name="membership_level" class="input" x-model="form.membership_level">
-                                    @foreach (\App\Enums\MembershipLevel::cases() as $level)
-                                        <option value="{{ $level->value }}">{{ $level->label() }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                             <div class="sm:col-span-2">
                                 <label class="label">Alamat</label>
                                 <textarea class="input min-h-24" name="address" x-model="form.address"></textarea>
@@ -394,10 +363,7 @@
                 gender: '',
                 gender_label: '—',
                 address: '',
-                membership_level: 'regular',
-                membership_label: 'Regular',
                 is_active: true,
-                points_label: '0',
                 total_transaction_label: '',
                 last_transaction_label: '—',
                 update_url: '',

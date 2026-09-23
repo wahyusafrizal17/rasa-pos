@@ -3,7 +3,6 @@
 namespace Tests\Support;
 
 use App\Enums\DiscountType;
-use App\Enums\MembershipLevel;
 use App\Enums\PrinterStation;
 use App\Enums\ProductType;
 use App\Enums\TableStatus;
@@ -206,8 +205,6 @@ trait SeedsPosFixture
             'name' => 'Andi Wijaya',
             'phone' => '081234567001',
             'email' => 'andi@example.com',
-            'membership_level' => MembershipLevel::Regular,
-            'points' => 0,
             'total_transaction' => 0,
             'is_active' => true,
         ]);
@@ -248,14 +245,6 @@ trait SeedsPosFixture
         Setting::query()->updateOrCreate(
             ['key' => 'tax_rate', 'outlet_id' => null],
             ['value' => '11', 'group' => 'general'],
-        );
-        Setting::query()->updateOrCreate(
-            ['key' => 'points_earn_per_amount', 'outlet_id' => null],
-            ['value' => '10000', 'group' => 'general'],
-        );
-        Setting::query()->updateOrCreate(
-            ['key' => 'points_redeem_value', 'outlet_id' => null],
-            ['value' => '100', 'group' => 'general'],
         );
     }
 

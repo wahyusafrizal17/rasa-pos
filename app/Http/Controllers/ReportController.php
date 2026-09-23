@@ -91,8 +91,8 @@ class ReportController extends Controller
         $rows = $this->reports->customers($filters);
 
         return $this->respond('reports.customers', $request, $filters, $rows, [
-            ['Nama', 'Phone', 'Level', 'Poin', 'Total'],
-        ], fn ($row) => [$row->name, $row->phone, $row->membership_level?->value, $row->points, $row->total_transaction], 'customers');
+            ['Nama', 'Phone', 'Total'],
+        ], fn ($row) => [$row->name, $row->phone, $row->total_transaction], 'customers');
     }
 
     public function categories(Request $request): View|BinaryFileResponse|\Illuminate\Http\Response

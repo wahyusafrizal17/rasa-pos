@@ -209,6 +209,32 @@ class CatalogSeeder extends Seeder
                 'maximum_stock' => 80,
             ]);
         }
+
+        foreach ([
+            ['sku' => 'ADD-EGG', 'name' => 'Extra Telur', 'price' => 5000],
+            ['sku' => 'ADD-CHE', 'name' => 'Extra Keju', 'price' => 8000],
+            ['sku' => 'ADD-RICE', 'name' => 'Extra Nasi', 'price' => 4000],
+        ] as $item) {
+            $this->product($item['sku'], $item['name'], $category('Food'), $unit('POR'), [
+                'type' => ProductType::Finished,
+                'price' => $item['price'],
+                'cost' => round($item['price'] * 0.4, 2),
+                'station' => PrinterStation::Kitchen->value,
+                'prep_minutes' => 3,
+                'description' => $item['name'],
+                'is_sellable' => true,
+                'is_addon' => true,
+                'is_stockable' => false,
+            ]);
+        }
+
+        $addonIds = Product::query()->where('is_addon', true)->pluck('id');
+        Product::query()
+            ->where('is_sellable', true)
+            ->where('is_addon', false)
+            ->where('category_id', $category('Food')->id)
+            ->get()
+            ->each(fn (Product $product) => $product->addons()->sync($addonIds));
     }
 
     protected function product(string $sku, string $name, Category $category, int $unitId, array $attrs): Product

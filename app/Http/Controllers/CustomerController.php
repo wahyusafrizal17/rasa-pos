@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Exports\GenericExport;
 use App\Imports\CustomerImport;
 use App\Models\Customer;
-use App\Models\Reward;
-use App\Services\LoyaltyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +20,7 @@ class CustomerController extends Controller
     {
         abort_unless($request->user()->hasPermission('customers.view'), 403);
 
-        $filters = $request->only(['code', 'name', 'phone', 'email', 'membership_level', 'address']);
+        $filters = $request->only(['code', 'name', 'phone', 'email', 'address']);
         $query = $this->filteredQuery($request);
 
         if ($request->export === 'xlsx') {
@@ -31,12 +29,11 @@ class CustomerController extends Controller
                 $customer->name,
                 $customer->phone,
                 $customer->email,
-                $customer->membership_level?->label(),
                 $customer->address,
             ])->all();
 
             return Excel::download(new GenericExport(
-                ['Kode', 'Nama', 'No. HP', 'Email', 'Level', 'Alamat'],
+                ['Kode', 'Nama', 'No. HP', 'Email', 'Alamat'],
                 $rows,
             ), 'pelanggan.xlsx');
         }
@@ -83,10 +80,10 @@ class CustomerController extends Controller
         abort_unless(auth()->user()->hasPermission('customers.manage'), 403);
 
         return Excel::download(new GenericExport(
-            ['Kode', 'Nama', 'No. HP', 'Email', 'Level', 'Alamat'],
+            ['Kode', 'Nama', 'No. HP', 'Email', 'Alamat'],
             [
-                ['CUS-010', 'Contoh Pelanggan', '081234567890', 'contoh@example.com', 'regular', 'Jl. Contoh No. 1'],
-                ['', 'Pelanggan Baru', '081234567891', '', 'silver', ''],
+                ['CUS-010', 'Contoh Pelanggan', '081234567890', 'contoh@example.com', 'Jl. Contoh No. 1'],
+                ['', 'Pelanggan Baru', '081234567891', '', ''],
             ],
         ), 'template-pelanggan.xlsx');
     }
@@ -138,27 +135,6 @@ class CustomerController extends Controller
         return redirect()->route('customers.index')->with('success', 'Pelanggan dihapus.');
     }
 
-    public function adjustPoints(Request $request, Customer $customer, LoyaltyService $loyalty): RedirectResponse
-    {
-        abort_unless($request->user()->hasPermission('loyalty.manage'), 403);
-        $data = $request->validate([
-            'points' => ['required', 'integer'],
-            'reason' => ['required', 'string', 'max:255'],
-        ]);
-        $loyalty->adjust($customer, (int) $data['points'], 'adjustment', $data['reason']);
-
-        return back()->with('success', 'Poin diperbarui.');
-    }
-
-    public function redeemReward(Request $request, Customer $customer, LoyaltyService $loyalty): RedirectResponse
-    {
-        abort_unless($request->user()->hasPermission('loyalty.manage'), 403);
-        $data = $request->validate(['reward_id' => ['required', 'exists:rewards,id']]);
-        $loyalty->redeemReward($customer, Reward::query()->findOrFail($data['reward_id']));
-
-        return back()->with('success', 'Reward ditukarkan.');
-    }
-
     protected function validated(Request $request, ?int $id = null): array
     {
         return $request->validate([
@@ -168,7 +144,6 @@ class CustomerController extends Controller
             'birthday' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:male,female,other'],
             'address' => ['nullable', 'string'],
-            'membership_level' => ['nullable', 'in:regular,silver,gold,platinum'],
             'is_active' => ['sometimes', 'boolean'],
         ], [
             'name.required' => 'Nama wajib diisi.',
@@ -184,7 +159,6 @@ class CustomerController extends Controller
             ->when($request->filled('name'), fn ($q) => $q->where('name', 'like', '%'.$request->string('name').'%'))
             ->when($request->filled('phone'), fn ($q) => $q->where('phone', 'like', '%'.$request->string('phone').'%'))
             ->when($request->filled('email'), fn ($q) => $q->where('email', 'like', '%'.$request->string('email').'%'))
-            ->when($request->filled('membership_level'), fn ($q) => $q->where('membership_level', $request->membership_level))
             ->when($request->filled('address'), fn ($q) => $q->where('address', 'like', '%'.$request->string('address').'%'))
             ->latest();
     }

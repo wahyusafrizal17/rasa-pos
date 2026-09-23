@@ -3,9 +3,6 @@
 return [
     'tax_rate' => 11,
     'service_charge' => 0,
-    'points_earn_per_amount' => 10000,
-    'points_per_rupiah' => 1,
-    'points_redeem_value' => 100,
     'currency' => 'IDR',
     'order_prefix' => 'ORD',
     'production_prefix' => 'PROD',
@@ -37,8 +34,6 @@ return [
         'customers.manage',
         'marketing.view',
         'marketing.manage',
-        'loyalty.view',
-        'loyalty.manage',
         'products.view',
         'products.manage',
         'inventory.view',
@@ -64,7 +59,7 @@ return [
         'admin' => [
             'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout', 'orders.check', 'orders.cancel',
             'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
-            'marketing.view', 'marketing.manage', 'loyalty.view', 'loyalty.manage',
+            'marketing.view', 'marketing.manage',
             'products.view', 'products.manage', 'inventory.view', 'inventory.manage', 'inventory.approve',
             'production.view', 'production.manage', 'printers.view', 'printers.manage',
             'reports.view', 'reports.export', 'users.view', 'users.manage',
@@ -73,7 +68,7 @@ return [
         'outlet_manager' => [
             'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout', 'orders.check', 'orders.cancel',
             'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
-            'marketing.view', 'marketing.manage', 'loyalty.view', 'products.view',
+            'marketing.view', 'marketing.manage', 'products.view',
             'inventory.view', 'inventory.manage', 'inventory.approve',
             'production.view', 'production.manage', 'printers.view',
             'reports.view', 'reports.export',

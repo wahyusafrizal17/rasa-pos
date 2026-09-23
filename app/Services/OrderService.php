@@ -29,7 +29,6 @@ class OrderService
         protected NumberGenerator $numbers,
         protected InventoryService $inventory,
         protected DiscountService $discounts,
-        protected LoyaltyService $loyalty,
         protected AuditService $audit,
         protected TableService $tables,
     ) {}
@@ -79,6 +78,29 @@ class OrderService
             $price = $bundle
                 ? (float) $bundle->price
                 : (float) $product->price + (float) ($variant?->price_adjustment ?? 0);
+            $addonIds = $bundle
+                ? []
+                : array_values(array_unique(array_filter(array_map('intval', $payload['addon_ids'] ?? []))));
+            sort($addonIds);
+
+            $existing = $order->items()
+                ->whereNull('parent_id')
+                ->where('product_id', $product->id)
+                ->where('product_variant_id', $variant?->id)
+                ->where('bundle_id', $bundle?->id)
+                ->with('addons')
+                ->get()
+                ->first(function ($item) use ($addonIds) {
+                    $have = $item->addons->pluck('product_id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+
+                    return $have === $addonIds;
+                });
+
+            if ($existing) {
+                $this->updateItem($existing, ['quantity' => (float) $existing->quantity + $qty]);
+
+                return $existing->fresh();
+            }
 
             $item = $order->items()->create([
                 'product_id' => $product->id,
@@ -94,6 +116,23 @@ class OrderService
                 'station' => $product->station ?? $product->category?->station,
                 'status' => 'new',
             ]);
+
+            if (! $bundle) {
+                foreach ($product->addons()->whereIn('products.id', $addonIds)->get() as $addon) {
+                    $order->items()->create([
+                        'parent_id' => $item->id,
+                        'product_id' => $addon->id,
+                        'name' => $addon->name,
+                        'quantity' => $qty,
+                        'unit_price' => (float) $addon->price,
+                        'discount_amount' => 0,
+                        'tax_amount' => 0,
+                        'total' => (float) $addon->price * $qty,
+                        'station' => $addon->station ?? $item->station,
+                        'status' => 'new',
+                    ]);
+                }
+            }
 
             $this->recalculate($order->fresh(['items', 'discount']));
 
@@ -113,6 +152,14 @@ class OrderService
         $item->total = ((float) $item->unit_price * (float) $item->quantity) - (float) $item->discount_amount;
         $item->save();
 
+        if (! $item->parent_id) {
+            foreach ($item->addons as $addon) {
+                $addon->quantity = $item->quantity;
+                $addon->total = ((float) $addon->unit_price * (float) $addon->quantity) - (float) $addon->discount_amount;
+                $addon->save();
+            }
+        }
+
         return $this->recalculate($order->fresh(['items', 'discount']));
     }
 
@@ -120,6 +167,9 @@ class OrderService
     {
         $order = $item->order;
         $this->assertMutable($order);
+        if (! $item->parent_id) {
+            $item->addons()->delete();
+        }
         $item->delete();
 
         return $this->recalculate($order->fresh(['items', 'discount']));
@@ -133,28 +183,6 @@ class OrderService
         $order->save();
 
         return $this->recalculate($order->fresh(['items', 'discount.items']));
-    }
-
-    public function applyPoints(Order $order, int $points): Order
-    {
-        $this->assertMutable($order);
-
-        if (! $order->customer_id) {
-            throw ValidationException::withMessages(['customer_id' => 'Pilih pelanggan untuk menukar poin.']);
-        }
-
-        $order->loadMissing('customer');
-
-        if ($points > 0 && (int) $order->customer->points < $points) {
-            throw ValidationException::withMessages(['points' => 'Poin pelanggan tidak mencukupi.']);
-        }
-
-        $value = $this->loyalty->redeemValue($points);
-        $order->points_redeemed = $points;
-        $order->points_value = $value;
-        $order->save();
-
-        return $this->recalculate($order->fresh(['items', 'discount']));
     }
 
     public function recalculate(Order $order): Order
@@ -177,8 +205,8 @@ class OrderService
 
         $taxable = max(0, $subtotal - $discount);
         $tax = round($taxable * ((float) $order->tax_rate / 100), 2);
-        $pointsValue = (float) $order->points_value;
-        $grand = max(0, $taxable + $tax + (float) $order->service_charge - $pointsValue);
+        $service = round($taxable * (service_charge_rate() / 100), 2);
+        $grand = max(0, $taxable + $tax + $service);
 
         $maxPrep = $order->items->loadMissing('product')->max(fn ($item) => $item->product?->prep_minutes ?? 10);
 
@@ -186,6 +214,7 @@ class OrderService
             'subtotal' => $subtotal,
             'discount_amount' => $discount,
             'tax_amount' => $tax,
+            'service_charge' => $service,
             'grand_total' => $grand,
             'estimated_ready_at' => now()->addMinutes((int) $maxPrep),
         ]);
@@ -346,15 +375,9 @@ class OrderService
                 }
             }
 
-            if ($order->points_redeemed > 0 && $order->customer) {
-                $this->loyalty->redeem($order->customer, (int) $order->points_redeemed, $order, 'Tukar poin '.$order->order_number);
-            }
-
             if ($order->customer) {
                 $order->customer->increment('total_transaction', (float) $order->grand_total);
                 $order->customer->update(['last_transaction_at' => now()]);
-                $this->loyalty->earnFromOrder($order);
-                $order->customer->refreshMembership();
             }
 
             $order->completed_at = now();
@@ -402,14 +425,6 @@ class OrderService
         $order->update(['table_id' => $tableId, 'order_type' => OrderType::DineIn]);
 
         return $order->fresh(['table']);
-    }
-
-    public function assignCustomer(Order $order, ?int $customerId): Order
-    {
-        $this->assertMutable($order);
-        $order->update(['customer_id' => $customerId]);
-
-        return $order->fresh(['items.product', 'customer', 'table', 'discount']);
     }
 
     public function updateItemStatus(OrderItem $item, string $status): Order

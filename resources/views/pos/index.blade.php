@@ -93,33 +93,16 @@
                         </select>
                     </div>
                 </div>
-                <div class="space-y-2">
-                    <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Member</p>
-                    <div class="flex items-center gap-2">
-                        <select class="input !min-w-0 !flex-1 !py-2 !text-xs" x-model="customer_id" @change="assignCustomer()">
-                            <option value="">Walk-in</option>
-                            @foreach ($customers as $customer)
-                                <option value="{{ $customer->id }}">{{ $customer->name }} · {{ $customer->phone }} · {{ $customer->points }} poin</option>
-                            @endforeach
-                            <template x-for="customer in extraCustomers" :key="customer.id">
-                                <option :value="customer.id" x-text="`${customer.name} · ${customer.phone || ''}`"></option>
-                            </template>
-                        </select>
-                        @if ($canRegisterCustomer)
-                            <button type="button" class="shrink-0 rounded-lg border border-[#e5e5e5] px-3 py-2 text-xs font-medium text-heading transition hover:bg-neutral-50" @click="memberOpen = true">Member baru</button>
-                        @endif
-                    </div>
-                </div>
             </div>
             <div class="mx-5 mt-3 border-t border-[#eee]"></div>
             <div class="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-                <template x-if="!order || !order.items?.length">
+                <template x-if="!order || !parentItems().length">
                     <div class="flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e5e5e5] bg-[#fafafa] px-4 text-center">
                         <p class="text-sm font-medium text-heading">Belum ada item</p>
                         <p class="mt-1 text-xs text-muted">Pilih menu di kiri, lalu tekan Tambah.</p>
                     </div>
                 </template>
-                <template x-for="item in (order?.items || [])" :key="item.id">
+                <template x-for="item in parentItems()" :key="item.id">
                     <div class="order-item">
                         <div class="flex items-start gap-3">
                             <img :src="itemImage(item)" :alt="item.name" class="h-16 w-16 shrink-0 rounded-xl bg-white object-cover shadow-sm">
@@ -128,6 +111,9 @@
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-semibold text-heading" x-text="item.name"></p>
                                         <p class="mt-0.5 text-xs text-muted" x-text="formatMoney(item.unit_price)"></p>
+                                        <template x-for="addon in addonsOf(item)" :key="addon.id">
+                                            <p class="mt-1 text-[11px] text-muted" x-text="`+ ${addon.name} · ${formatMoney(addon.unit_price)}`"></p>
+                                        </template>
                                     </div>
                                     <button class="shrink-0 text-[11px] font-medium text-brand hover:underline" @click="removeItem(item.id)">Hapus</button>
                                 </div>
@@ -166,13 +152,9 @@
                     <span>Tax</span>
                     <span class="font-medium text-heading" x-text="formatMoney(order?.tax_amount || 0)"></span>
                 </div>
-                <div class="order-row text-muted" x-show="selectedCustomer()">
-                    <span>Poin <span class="text-[11px]" x-text="`(${selectedCustomer()?.points || 0})`"></span></span>
-                    <input class="h-8 w-24 rounded-lg border border-[#e5e5e5] bg-white px-2 text-xs outline-none" type="number" min="0" x-model="points" @change="applyPoints()">
-                </div>
-                <div class="order-row text-muted" x-show="order?.points_value > 0">
-                    <span>Tukar poin</span>
-                    <span class="font-medium text-heading" x-text="`- ${formatMoney(order?.points_value || 0)}`"></span>
+                <div class="order-row text-muted">
+                    <span>Service</span>
+                    <span class="font-medium text-heading" x-text="formatMoney(order?.service_charge || 0)"></span>
                 </div>
                 <div class="flex items-center justify-between rounded-xl bg-[#111] px-3.5 py-3 text-white">
                     <span class="text-sm font-medium">Total</span>
@@ -203,9 +185,6 @@
                 </div>
                 <p class="mt-2 text-[12px] text-white/50" x-show="Number(order?.discount_amount || 0) > 0">
                     Diskon <span x-text="discountLine()"></span>
-                </p>
-                <p class="mt-2 text-[12px] text-white/50" x-show="order?.points_value > 0">
-                    Poin <span x-text="order?.points_redeemed || 0"></span> · potongan <span x-text="formatMoney(order?.points_value || 0)"></span>
                 </p>
             </div>
             <div class="px-6 py-5">
@@ -277,18 +256,24 @@
         </div>
     </div>
 
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="memberOpen" x-cloak>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="addonOpen" x-cloak @click.self="confirmAddons([])">
         <div class="card w-full max-w-md p-6">
-            <h3 class="text-lg font-semibold">Registrasi member</h3>
-            <label class="label mt-4">Nama</label>
-            <input class="input" x-model="member.name">
-            <label class="label mt-3">Telepon</label>
-            <input class="input" x-model="member.phone">
-            <label class="label mt-3">Email</label>
-            <input class="input" type="email" x-model="member.email">
+            <h3 class="text-lg font-semibold">Tambahan</h3>
+            <p class="mt-1 text-sm text-muted">Pilih add-on untuk item ini.</p>
+            <div class="mt-4 max-h-64 space-y-2 overflow-y-auto">
+                <template x-for="addon in addons" :key="addon.id">
+                    <label class="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm">
+                        <span class="flex items-center gap-2">
+                            <input type="checkbox" class="rounded border-line" :value="addon.id" x-model="selectedAddonIds">
+                            <span x-text="addon.name"></span>
+                        </span>
+                        <span class="text-muted" x-text="formatMoney(addon.price)"></span>
+                    </label>
+                </template>
+            </div>
             <div class="mt-6 flex gap-2">
-                <button class="btn-ghost flex-1" @click="memberOpen = false">Batal</button>
-                <button class="btn-primary flex-1" @click="registerMember()" :disabled="busy">Simpan</button>
+                <button type="button" class="btn-ghost flex-1" @click="confirmAddons([])">Lewati</button>
+                <button type="button" class="btn-primary flex-1" @click="confirmAddons(selectedAddonIds)">Tambah</button>
             </div>
         </div>
     </div>
@@ -299,8 +284,11 @@
 <script>
 function posApp() {
     return {
-        order: null, search: '', category: null, order_type: 'dine_in', table_id: '', customer_id: '',
-        discount_id: '', method: 'cash', tendered: 0, points: 0, payOpen: false, openHeld: false, memberOpen: false, busy: false, notice: '',
+        order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
+        discount_id: '', method: 'cash', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, notice: '',
+        pendingAdd: null, selectedAddonIds: [],
+        productAddons: @json($productAddons),
+        addons: [],
         paymentMethods: [
             { id: 'cash', label: 'Tunai', hint: 'Hitung kembalian' },
             { id: 'card', label: 'Kartu', hint: 'Debit / kredit' },
@@ -309,9 +297,6 @@ function posApp() {
         ],
         heldOrders: @json($heldOrders),
         online: navigator.onLine,
-        member: { name: '', phone: '', email: '' },
-        customers: @json($customerOptions),
-        extraCustomers: [],
         images: @json($productImages),
         placeholder: @json(asset('images/menu/placeholder.svg')),
         discountCatalog: @json($discountCatalog),
@@ -343,9 +328,6 @@ function posApp() {
         },
         channel() {
             return this.order_type === 'pickup' ? 'pickup' : (this.order_type === 'online' ? 'online' : 'pos');
-        },
-        selectedCustomer() {
-            return this.customers.find((c) => String(c.id) === String(this.customer_id)) || null;
         },
         etaLabel() {
             if (!this.order?.estimated_ready_at) return '';
@@ -419,7 +401,7 @@ function posApp() {
         },
         persistDraft() {
             const payload = {
-                order_type: this.order_type, table_id: this.table_id, customer_id: this.customer_id,
+                order_type: this.order_type, table_id: this.table_id,
                 items: (this.order?.items || []).map((item) => ({
                     product_id: item.product_id, product_variant_id: item.product_variant_id, bundle_id: item.bundle_id,
                     quantity: item.quantity, notes: item.notes,
@@ -434,7 +416,6 @@ function posApp() {
                 const draft = JSON.parse(raw);
                 this.order_type = draft.order_type || this.order_type;
                 this.table_id = draft.table_id || '';
-                this.customer_id = draft.customer_id || '';
             } catch (e) {}
         },
         queue(action) {
@@ -448,7 +429,7 @@ function posApp() {
             localStorage.removeItem('pos_offline_queue');
             for (const action of items) {
                 if (action.type === 'add') {
-                    await this.addProduct(action.product_id, action.variant_id, action.bundle_id, true);
+                    await this.addProduct(action.product_id, action.variant_id, action.bundle_id, true, action.addon_ids || []);
                 }
             }
         },
@@ -473,20 +454,44 @@ function posApp() {
         async ensureOrder() {
             if (this.order) return this.order;
             this.order = await this.request('{{ route('pos.draft', absolute: false) }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                order_type: this.order_type, table_id: this.table_id || null, customer_id: this.customer_id || null, channel: this.channel()
+                order_type: this.order_type, table_id: this.table_id || null, channel: this.channel()
             })});
             return this.order;
         },
-        async addProduct(productId, variantId, bundleId, fromQueue = false) {
+        parentItems() {
+            return (this.order?.items || []).filter((item) => !item.parent_id);
+        },
+        addonsOf(item) {
+            return (this.order?.items || []).filter((addon) => addon.parent_id === item.id);
+        },
+        addonsFor(productId) {
+            return this.productAddons[productId] || this.productAddons[String(productId)] || [];
+        },
+        async addProduct(productId, variantId, bundleId, fromQueue = false, addonIds = null) {
+            const extras = this.addonsFor(productId);
+            if (!fromQueue && !bundleId && extras.length && addonIds === null) {
+                this.pendingAdd = { productId, variantId, bundleId };
+                this.selectedAddonIds = [];
+                this.addons = extras;
+                this.addonOpen = true;
+                return;
+            }
             try {
                 await this.ensureOrder();
                 this.order = await this.request(`/pos/${this.order.id}/items`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                    product_id: productId, product_variant_id: variantId, bundle_id: bundleId, quantity: 1
+                    product_id: productId, product_variant_id: variantId, bundle_id: bundleId, quantity: 1, addon_ids: addonIds || []
                 })});
                 this.persistDraft();
             } catch (e) {
-                if (!fromQueue) this.queue({ type: 'add', product_id: productId, variant_id: variantId, bundle_id: bundleId });
+                if (!fromQueue) this.queue({ type: 'add', product_id: productId, variant_id: variantId, bundle_id: bundleId, addon_ids: addonIds || [] });
             }
+        },
+        confirmAddons(ids) {
+            const pending = this.pendingAdd;
+            this.addonOpen = false;
+            this.pendingAdd = null;
+            if (!pending) return;
+            this.addProduct(pending.productId, pending.variantId, pending.bundleId, false, (ids || []).map(Number));
         },
         async changeQty(item, delta) {
             const qty = Number(item.quantity) + delta;
@@ -506,40 +511,16 @@ function posApp() {
             if (!this.order) return;
             this.order = await this.request(`/pos/${this.order.id}/discount`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({ discount_id: this.discount_id || null })});
         },
-        async applyPoints() {
-            if (!this.order || !this.customer_id) return;
-            this.order = await this.request(`/pos/${this.order.id}/points`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({ points: Number(this.points || 0) })});
-        },
-        async assignCustomer() {
-            if (!this.order) return;
-            this.order = await this.request(`/pos/${this.order.id}/customer`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({ customer_id: this.customer_id || null })});
-        },
         async transferTable() {
             if (!this.order || this.order_type !== 'dine_in' || !this.table_id) return;
             if (String(this.order.table_id || '') === String(this.table_id)) return;
             this.order = await this.request(`/pos/${this.order.id}/transfer`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({ table_id: this.table_id })});
-        },
-        async registerMember() {
-            this.busy = true;
-            try {
-                const customer = await this.request('{{ route('pos.customers.store', absolute: false) }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify(this.member) });
-                const created = { id: customer.id, name: customer.name, phone: customer.phone, points: customer.points || 0 };
-                this.customers.unshift(created);
-                this.extraCustomers.unshift(created);
-                this.customer_id = customer.id;
-                this.memberOpen = false;
-                this.member = { name: '', phone: '', email: '' };
-                await this.assignCustomer();
-            } finally {
-                this.busy = false;
-            }
         },
         async hold() {
             if (!this.order) return;
             const held = await this.request(`/pos/${this.order.id}/hold`, { method: 'POST', headers: await this.csrf() });
             this.heldOrders = [held, ...this.heldOrders.filter((item) => item.id !== held.id)];
             this.order = null;
-            this.points = 0;
             this.discount_id = '';
             localStorage.removeItem('pos_offline_draft');
         },
@@ -548,11 +529,9 @@ function posApp() {
                 await this.hold();
             }
             this.order = await this.request(`/pos/${id}/recall`, { headers: await this.csrf() });
-            this.customer_id = this.order.customer_id || '';
             this.table_id = this.order.table_id || '';
             this.order_type = this.order.order_type || this.order_type;
             this.discount_id = this.order.discount_id || '';
-            this.points = this.order.points_redeemed || 0;
             this.heldOrders = this.heldOrders.filter((item) => item.id !== id);
             this.openHeld = false;
         },
@@ -584,7 +563,6 @@ function posApp() {
                         ? 'Pembayaran berhasil, struk dicetak.'
                         : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
                     this.order = null;
-                    this.points = 0;
                     this.tendered = 0;
                     localStorage.removeItem('pos_offline_draft');
                 }

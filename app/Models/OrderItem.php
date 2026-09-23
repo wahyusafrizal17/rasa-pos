@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'order_id', 'product_id', 'product_variant_id', 'bundle_id', 'batch_id', 'name',
+    'order_id', 'parent_id', 'product_id', 'product_variant_id', 'bundle_id', 'batch_id', 'name',
     'quantity', 'unit_price', 'discount_amount', 'tax_amount', 'total',
     'notes', 'station', 'status', 'confirmed_by', 'confirmed_at',
 ])]
@@ -34,6 +35,16 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function addons(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 
     public function product(): BelongsTo

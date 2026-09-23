@@ -7,14 +7,15 @@ use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\StockMovementType;
-use App\Models\CustomerPoint;
 use App\Models\Inventory;
 use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Services\EscPosPrinter;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\Support\SeedsPosFixture;
 use Tests\TestCase;
 
@@ -72,6 +73,7 @@ class OrderCheckoutTest extends TestCase
         $expectedSubtotal = 35000 * 2;
         $this->assertEquals($expectedSubtotal, (float) $order->subtotal);
         $this->assertEquals($expectedSubtotal + round($expectedSubtotal * 0.11, 2), (float) $order->grand_total);
+        $this->assertEquals(0, (float) $order->service_charge);
         $this->assertEquals($stockBefore, (float) Inventory::query()
             ->where('outlet_id', $this->outlet->id)
             ->where('product_id', $this->sellableProduct->id)
@@ -94,15 +96,6 @@ class OrderCheckoutTest extends TestCase
         );
 
         $this->customer->refresh();
-        $expectedPoints = (int) floor(((float) $order->grand_total) / 10000);
-        $this->assertSame($expectedPoints, (int) $this->customer->points);
-        $this->assertTrue(
-            CustomerPoint::query()
-                ->where('customer_id', $this->customer->id)
-                ->where('order_id', $order->id)
-                ->where('type', 'earn')
-                ->exists()
-        );
         $this->assertEquals((float) $order->grand_total, (float) $this->customer->total_transaction);
         $this->assertNotNull($this->customer->last_transaction_at);
     }
@@ -165,5 +158,37 @@ class OrderCheckoutTest extends TestCase
         $this->assertStringContainsString("\x1D\x56\x00", $raw);
         $this->assertStringContainsString($order->order_number, $html);
         $this->assertLessThanOrEqual(180, app(EscPosPrinter::class)->receiptHeightMm($order));
+    }
+
+    public function test_checkout_applies_service_charge_percent_from_settings(): void
+    {
+        Setting::query()->updateOrCreate(
+            ['key' => 'service_charge', 'outlet_id' => null],
+            ['value' => '10', 'group' => 'general'],
+        );
+        Cache::flush();
+
+        $this->actingAsAtOutlet($this->cashier);
+        $service = app(OrderService::class);
+        $order = $service->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+        $service->addItem($order, [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 2,
+        ]);
+        $order = $service->checkout($order->fresh(), [
+            'method' => PaymentMethod::Cash->value,
+            'tendered' => 200000,
+        ]);
+
+        $subtotal = 35000 * 2;
+        $tax = round($subtotal * 0.11, 2);
+        $fee = round($subtotal * 0.10, 2);
+
+        $this->assertEquals($fee, (float) $order->service_charge);
+        $this->assertEquals($subtotal + $tax + $fee, (float) $order->grand_total);
+        $this->assertStringContainsString('Service', app(EscPosPrinter::class)->receipt($order));
     }
 }

@@ -75,28 +75,14 @@ class InventoryMovement extends Model
             'type_label' => $this->type?->label() ?? '—',
             'type_color' => $this->type?->color() ?? 'gray',
             'quantity' => $qty,
-            'quantity_label' => $this->formatSignedQty($qty, $unit),
+            'quantity_label' => ($qty > 0 ? '+' : '').qty_label($qty, $unit),
             'quantity_tone' => $qty > 0 ? 'plus' : ($qty < 0 ? 'minus' : 'zero'),
-            'before_label' => $this->formatQty($before, $unit),
-            'after_label' => $this->formatQty($after, $unit),
+            'before_label' => qty_label($before, $unit),
+            'after_label' => qty_label($after, $unit),
             'reason' => $this->reason ?: '—',
             'user_name' => $this->user?->name ?? '—',
             'outlet_name' => $this->outlet?->name ?? '—',
             'created_label' => $this->created_at?->format('d/m/Y H:i') ?? '—',
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
-    }
-
-    protected function formatSignedQty(float $value, string $unit): string
-    {
-        $prefix = $value > 0 ? '+' : '';
-
-        return $prefix.$this->formatQty($value, $unit);
     }
 }

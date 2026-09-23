@@ -13,6 +13,8 @@
             'type' => old('type', 'percentage'),
             'scope' => old('scope', 'order'),
             'value' => old('value', ''),
+            'buy_qty' => old('buy_qty', 1),
+            'get_qty' => old('get_qty', 1),
             'minimum_transaction' => old('minimum_transaction', ''),
             'maximum_discount' => old('maximum_discount', ''),
             'start_date' => old('start_date', ''),
@@ -104,6 +106,7 @@
                                     <option value="">Semua</option>
                                     <option value="percentage" @selected(($filters['type'] ?? '') === 'percentage')>Persentase</option>
                                     <option value="nominal" @selected(($filters['type'] ?? '') === 'nominal')>Nominal</option>
+                                    <option value="bogo" @selected(($filters['type'] ?? '') === 'bogo')>Buy X Get Y</option>
                                 </select>
                             </th>
                             <th>
@@ -290,6 +293,7 @@
                                     <select name="type" class="input" required x-model="form.type">
                                         <option value="percentage">Persentase</option>
                                         <option value="nominal">Nominal</option>
+                                        <option value="bogo">Buy X Get Y</option>
                                     </select>
                                 </div>
                                 <div>
@@ -300,11 +304,19 @@
                                         <option value="category">Kategori</option>
                                     </select>
                                 </div>
-                                <div>
+                                <div x-show="form.type !== 'bogo'">
                                     <label class="label">Nilai</label>
-                                    <input class="input" type="number" step="0.01" min="0" name="value" required x-model="form.value" placeholder="10 atau 5000">
+                                    <input class="input" type="number" step="0.01" min="0" name="value" x-bind:required="form.type !== 'bogo'" x-model="form.value" placeholder="10 atau 5000">
                                     <p class="mt-1 text-[12px] text-muted">Persentase: 10 untuk 10%. Nominal: jumlah potongan.</p>
                                     @error('value')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
+                                </div>
+                                <div x-show="form.type === 'bogo'" x-cloak>
+                                    <label class="label">Beli</label>
+                                    <input class="input" type="number" min="1" name="buy_qty" x-model="form.buy_qty" placeholder="1">
+                                </div>
+                                <div x-show="form.type === 'bogo'" x-cloak>
+                                    <label class="label">Gratis</label>
+                                    <input class="input" type="number" min="1" name="get_qty" x-model="form.get_qty" placeholder="1">
                                 </div>
                                 <div>
                                     <label class="label">Min. transaksi</label>
@@ -411,6 +423,8 @@
                 type: 'percentage',
                 scope: 'order',
                 value: '',
+                buy_qty: 1,
+                get_qty: 1,
                 minimum_transaction: '',
                 maximum_discount: '',
                 start_date: '',

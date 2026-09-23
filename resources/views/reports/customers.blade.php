@@ -44,8 +44,6 @@
                     <tr>
                         <th>Nama</th>
                         <th>Phone</th>
-                        <th>Level</th>
-                        <th>Poin</th>
                         <th>Total</th>
                     </tr>
                 </thead>
@@ -54,13 +52,11 @@
                         <tr>
                             <td class="font-medium">{{ $row->name }}</td>
                             <td>{{ $row->phone }}</td>
-                            <td>{{ $row->membership_level?->label() ?? $row->membership_level?->value }}</td>
-                            <td>{{ number_format($row->points) }}</td>
                             <td>{{ money($row->total_transaction) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-16 text-center text-sm text-slate-400">Tidak ada data pelanggan.</td>
+                            <td colspan="3" class="py-16 text-center text-sm text-slate-400">Tidak ada data pelanggan.</td>
                         </tr>
                     @endforelse
                 </tbody>

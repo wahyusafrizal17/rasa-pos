@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
+use App\Enums\ProductType;
+use App\Models\Product;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\SeedsPosFixture;
@@ -131,7 +133,17 @@ class AuthorizationTest extends TestCase
             'order_type' => OrderType::Pickup->value,
         ]);
         $first = $orders->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
-        $second = $orders->addItem($order->fresh(), ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
+        $drink = Product::query()->create([
+            'sku' => 'PRD-READY-2',
+            'name' => 'Es Teh',
+            'category_id' => $this->foodCategory->id,
+            'unit_id' => $this->unitPcs->id,
+            'type' => ProductType::Finished,
+            'price' => 8000,
+            'is_sellable' => true,
+            'is_active' => true,
+        ]);
+        $second = $orders->addItem($order->fresh(), ['product_id' => $drink->id, 'quantity' => 1]);
         $orders->submit($order->fresh());
 
         $this->actingAsAtOutlet($this->kitchen)

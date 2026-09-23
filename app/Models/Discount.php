@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'name', 'code', 'type', 'scope', 'value', 'minimum_transaction', 'maximum_discount',
+    'name', 'code', 'type', 'scope', 'value', 'buy_qty', 'get_qty', 'minimum_transaction', 'maximum_discount',
     'start_date', 'end_date', 'start_time', 'end_time', 'is_active',
 ])]
 class Discount extends Model
@@ -46,6 +46,7 @@ class Discount extends Model
         return match ($this->type) {
             DiscountType::Percentage => 'Persentase',
             DiscountType::Nominal => 'Nominal',
+            DiscountType::Bogo => 'Buy X Get Y',
             default => '—',
         };
     }
@@ -62,6 +63,10 @@ class Discount extends Model
 
     public function valueLabel(): string
     {
+        if ($this->type === DiscountType::Bogo) {
+            return 'Beli '.(int) $this->buy_qty.' gratis '.(int) $this->get_qty;
+        }
+
         return $this->type === DiscountType::Percentage
             ? rtrim(rtrim(number_format((float) $this->value, 2, ',', '.'), '0'), ',').'%'
             : money($this->value);
@@ -128,6 +133,8 @@ class Discount extends Model
             'type' => $this->type instanceof DiscountType ? $this->type->value : (string) $this->type,
             'scope' => $this->scope,
             'value' => (float) $this->value,
+            'buy_qty' => (int) ($this->buy_qty ?: 1),
+            'get_qty' => (int) ($this->get_qty ?: 1),
             'minimum_transaction' => (float) $this->minimum_transaction ?: '',
             'maximum_discount' => $this->maximum_discount !== null ? (float) $this->maximum_discount : '',
             'start_date' => $this->start_date?->format('Y-m-d') ?? '',

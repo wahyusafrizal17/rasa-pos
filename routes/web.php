@@ -12,7 +12,6 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\LoyaltyController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
@@ -58,9 +57,6 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
         Route::put('/{order}/items/{item}', [PosController::class, 'updateItem'])->name('items.update');
         Route::delete('/{order}/items/{item}', [PosController::class, 'removeItem'])->name('items.destroy');
         Route::post('/{order}/discount', [PosController::class, 'discount'])->name('discount');
-        Route::post('/{order}/points', [PosController::class, 'points'])->name('points');
-        Route::post('/{order}/customer', [PosController::class, 'customer'])->name('customer');
-        Route::post('/customers', [PosController::class, 'storeCustomer'])->name('customers.store');
         Route::post('/{order}/submit', [PosController::class, 'submit'])->name('submit');
         Route::post('/{order}/transfer', [PosController::class, 'transfer'])->name('transfer');
         Route::post('/{order}/hold', [PosController::class, 'hold'])->name('hold');
@@ -101,8 +97,6 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::get('/customers/template', [CustomerController::class, 'template'])->name('customers.template');
     Route::post('/customers/import', [CustomerController::class, 'import'])->name('customers.import');
     Route::resource('customers', CustomerController::class);
-    Route::post('/customers/{customer}/points', [CustomerController::class, 'adjustPoints'])->name('customers.points');
-    Route::post('/customers/{customer}/rewards', [CustomerController::class, 'redeemReward'])->name('customers.rewards');
 
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('/inventory/movements', [InventoryController::class, 'movements'])->name('inventory.movements');
@@ -146,11 +140,6 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::get('/marketing/bundles', [MarketingController::class, 'bundles'])->name('marketing.bundles');
     Route::post('/marketing/bundles', [MarketingController::class, 'storeBundle'])->name('marketing.bundles.store');
     Route::post('/marketing/bundles/{bundle}/toggle', [MarketingController::class, 'toggleBundle'])->name('marketing.bundles.toggle');
-
-    Route::get('/loyalty', [LoyaltyController::class, 'index'])->name('loyalty.index');
-    Route::get('/loyalty/rewards', [MarketingController::class, 'rewards'])->name('loyalty.rewards');
-    Route::post('/loyalty/rewards', [MarketingController::class, 'storeReward'])->name('loyalty.rewards.store');
-    Route::post('/loyalty/rewards/{reward}/toggle', [MarketingController::class, 'toggleReward'])->name('loyalty.rewards.toggle');
 
     Route::get('/printers', [PrinterController::class, 'index'])->name('printers.index');
     Route::post('/printers', [PrinterController::class, 'store'])->name('printers.store');
