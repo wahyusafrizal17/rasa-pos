@@ -56,7 +56,7 @@ class Waste extends Model
             'product_name' => $this->product?->name ?? '—',
             'sku' => $this->product?->sku ?? '—',
             'quantity' => $qty,
-            'quantity_label' => $this->formatQty($qty, $unit),
+            'quantity_label' => qty_label($qty, $unit),
             'reason_label' => $this->reason?->label() ?? '—',
             'reason_color' => $this->reason?->color() ?? 'gray',
             'notes' => $this->notes ?: '—',
@@ -64,12 +64,5 @@ class Waste extends Model
             'outlet_name' => $this->outlet?->name ?? '—',
             'created_label' => $this->created_at?->format('d/m/Y H:i') ?? '—',
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

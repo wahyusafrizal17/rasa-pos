@@ -89,7 +89,7 @@
                 @foreach ([
                     ['Low stock', $metrics['low_stock'], 'bg-orange-400'],
                     ['Out of stock', $metrics['out_of_stock'], 'bg-red-500'],
-                    ['Today\'s waste', number_format($metrics['today_waste'], 1), 'bg-slate-400'],
+                    ['Today\'s waste', qty_label($metrics['today_waste']), 'bg-slate-400'],
                     ['Transfer pending', $metrics['pending_transfers'], 'bg-brand'],
                 ] as $row)
                     <div class="flex items-center justify-between">
@@ -103,7 +103,7 @@
             <p class="font-semibold text-heading">Production</p>
             <div class="mt-4 space-y-3.5 text-sm">
                 @foreach ([
-                    ['Today\'s production', number_format($metrics['today_production'], 1), 'bg-emerald-500'],
+                    ['Today\'s production', qty_label($metrics['today_production']), 'bg-emerald-500'],
                     ['Pending', $metrics['pending_production'], 'bg-orange-400'],
                     ['Semi finished SKU', $metrics['semi_finished'], 'bg-sky-500'],
                     ['Yield', number_format($metrics['production_yield'], 1).'%', 'bg-brand'],
@@ -159,7 +159,7 @@
                             <p class="font-medium text-heading">{{ $product->name }}</p>
                             <p class="text-muted">Reorder {{ $product->reorder_level }} {{ $product->unit?->code }}</p>
                         </div>
-                        <span class="badge bg-[#fff3e8] text-[#ff9f43]">{{ number_format($product->inventories->first()?->quantity ?? 0, 1) }} {{ $product->unit?->code }}</span>
+                        <span class="badge bg-[#fff3e8] text-[#ff9f43]">{{ qty_label($product->inventories->first()?->quantity ?? 0, $product->unit?->code ?? '') }}</span>
                     </div>
                 @endforeach
             </div>

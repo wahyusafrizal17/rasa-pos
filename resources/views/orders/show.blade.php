@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', $order->order_number)
-@section('breadcrumb', 'Orders')
+@section('breadcrumb', 'Sales Orders')
 @section('content')
     @php
         $flow = [
@@ -282,12 +282,9 @@
                 @if ($order->payment_status === \App\Enums\PaymentStatus::Paid)
                     <a href="{{ route('pos.receipt', $order) }}" class="btn-add w-full">
                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6v-7z"/></svg>
-                        Cetak receipt
+                        Cetak invoice
                     </a>
                 @endif
-                <a href="{{ route('pos.ticket', [$order, 'kitchen']) }}?reprint=1" target="_blank" class="btn-ghost w-full">Reprint kitchen</a>
-                <a href="{{ route('pos.ticket', [$order, 'bar']) }}?reprint=1" target="_blank" class="btn-ghost w-full">Reprint bar</a>
-                <a href="{{ route('pos.ticket', [$order, 'cashier']) }}?reprint=1" target="_blank" class="btn-ghost w-full">Reprint kasir</a>
             </div>
         </div>
     </div>

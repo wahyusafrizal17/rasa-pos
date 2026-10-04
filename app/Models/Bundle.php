@@ -92,10 +92,7 @@ class Bundle extends Model
 
     public function quantityLabel(mixed $quantity): string
     {
-        $value = (float) $quantity;
-        $formatted = number_format($value, 3, ',', '.');
-
-        return rtrim(rtrim($formatted, '0'), ',');
+        return qty_label($quantity);
     }
 
     public function toModalArray(): array

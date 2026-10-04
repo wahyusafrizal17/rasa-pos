@@ -8,7 +8,22 @@ class EscPosPrinter
 {
     public const WIDTH = 48;
 
-    public function receipt(Order $order): string
+    public function receipts(Order $order): string
+    {
+        return $this->receipt($order, 'CUSTOMER').$this->receipt($order, 'KARYAWAN');
+    }
+
+    public function receiptsHtml(Order $order): string
+    {
+        return $this->receiptHtml($order, 'CUSTOMER').$this->receiptHtml($order, 'KARYAWAN');
+    }
+
+    public function receiptsHeightMm(Order $order): int
+    {
+        return min(320, $this->receiptHeightMm($order) * 2);
+    }
+
+    public function receipt(Order $order, ?string $copy = null): string
     {
         $order->loadMissing(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
 
@@ -17,6 +32,11 @@ class EscPosPrinter
         $out .= $this->bold(true);
         $out .= $this->line($order->outlet?->name ?: config('app.name'));
         $out .= $this->bold(false);
+        if ($copy) {
+            $out .= $this->bold(true);
+            $out .= $this->line($copy);
+            $out .= $this->bold(false);
+        }
         $out .= $this->line($order->order_number);
         $out .= $this->line($order->created_at?->format('d/m/Y H:i') ?? '');
         $type = $order->order_type?->label() ?? '';
@@ -61,7 +81,7 @@ class EscPosPrinter
         return $out;
     }
 
-    public function receiptHtml(Order $order): string
+    public function receiptHtml(Order $order, ?string $copy = null): string
     {
         $order->loadMissing(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
 
@@ -92,6 +112,7 @@ class EscPosPrinter
             .'.n{margin:0 0 2px 8px}.hr{border:0;border-top:1px dashed #000;margin:6px 0}'
             .'</style></head><body>'
             .'<div class="c b">'.$this->e($order->outlet?->name ?: (string) config('app.name')).'</div>'
+            .($copy ? '<div class="c b">'.$this->e($copy).'</div>' : '')
             .'<div class="c">'.$this->e($order->order_number).'</div>'
             .'<div class="c">'.$this->e($order->created_at?->format('d/m/Y H:i') ?? '').'</div>'
             .'<div class="c">'.$this->e($type).'</div>'

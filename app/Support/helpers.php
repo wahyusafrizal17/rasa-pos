@@ -21,7 +21,9 @@ function qty_label(float|int|string|null $value, string $unit = ''): string
         ? (string) (int) round($n)
         : rtrim(rtrim(sprintf('%.3f', $n), '0'), '.');
 
-    return $unit !== '' ? $label.' '.$unit : $label;
+    $unit = trim($unit);
+
+    return $unit !== '' && $unit !== '—' ? $label.' '.$unit : $label;
 }
 
 function current_outlet_id(): ?int

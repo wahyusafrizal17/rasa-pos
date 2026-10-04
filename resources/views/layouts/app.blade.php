@@ -30,111 +30,87 @@
 
             <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 pb-8">
                 @php
-                    $groups = [
-                        'Operations' => [
-                            ['label' => 'Dashboard', 'route' => 'dashboard', 'perm' => 'dashboard.view', 'icon' => 'home'],
-                            ['label' => 'POS', 'route' => 'pos.index', 'perm' => 'pos.access', 'icon' => 'pos'],
-                            ['label' => 'Orders', 'route' => 'orders.index', 'perm' => 'orders.view', 'icon' => 'orders'],
-                            ['label' => 'Kitchen', 'route' => 'kitchen.index', 'perm' => 'orders.check', 'icon' => 'fire', 'hide_role' => 'bar'],
-                            ['label' => 'Bar', 'route' => 'bar.index', 'perm' => 'orders.check', 'icon' => 'glass', 'hide_role' => 'kitchen'],
-                            ['label' => 'Tables', 'route' => 'tables.index', 'perm' => 'tables.view', 'icon' => 'tables'],
-                        ],
-                        'Commerce' => [
-                            ['label' => 'Customers', 'route' => 'customers.index', 'perm' => 'customers.view', 'icon' => 'customers'],
-                            ['label' => 'Marketing', 'route' => 'marketing.discounts', 'perm' => 'marketing.view', 'icon' => 'marketing', 'children' => [
-                                ['label' => 'Discounts', 'route' => 'marketing.discounts', 'icon' => 'tag'],
-                                ['label' => 'Bundles', 'route' => 'marketing.bundles', 'icon' => 'gift'],
-                            ]],
-                            ['label' => 'Catalog', 'route' => 'products.index', 'perm' => 'products.view', 'icon' => 'products', 'children' => [
-                                ['label' => 'Products', 'route' => 'products.index', 'icon' => 'products'],
-                                ['label' => 'Categories', 'route' => 'categories.index', 'icon' => 'folder'],
-                            ]],
-                        ],
-                        'Supply' => [
-                            ['label' => 'Inventory', 'route' => 'inventory.index', 'perm' => 'inventory.view', 'icon' => 'inventory', 'children' => [
-                                ['label' => 'Stock', 'route' => 'inventory.index', 'icon' => 'inventory'],
-                                ['label' => 'Movements', 'route' => 'inventory.movements', 'icon' => 'arrows'],
-                                ['label' => 'Stock Opname', 'route' => 'opnames.index', 'icon' => 'clipboard-check'],
-                                ['label' => 'Waste', 'route' => 'wastes.index', 'icon' => 'trash'],
-                                ['label' => 'Transfers', 'route' => 'transfers.index', 'icon' => 'swap'],
-                            ]],
-                            ['label' => 'Production', 'route' => 'production.index', 'perm' => 'production.view', 'icon' => 'production', 'children' => [
-                                ['label' => 'Orders', 'route' => 'production.index', 'icon' => 'clipboard'],
-                                ['label' => 'BOM', 'route' => 'boms.index', 'icon' => 'list'],
-                                ['label' => 'Batches', 'route' => 'batches.index', 'icon' => 'layers'],
-                            ]],
-                        ],
-                        'System' => [
-                            ['label' => 'Reports', 'route' => 'reports.sales', 'perm' => 'reports.view', 'icon' => 'reports', 'children' => [
-                                ['label' => 'Sales', 'route' => 'reports.sales', 'icon' => 'chart'],
-                                ['label' => 'Products', 'route' => 'reports.products', 'icon' => 'products'],
-                                ['label' => 'Categories', 'route' => 'reports.categories', 'icon' => 'folder'],
-                                ['label' => 'Promo', 'route' => 'reports.promo', 'icon' => 'megaphone'],
-                            ]],
-                            ['label' => 'Printers', 'route' => 'printers.index', 'perm' => 'printers.view', 'icon' => 'printers'],
-                            ['label' => 'Settings', 'route' => 'settings.index', 'perm' => 'settings.manage', 'icon' => 'settings', 'children' => [
-                                ['label' => 'General', 'route' => 'settings.index', 'icon' => 'settings'],
-                                ['label' => 'Outlets', 'route' => 'outlets.index', 'icon' => 'building'],
-                                ['label' => 'Users', 'route' => 'users.index', 'icon' => 'user'],
-                                ['label' => 'Audit Logs', 'route' => 'audit.index', 'icon' => 'document'],
-                            ]],
-                        ],
+                    $nav = [
+                        ['label' => 'Dashboard', 'route' => 'dashboard', 'perm' => 'dashboard.view', 'icon' => 'home'],
+                        ['label' => 'Operasional', 'icon' => 'pos', 'children' => [
+                            ['label' => 'POS', 'route' => 'pos.index', 'active' => 'pos.*', 'perm' => 'pos.access', 'icon' => 'pos'],
+                            ['label' => 'Sales Orders', 'route' => 'orders.index', 'active' => 'orders.*', 'perm' => 'orders.view', 'icon' => 'orders'],
+                            ['label' => 'Tables', 'route' => 'tables.index', 'active' => 'tables.*', 'perm' => 'tables.view', 'icon' => 'tables'],
+                        ]],
+                        ['label' => 'Marketing', 'icon' => 'customers', 'children' => [
+                            ['label' => 'Customers', 'route' => 'customers.index', 'active' => 'customers.*', 'perm' => 'customers.view', 'icon' => 'customers'],
+                            ['label' => 'Discounts', 'route' => 'marketing.discounts', 'perm' => 'marketing.view', 'icon' => 'tag'],
+                        ]],
+                        ['label' => 'Katalog', 'icon' => 'products', 'children' => [
+                            ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'perm' => 'products.view', 'icon' => 'products'],
+                            ['label' => 'Categories', 'route' => 'categories.index', 'active' => 'categories.*', 'perm' => 'products.view', 'icon' => 'folder'],
+                            ['label' => 'Bundles', 'route' => 'marketing.bundles', 'perm' => 'marketing.view', 'icon' => 'gift'],
+                        ]],
+                        ['label' => 'Inventori', 'icon' => 'inventory', 'children' => [
+                            ['label' => 'Stock', 'route' => 'inventory.index', 'perm' => 'inventory.view', 'icon' => 'inventory'],
+                            ['label' => 'Movements', 'route' => 'inventory.movements', 'perm' => 'inventory.view', 'icon' => 'arrows'],
+                            ['label' => 'Transfers', 'route' => 'transfers.index', 'active' => 'transfers.*', 'perm' => 'inventory.view', 'icon' => 'swap'],
+                            ['label' => 'Stock Opname', 'route' => 'opnames.index', 'active' => 'opnames.*', 'perm' => 'inventory.view', 'icon' => 'clipboard-check'],
+                            ['label' => 'Waste', 'route' => 'wastes.index', 'active' => 'wastes.*', 'perm' => 'inventory.view', 'icon' => 'trash'],
+                        ]],
+                        ['label' => 'Produksi', 'icon' => 'production', 'children' => [
+                            ['label' => 'BOM', 'route' => 'boms.index', 'active' => 'boms.*', 'perm' => 'production.view', 'icon' => 'list'],
+                            ['label' => 'Production Orders', 'route' => 'production.index', 'active' => 'production.*', 'perm' => 'production.view', 'icon' => 'clipboard'],
+                            ['label' => 'Batches', 'route' => 'batches.index', 'active' => 'batches.*', 'perm' => 'production.view', 'icon' => 'layers'],
+                        ]],
+                        ['label' => 'Laporan', 'icon' => 'reports', 'children' => [
+                            ['label' => 'Sales', 'route' => 'reports.sales', 'perm' => 'reports.view', 'icon' => 'chart'],
+                            ['label' => 'Products', 'route' => 'reports.products', 'perm' => 'reports.view', 'icon' => 'products'],
+                            ['label' => 'Categories', 'route' => 'reports.categories', 'perm' => 'reports.view', 'icon' => 'folder'],
+                            ['label' => 'Promo', 'route' => 'reports.promo', 'perm' => 'reports.view', 'icon' => 'megaphone'],
+                        ]],
+                        ['label' => 'Pengaturan', 'icon' => 'settings', 'children' => [
+                            ['label' => 'General', 'route' => 'settings.index', 'perm' => 'settings.manage', 'icon' => 'settings'],
+                            ['label' => 'Outlets', 'route' => 'outlets.index', 'active' => 'outlets.*', 'perm' => 'outlets.view', 'icon' => 'building'],
+                            ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'perm' => 'users.view', 'icon' => 'user'],
+                            ['label' => 'Printers', 'route' => 'printers.index', 'active' => 'printers.*', 'perm' => 'printers.view', 'icon' => 'printers'],
+                            ['label' => 'Audit Logs', 'route' => 'audit.index', 'perm' => 'audit.view', 'icon' => 'document'],
+                        ]],
                     ];
+                    $canSee = fn ($item) => empty($item['perm']) || auth()->user()->hasPermission($item['perm']);
+                    $navIsActive = fn (array $item) => request()->routeIs($item['active'] ?? $item['route'] ?? '');
                 @endphp
 
-                @foreach ($groups as $section => $items)
+                @foreach ($nav as $item)
                     @php
-                        $visible = collect($items)->contains(fn ($item) => auth()->user()->hasPermission($item['perm'])
-                            && (empty($item['hide_role']) || ! auth()->user()->hasRole($item['hide_role'])));
+                        $children = collect($item['children'] ?? [])->filter($canSee)->values();
+                        $visible = $children->isNotEmpty() || ($children->isEmpty() && ! empty($item['route']) && $canSee($item));
                     @endphp
                     @if ($visible)
-                        <p class="nav-section" x-show="!collapsed">{{ $section }}</p>
-                        @foreach ($items as $item)
-                            @if (auth()->user()->hasPermission($item['perm']) && (empty($item['hide_role']) || ! auth()->user()->hasRole($item['hide_role'])))
-                                @php
-                                    $children = $item['children'] ?? [];
-                                    $childRoutes = collect($children)->pluck('route')->all();
-                                    $parentPattern = str($item['route'])->beforeLast('.')->append('.*')->toString();
-                                    $groupActive = $children
-                                        ? request()->routeIs($parentPattern, $item['route'], ...$childRoutes)
-                                        : request()->routeIs($item['route']);
-                                    $leafActive = empty($children) && $groupActive;
-                                @endphp
-                                <div class="{{ $children ? 'nav-group' : '' }}" x-data="{ open: {{ $groupActive ? 'true' : 'false' }} }" @if ($children) :class="open && 'nav-group-open'" @endif>
-                                    @if ($children)
-                                        <button type="button" class="nav-item" @click="open = !open">
-                                            @include('layouts.partials.icon', ['name' => $item['icon']])
-                                            <span class="flex-1" x-show="!collapsed">{{ $item['label'] }}</span>
-                                            <svg class="h-3.5 w-3.5 shrink-0 text-white/70 transition-transform" x-show="!collapsed" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9l6 6 6-6"/>
-                                            </svg>
-                                        </button>
-                                        <div class="space-y-0.5 px-2 pb-2 pl-3" x-show="open && !collapsed">
-                                            @foreach ($children as $child)
-                                                @if (empty($child['perm']) || auth()->user()->hasPermission($child['perm']))
-                                                    @php
-                                                        $otherChildren = array_values(array_diff($childRoutes, [$child['route']]));
-                                                        $childActive = request()->routeIs($child['route'])
-                                                            || ($child['route'] === $item['route']
-                                                                && request()->routeIs($parentPattern)
-                                                                && ($otherChildren === [] || ! request()->routeIs(...$otherChildren)));
-                                                    @endphp
-                                                    <a href="{{ route($child['route']) }}" class="nav-subitem {{ $childActive ? 'nav-subitem-active' : '' }}">
-                                                        @include('layouts.partials.icon', ['name' => $child['icon'] ?? 'clipboard', 'size' => 'h-4 w-4'])
-                                                        <span>{{ $child['label'] }}</span>
-                                                    </a>
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                    @else
-                                        <a href="{{ route($item['route']) }}" class="nav-item {{ $leafActive ? 'nav-item-active' : '' }}">
-                                            @include('layouts.partials.icon', ['name' => $item['icon']])
-                                            <span class="flex-1" x-show="!collapsed">{{ $item['label'] }}</span>
+                        @php
+                            $groupActive = $children->contains(fn ($child) => $navIsActive($child))
+                                || (! empty($item['route']) && $navIsActive($item));
+                            $leafActive = $children->isEmpty() && $groupActive;
+                        @endphp
+                        <div class="{{ $children->isNotEmpty() ? 'nav-group' : '' }}" data-nav="{{ $item['label'] }}" data-open="{{ $groupActive ? '1' : '0' }}" x-data="{ open: {{ $groupActive ? 'true' : 'false' }} }" @if ($children->isNotEmpty()) :class="open && 'nav-group-open'" @endif>
+                            @if ($children->isNotEmpty())
+                                <button type="button" class="nav-item" @click="open = !open">
+                                    @include('layouts.partials.icon', ['name' => $item['icon']])
+                                    <span class="flex-1" x-show="!collapsed">{{ $item['label'] }}</span>
+                                    <svg class="h-3.5 w-3.5 shrink-0 text-white/70 transition-transform" x-show="!collapsed" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </button>
+                                <div class="space-y-0.5 px-2 pb-2 pl-3" x-show="open && !collapsed">
+                                    @foreach ($children as $child)
+                                        <a href="{{ route($child['route']) }}" class="nav-subitem {{ $navIsActive($child) ? 'nav-subitem-active' : '' }}">
+                                            @include('layouts.partials.icon', ['name' => $child['icon'] ?? 'clipboard', 'size' => 'h-4 w-4'])
+                                            <span>{{ $child['label'] }}</span>
                                         </a>
-                                    @endif
+                                    @endforeach
                                 </div>
+                            @else
+                                <a href="{{ route($item['route']) }}" class="nav-item {{ $leafActive ? 'nav-item-active' : '' }}">
+                                    @include('layouts.partials.icon', ['name' => $item['icon']])
+                                    <span class="flex-1" x-show="!collapsed">{{ $item['label'] }}</span>
+                                </a>
                             @endif
-                        @endforeach
+                        </div>
                     @endif
                 @endforeach
             </nav>
@@ -201,24 +177,14 @@
 
     <nav class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white px-2 py-2 lg:hidden">
         <a href="{{ route('dashboard') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('dashboard') ? 'text-brand' : 'text-muted' }}">Home</a>
-        @if (auth()->user()?->hasRole('kitchen'))
-            <a href="{{ route('kitchen.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('kitchen.*') ? 'text-brand' : 'text-muted' }}">Dapur</a>
-        @elseif (auth()->user()?->hasRole('bar'))
-            <a href="{{ route('bar.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('bar.*') ? 'text-brand' : 'text-muted' }}">Bar</a>
-        @elseif (auth()->user()?->can('pos.access'))
+        @if (auth()->user()?->can('pos.access'))
             <a href="{{ route('pos.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('pos.*') ? 'text-brand' : 'text-muted' }}">POS</a>
         @endif
-        @can('orders.view')<a href="{{ route('orders.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('orders.*') ? 'text-brand' : 'text-muted' }}">Orders</a>@endcan
+        @can('orders.view')<a href="{{ route('orders.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('orders.*') ? 'text-brand' : 'text-muted' }}">Sales</a>@endcan
         @can('tables.view')<a href="{{ route('tables.index') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('tables.*') ? 'text-brand' : 'text-muted' }}">Tables</a>@endcan
         <a href="{{ route('profile.edit') }}" class="flex flex-col items-center gap-1 text-[11px] {{ request()->routeIs('profile.*') ? 'text-brand' : 'text-muted' }}">Me</a>
     </nav>
 
-    @if (auth()->user()?->hasRole(['kitchen', 'bar']))
-        <script>window.RasaQz = { printer: '' };</script>
-        <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
-        @include('layouts.partials.qz-print')
-        @include('layouts.partials.station-autoprint')
-    @endif
     @include('layouts.partials.select2')
     @livewireScripts
     <script>

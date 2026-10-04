@@ -80,11 +80,11 @@ class StockOpname extends Model
                     'sku' => $item->product?->sku ?? '—',
                     'unit' => $unit,
                     'system_qty' => $system,
-                    'system_label' => $this->formatQty($system, $unit),
+                    'system_label' => qty_label($system, $unit),
                     'physical_qty' => (string) (float) $item->physical_qty,
-                    'physical_label' => $this->formatQty($physical, $unit),
+                    'physical_label' => qty_label($physical, $unit),
                     'difference' => $difference,
-                    'difference_label' => $this->formatQty($difference, $unit, true),
+                    'difference_label' => ($difference > 0 ? '+' : '').qty_label($difference, $unit),
                     'difference_tone' => $difference > 0 ? 'plus' : ($difference < 0 ? 'minus' : 'zero'),
                     'reason' => $item->reason ?? '',
                 ];
@@ -112,15 +112,5 @@ class StockOpname extends Model
             'update_url' => route('opnames.update', $this),
             'finalize_url' => route('opnames.finalize', $this),
         ];
-    }
-
-    protected function formatQty(float $value, string $unit, bool $signed = false): string
-    {
-        $label = number_format($value, 2);
-        if ($signed && $value > 0) {
-            $label = '+'.$label;
-        }
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

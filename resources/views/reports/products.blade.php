@@ -29,7 +29,7 @@
         <div class="stat-card">
             <div>
                 <p class="stat-kicker">Qty terjual</p>
-                <p class="stat-value">{{ number_format($stats['qty'] ?? 0, 2) }}</p>
+                <p class="stat-value">{{ qty_label($stats['qty'] ?? 0) }}</p>
                 <p class="stat-hint">Semua item order dibayar</p>
             </div>
             <span class="stat-icon bg-[#e8f8ee] text-[#1f9d57]">
@@ -126,7 +126,7 @@
                                     <span class="font-medium">{{ $row->name }}</span>
                                 @endunless
                             </td>
-                            <td>{{ number_format($row->qty, 2) }}</td>
+                            <td>{{ qty_label($row->qty) }}</td>
                             <td class="font-semibold">{{ money($row->total) }}</td>
                             @unless ($exporting ?? false)
                                 <td class="col-actions">

@@ -270,14 +270,43 @@ class OperationsGapTest extends TestCase
             ->assertSee('Ulang tahun');
     }
 
-    public function test_table_move_script_uses_generated_url(): void
+    public function test_tables_index_is_a_list(): void
     {
         $this->actingAsAtOutlet($this->admin);
 
         $html = $this->get(route('tables.index'))->assertOk()->getContent();
 
-        $this->assertStringContainsString(url('/tables'), $html);
-        $this->assertStringNotContainsString("fetch('/tables/'", $html);
+        $this->assertStringContainsString('Daftar meja', $html);
+        $this->assertStringContainsString('T-01', $html);
+        $this->assertStringNotContainsString('floor-canvas', $html);
+        $this->assertStringNotContainsString('tableDrag', $html);
+    }
+
+    public function test_cannot_create_duplicate_table_code(): void
+    {
+        $this->actingAsAtOutlet($this->admin)
+            ->from(route('tables.index'))
+            ->post(route('tables.store'), [
+                'code' => 'T-01',
+                'name' => 'Duplikat',
+                'capacity' => 2,
+                '_form' => 'create',
+            ])
+            ->assertRedirect(route('tables.index'))
+            ->assertSessionHasErrors('code');
+    }
+
+    public function test_cannot_delete_occupied_table(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+        DiningTable::query()->whereKey($this->tableA->id)->update(['status' => TableStatus::Occupied]);
+
+        $this->from(route('tables.index'))
+            ->delete(route('tables.destroy', $this->tableA))
+            ->assertRedirect(route('tables.index'))
+            ->assertSessionHasErrors('table');
+
+        $this->assertNotNull($this->tableA->fresh());
     }
 
     public function test_split_route_requires_items(): void

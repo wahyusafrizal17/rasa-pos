@@ -78,9 +78,9 @@ class StockTransfer extends Model
                     'sku' => $item->product?->sku ?? '—',
                     'unit' => $unit,
                     'quantity' => $qty,
-                    'quantity_label' => $this->formatQty($qty, $unit),
+                    'quantity_label' => qty_label($qty, $unit),
                     'received_qty' => $received,
-                    'received_label' => $this->formatQty($received, $unit),
+                    'received_label' => qty_label($received, $unit),
                     'received_input' => (string) $qty,
                 ];
             })
@@ -111,12 +111,5 @@ class StockTransfer extends Model
             'ship_url' => route('transfers.ship', $this),
             'receive_url' => route('transfers.receive', $this),
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

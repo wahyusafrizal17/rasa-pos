@@ -82,7 +82,7 @@ class ProductionBatch extends Model
                     'product_name' => $item->product?->name ?? '—',
                     'sku' => $item->product?->sku ?? '—',
                     'unit' => $itemUnit !== '' ? $itemUnit : '—',
-                    'quantity_label' => $this->formatQty($used, $itemUnit),
+                    'quantity_label' => qty_label($used, $itemUnit),
                 ];
             })
             ->all();
@@ -95,7 +95,7 @@ class ProductionBatch extends Model
                     'order_number' => $item->order?->order_number ?? '—',
                     'order_url' => $item->order ? route('orders.show', $item->order) : '',
                     'name' => $item->name ?: ($item->product?->name ?? '—'),
-                    'quantity_label' => $this->formatQty((float) $item->quantity, $unit),
+                    'quantity_label' => qty_label((float) $item->quantity, $unit),
                 ];
             })
             ->all();
@@ -107,9 +107,9 @@ class ProductionBatch extends Model
             'sku' => $this->product?->sku ?? '—',
             'outlet_name' => $this->outlet?->name ?? '—',
             'destination_name' => $this->destinationOutlet?->name ?? $this->outlet?->name ?? '—',
-            'quantity_label' => $this->formatQty($qty, $unit),
-            'yield_label' => $this->formatQty($yield, $unit),
-            'remaining_label' => $this->formatQty($remaining, $unit),
+            'quantity_label' => qty_label($qty, $unit),
+            'yield_label' => qty_label($yield, $unit),
+            'remaining_label' => qty_label($remaining, $unit),
             'produced_label' => $this->produced_at?->format('d/m/Y') ?? '—',
             'expires_label' => $this->expires_at?->format('d/m/Y') ?? '—',
             'status' => $status,
@@ -131,12 +131,5 @@ class ProductionBatch extends Model
             'sales' => $sales,
             'sales_count' => count($sales),
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TableStatus;
 use App\Models\Customer;
 use App\Models\DiningTable;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TableController extends Controller
@@ -25,6 +27,7 @@ class TableController extends Controller
             ])
             ->where('outlet_id', $outletId)
             ->where('is_active', true)
+            ->orderBy('code')
             ->get()
             ->each(fn (DiningTable $table) => $table->setAttribute(
                 'open_minutes',
@@ -46,13 +49,15 @@ class TableController extends Controller
         abort_unless($request->user()->hasPermission('tables.manage'), 403);
 
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:20'],
+            'code' => ['required', 'string', 'max:20', $this->uniqueCode()],
             'name' => ['required', 'string', 'max:50'],
             'capacity' => ['required', 'integer', 'min:1'],
             'shape' => ['nullable', 'in:square,round,rect'],
             'zone' => ['nullable', 'string', 'max:50'],
             'pos_x' => ['nullable', 'integer'],
             'pos_y' => ['nullable', 'integer'],
+        ], [
+            'code.unique' => 'Kode meja sudah dipakai.',
         ]);
 
         $data['outlet_id'] = current_outlet_id();
@@ -66,11 +71,13 @@ class TableController extends Controller
         abort_unless($request->user()->hasPermission('tables.manage'), 403);
 
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:20'],
+            'code' => ['required', 'string', 'max:20', $this->uniqueCode($table->id)],
             'name' => ['required', 'string', 'max:50'],
             'capacity' => ['required', 'integer', 'min:1'],
             'shape' => ['nullable', 'in:square,round,rect'],
             'zone' => ['nullable', 'string', 'max:50'],
+        ], [
+            'code.unique' => 'Kode meja sudah dipakai.',
         ]);
 
         $table->update($data);
@@ -81,6 +88,11 @@ class TableController extends Controller
     public function destroy(DiningTable $table): RedirectResponse
     {
         abort_unless(auth()->user()->hasPermission('tables.manage'), 403);
+
+        if ($table->status !== TableStatus::Available || $table->currentOrder()) {
+            return back()->withErrors(['table' => 'Meja masih terisi atau direservasi.']);
+        }
+
         $table->delete();
 
         return back()->with('success', 'Meja dihapus.');
@@ -195,5 +207,12 @@ class TableController extends Controller
             'table' => $table->load(['outlet', 'sessions.order', 'reservations']),
             'order' => $table->currentOrder()?->load('items'),
         ]);
+    }
+
+    protected function uniqueCode(?int $ignoreId = null): \Illuminate\Validation\Rules\Unique
+    {
+        return Rule::unique('tables', 'code')
+            ->where(fn ($query) => $query->where('outlet_id', current_outlet_id()))
+            ->ignore($ignoreId);
     }
 }

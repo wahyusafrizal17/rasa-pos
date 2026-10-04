@@ -13,7 +13,7 @@
             </div>
             <p class="mt-2 text-sm text-slate-500">{{ $table->name }} · {{ $table->outlet?->name }} · {{ $table->shape }}</p>
         </div>
-        <a href="{{ route('tables.index') }}" class="btn-ghost">Kembali ke floor plan</a>
+        <a href="{{ route('tables.index') }}" class="btn-ghost">Kembali ke daftar meja</a>
     </div>
 
     <div class="grid gap-4 xl:grid-cols-2">

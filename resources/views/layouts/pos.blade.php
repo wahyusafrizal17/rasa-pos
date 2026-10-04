@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,13 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
     @include('layouts.partials.qz-print')
 </head>
-<body class="h-screen overflow-hidden bg-canvas text-ink">
-    <div class="flex h-screen flex-col">
-        <header class="flex h-14 shrink-0 items-center justify-between border-b border-line bg-white px-4">
+<body class="h-full overflow-hidden bg-white text-ink">
+    <div class="flex h-full flex-col overflow-hidden">
+        <header class="pos-topbar">
             <div class="flex items-center gap-3">
-                <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="h-14 w-auto max-w-[180px] object-contain">
+                <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="h-12 w-auto max-w-[160px] object-contain">
             </div>
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
                 @if (auth()->user()->canSwitchOutlet())
                     <form method="GET" action="{{ url()->current() }}">
                         @foreach (request()->except('switch_outlet') as $k => $v)
@@ -29,13 +29,13 @@
                         </select>
                     </form>
                 @endif
-                <a href="{{ route('dashboard') }}" class="btn-ghost !px-3 !py-2 text-xs">Dashboard</a>
-                <a href="{{ route('orders.index') }}" class="btn-ghost !px-3 !py-2 text-xs">Orders</a>
+                <a href="{{ route('dashboard') }}" class="rounded-full px-3 py-2 text-xs font-medium text-muted transition hover:bg-[#faf7f3] hover:text-heading">Dashboard</a>
+                <a href="{{ route('orders.index') }}" class="rounded-full px-3 py-2 text-xs font-medium text-muted transition hover:bg-[#faf7f3] hover:text-heading">Sales Orders</a>
                 @include('layouts.partials.user-menu')
             </div>
         </header>
 
-        <main class="min-h-0 flex-1">
+        <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
             @if (session('success'))
                 <div class="absolute left-1/2 top-16 z-30 -translate-x-1/2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700" x-data x-init="setTimeout(() => $el.remove(), 3200)">{{ session('success') }}</div>
             @endif

@@ -222,9 +222,9 @@ class PosController extends Controller
         return response()->json([
             'order' => $completed,
             'print_jobs' => $this->escposJobs($printers->route($completed), $completed),
-            'receipt_escpos' => base64_encode($escpos->receipt($completed)),
-            'receipt_html' => $escpos->receiptHtml($completed),
-            'receipt_height_mm' => $escpos->receiptHeightMm($completed),
+            'receipt_escpos' => base64_encode($escpos->receipts($completed)),
+            'receipt_html' => $escpos->receiptsHtml($completed),
+            'receipt_height_mm' => $escpos->receiptsHeightMm($completed),
             'qz_printer' => setting('qz_printer', ''),
         ]);
     }
@@ -247,9 +247,9 @@ class PosController extends Controller
 
         return view('pos.receipt', [
             'order' => $order,
-            'receiptEscpos' => base64_encode(app(EscPosPrinter::class)->receipt($order)),
-            'receiptHtml' => app(EscPosPrinter::class)->receiptHtml($order),
-            'receiptHeightMm' => app(EscPosPrinter::class)->receiptHeightMm($order),
+            'receiptEscpos' => base64_encode(app(EscPosPrinter::class)->receipts($order)),
+            'receiptHtml' => app(EscPosPrinter::class)->receiptsHtml($order),
+            'receiptHeightMm' => app(EscPosPrinter::class)->receiptsHeightMm($order),
             'qzPrinter' => setting('qz_printer', ''),
         ]);
     }

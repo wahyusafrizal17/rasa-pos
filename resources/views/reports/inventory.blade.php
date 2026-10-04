@@ -54,7 +54,7 @@
                         <tr>
                             <td class="font-medium">{{ $row->product?->name }}</td>
                             <td>{{ $row->outlet?->name }}</td>
-                            <td>{{ number_format($row->quantity, 2) }} {{ $row->product?->unit?->code }}</td>
+                            <td>{{ qty_label($row->quantity, $row->product?->unit?->code ?? '') }}</td>
                             <td>{{ money($row->product?->cost) }}</td>
                             <td>{{ money((float) $row->quantity * (float) ($row->product?->cost ?? 0)) }}</td>
                         </tr>

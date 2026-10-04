@@ -85,8 +85,8 @@ class ProductionOrder extends Model
                     'product_name' => $item->product?->name ?? '—',
                     'sku' => $item->product?->sku ?? '—',
                     'unit' => $itemUnit,
-                    'required_label' => $this->formatQty($required, $itemUnit),
-                    'used_label' => $this->formatQty($used, $itemUnit),
+                    'required_label' => qty_label($required, $itemUnit),
+                    'used_label' => qty_label($used, $itemUnit),
                 ];
             })
             ->all();
@@ -103,10 +103,10 @@ class ProductionOrder extends Model
             'notes' => $this->notes ?: '—',
             'user_name' => $this->user?->name ?? '—',
             'planned' => $planned,
-            'planned_label' => $this->formatQty($planned, $unit),
-            'produced_label' => $this->formatQty($produced, $unit),
+            'planned_label' => qty_label($planned, $unit),
+            'produced_label' => qty_label($produced, $unit),
             'produced_input' => (string) ($produced > 0 ? $produced : $planned),
-            'yield_label' => number_format((float) ($this->yield_percentage ?? 0), 1).'%',
+            'yield_label' => qty_label($this->yield_percentage ?? 0).'%',
             'batch_number' => $this->batch?->batch_number ?? $this->batch_number ?: '—',
             'batch_url' => $this->batch ? route('batches.show', $this->batch) : '',
             'production_date_label' => $this->production_date?->format('d/m/Y') ?? '—',
@@ -118,12 +118,5 @@ class ProductionOrder extends Model
             'complete_url' => route('production.complete', $this),
             'cancel_url' => route('production.cancel', $this),
         ];
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 2);
-
-        return $unit !== '' ? $label.' '.$unit : $label;
     }
 }

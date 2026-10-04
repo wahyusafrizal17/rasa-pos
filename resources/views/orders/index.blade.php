@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Orders')
-@section('breadcrumb', 'Front of house')
+@section('title', 'Sales Orders')
+@section('breadcrumb', 'Operasional')
 @section('content')
     @php
         $hasFilters = collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty();

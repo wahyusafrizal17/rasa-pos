@@ -1,65 +1,59 @@
 @extends('layouts.pos')
 @section('content')
-<div class="flex h-full min-h-0" x-data="posApp()">
-    <div class="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <section class="card flex min-h-0 flex-col overflow-hidden">
-            <div class="flex items-center justify-between gap-3 border-b border-line px-3 py-2 text-xs" x-show="!online" x-cloak>
+<div class="flex min-h-0 w-full flex-1 flex-col" x-data="posApp()">
+    <div class="pos-shell">
+        <section class="pos-catalog">
+            <div class="flex items-center justify-between gap-3 border-b border-[#f0ebe6] px-4 py-2 text-xs" x-show="!online" x-cloak>
                 <span class="font-medium text-[#d97706]">Mode offline — order akan dikirim saat koneksi kembali.</span>
             </div>
             @if ($lowStock->isNotEmpty())
-                <div class="border-b border-brand-soft bg-brand-soft px-3 py-2 text-xs text-brand">
+                <div class="border-b border-brand-soft bg-brand-soft px-4 py-2 text-xs text-brand">
                     Stok menipis: {{ $lowStockNames }}@if ($lowStockExtra > 0) +{{ $lowStockExtra }} lagi @endif
                 </div>
             @endif
-            <div class="flex items-center gap-3 border-b border-line px-3 py-2.5">
-                <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto">
-                    <button class="shrink-0 rounded-full px-3 py-1.5 text-sm" :class="!category ? 'bg-brand text-white' : 'bg-slate-100 text-heading'" @click="category = null">Semua</button>
+            <div class="pos-toolbar">
+                <div class="pos-chips">
+                    <button type="button" class="pos-chip" :class="!category && 'pos-chip-active'" @click="category = null">Semua</button>
                     @foreach ($categories as $category)
-                        <button class="shrink-0 rounded-full px-3 py-1.5 text-sm" :class="category == {{ $category->id }} ? 'bg-brand text-white' : 'bg-slate-100 text-heading'" @click="category = {{ $category->id }}">{{ $category->name }}</button>
+                        <button type="button" class="pos-chip" :class="category == {{ $category->id }} && 'pos-chip-active'" @click="category = {{ $category->id }}">{{ $category->name }}</button>
                     @endforeach
                 </div>
-                <input class="input !w-56 shrink-0 !py-2" placeholder="Cari menu..." x-model="search">
+                <div class="relative shrink-0">
+                    <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 110-15 7.5 7.5 0 010 15z"/></svg>
+                    <input class="input pos-search" placeholder="Cari menu..." x-model="search">
+                </div>
             </div>
-            <div class="grid flex-1 auto-rows-min grid-cols-3 gap-3 overflow-y-auto p-3">
+            <div class="pos-grid">
                 @foreach ($products as $product)
                     <article
-                        class="menu-card min-h-[188px]"
+                        class="menu-card"
                         x-show="(!category || category == {{ $product->category_id }}) && productMatch('{{ strtolower($product->name) }}')"
+                        @click="addProduct({{ $product->id }}, null, null)"
                     >
                         <div class="menu-card-visual">
-                            <span class="menu-card-badge">{{ $product->category?->name }}</span>
                             <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="menu-card-photo" loading="lazy">
                         </div>
                         <div class="menu-card-body">
-                            <div>
-                                <h3 class="text-[17px] font-bold leading-tight text-heading">{{ $product->name }}</h3>
-                                <p class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-neutral-700">{{ $product->menuDescription() }}</p>
-                                <p class="mt-2.5 text-[16px] font-bold text-heading">{{ money($product->price) }}</p>
-                                @if ($product->variants->count())
-                                    <div class="mt-2 flex flex-wrap gap-1">
-                                        @foreach ($product->variants as $variant)
-                                            <button type="button" class="rounded-full bg-white px-2 py-0.5 text-[11px] text-heading shadow-sm" @click="addProduct({{ $product->id }}, {{ $variant->id }}, null)">{{ $variant->name }}</button>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                            <button type="button" class="menu-card-add" @click="addProduct({{ $product->id }}, null, null)">Tambah</button>
+                            <h3 class="menu-card-name">{{ $product->name }}</h3>
+                            <p class="menu-card-price">{{ money($product->price) }}</p>
+                            @if ($product->variants->count())
+                                <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
+                                    @foreach ($product->variants as $variant)
+                                        <button type="button" class="rounded-full bg-[#f6f1eb] px-2.5 py-1 text-[11px] font-medium text-heading" @click="addProduct({{ $product->id }}, {{ $variant->id }}, null)">{{ $variant->name }}</button>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     </article>
                 @endforeach
                 @foreach ($bundles as $bundle)
-                    <article class="menu-card min-h-[188px]" x-show="!category || category == {{ $bundle->product?->category_id ?? 0 }}">
+                    <article class="menu-card" x-show="!category || category == {{ $bundle->product?->category_id ?? 0 }}" @click="addProduct({{ $bundle->product_id ?? $bundle->items->first()?->product_id }}, null, {{ $bundle->id }})">
                         <div class="menu-card-visual">
-                            <span class="menu-card-badge">Package</span>
                             <img src="{{ $bundle->product?->imageUrl() ?? asset('images/menu/placeholder.svg') }}" alt="{{ $bundle->name }}" class="menu-card-photo" loading="lazy">
                         </div>
                         <div class="menu-card-body">
-                            <div>
-                                <h3 class="text-[17px] font-bold leading-tight text-heading">{{ $bundle->name }}</h3>
-                                <p class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-neutral-700">Paket hemat berisi makanan utama dan minuman pilihan</p>
-                                <p class="mt-2.5 text-[16px] font-bold text-heading">{{ money($bundle->price) }}</p>
-                            </div>
-                            <button type="button" class="menu-card-add" @click="addProduct({{ $bundle->product_id ?? $bundle->items->first()?->product_id }}, null, {{ $bundle->id }})">Tambah</button>
+                            <h3 class="menu-card-name">{{ $bundle->name }}</h3>
+                            <p class="menu-card-price">{{ money($bundle->price) }}</p>
                         </div>
                     </article>
                 @endforeach
@@ -67,39 +61,26 @@
         </section>
 
         <aside class="order-panel">
-            <div class="flex items-center justify-between px-5 py-4">
-                <div>
-                    <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Current order</p>
-                    <p class="mt-1 text-[15px] font-semibold text-heading" x-text="order?.order_number || 'Draft baru'"></p>
-                    <p class="mt-0.5 text-[11px] font-medium text-brand" x-show="order?.status === 'held'">Hold — siap dilanjutkan</p>
-                    <p class="mt-0.5 text-[11px] text-muted" x-show="order?.estimated_ready_at && order?.status !== 'held'" x-text="etaLabel()"></p>
-                </div>
-                <button class="rounded-lg border border-[#e5e5e5] px-3 py-1.5 text-xs font-medium text-heading transition hover:bg-neutral-50" @click="hold()" x-show="order">Hold</button>
-            </div>
-            <div class="mx-5 space-y-3 border-t border-[#eee] pt-3">
-                <div class="space-y-2">
-                    <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Tipe order</p>
-                    <div class="flex items-center gap-2">
-                        <select class="input !min-w-0 !flex-1 !py-2 !text-xs" x-model="order_type">
-                            <option value="dine_in">Dine-in</option>
-                            <option value="pickup">Pickup</option>
-                            <option value="online">Online</option>
-                        </select>
-                        <select class="input !min-w-0 !flex-1 !py-2 !text-xs" x-model="table_id" x-show="order_type === 'dine_in'" x-cloak>
-                            <option value="">Pilih meja</option>
-                            @foreach ($tables as $table)
-                                <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->capacity }} pax · {{ $table->status->label() }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+            <div class="mx-5 space-y-2 border-b border-[#f0ebe6] py-4">
+                <div class="flex items-center gap-2">
+                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="order_type">
+                        <option value="dine_in">Dine-in</option>
+                        <option value="pickup">Pickup</option>
+                        <option value="online">Online</option>
+                    </select>
+                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="table_id" x-show="order_type === 'dine_in'" x-cloak>
+                        <option value="">Pilih meja</option>
+                        @foreach ($tables as $table)
+                            <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->capacity }} pax · {{ $table->status->label() }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
-            <div class="mx-5 mt-3 border-t border-[#eee]"></div>
-            <div class="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div class="flex-1 space-y-2.5 overflow-y-auto px-5 py-4">
                 <template x-if="!order || !parentItems().length">
-                    <div class="flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-[#e5e5e5] bg-[#fafafa] px-4 text-center">
+                    <div class="flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-[#efe8e1] bg-[#faf7f3] px-4 text-center">
                         <p class="text-sm font-medium text-heading">Belum ada item</p>
-                        <p class="mt-1 text-xs text-muted">Pilih menu di kiri, lalu tekan Tambah.</p>
+                        <p class="mt-1 text-xs text-muted">Ketuk menu di kiri untuk menambah.</p>
                     </div>
                 </template>
                 <template x-for="item in parentItems()" :key="item.id">
@@ -130,7 +111,7 @@
                     </div>
                 </template>
             </div>
-            <div class="space-y-3 border-t border-[#eee] px-5 py-4">
+            <div class="space-y-2.5 border-t border-[#f0ebe6] px-5 py-4">
                 <div class="order-row text-muted">
                     <span>Subtotal</span>
                     <span class="font-medium text-heading" x-text="formatMoney(order?.subtotal || 0)"></span>
@@ -140,7 +121,7 @@
                         <span>Diskon</span>
                         <span class="font-medium" :class="Number(order?.discount_amount || 0) > 0 ? 'text-brand' : 'text-heading'" x-text="discountLine()"></span>
                     </div>
-                    <select class="h-8 w-full rounded-lg border border-[#e5e5e5] bg-white px-2 text-xs text-heading outline-none" x-model="discount_id" @change="applyDiscount()">
+                    <select class="h-9 w-full rounded-full border border-[#efe8e1] bg-[#faf7f3] px-3 text-xs text-heading outline-none" x-model="discount_id" @change="applyDiscount()">
                         <option value="">Tanpa diskon</option>
                         @foreach ($discounts as $discount)
                             <option value="{{ $discount->id }}">{{ $discount->name }} · {{ $discount->valueLabel() }}</option>
@@ -156,18 +137,18 @@
                     <span>Service</span>
                     <span class="font-medium text-heading" x-text="formatMoney(order?.service_charge || 0)"></span>
                 </div>
-                <div class="flex items-center justify-between rounded-xl bg-[#111] px-3.5 py-3 text-white">
-                    <span class="text-sm font-medium">Total</span>
-                    <span class="text-lg font-semibold" x-text="formatMoney(order?.grand_total || 0)"></span>
+                <div class="flex items-center justify-between rounded-2xl bg-[#1a1211] px-4 py-3.5 text-white">
+                    <span class="text-sm font-medium text-white/70">Total</span>
+                    <span class="text-[22px] font-semibold tracking-tight" x-text="formatMoney(order?.grand_total || 0)"></span>
                 </div>
                 <p class="text-xs font-medium text-brand" x-show="notice" x-text="notice" x-cloak></p>
                 <p class="text-[11px] text-muted" x-show="needsTable()" x-cloak>Pilih meja dulu untuk dine-in sebelum bayar.</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button class="inline-flex items-center justify-center gap-2 rounded-full border border-[#e5e5e5] bg-white px-4 py-2.5 text-sm font-medium text-heading transition hover:bg-neutral-50" @click="openHeldList()">
-                        Order Hold
-                        <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold leading-none text-white" x-show="heldCount() > 0" x-text="heldCount()" x-cloak></span>
-                    </button>
-                    <button class="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40" @click="openPay()" :disabled="!canPay()">Bayar</button>
+                <div class="grid grid-cols-[1fr_1.6fr] gap-2">
+                    <div class="relative">
+                        <button type="button" class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#efe8e1] bg-white text-sm font-medium text-heading transition hover:bg-[#faf7f3] disabled:cursor-not-allowed disabled:opacity-40" @click="hold()" :disabled="!canHold()">Hold</button>
+                        <button type="button" class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold leading-none text-white" x-show="heldCount() > 0" x-text="heldCount()" x-cloak @click.stop="openHeldList()" title="Lihat order hold"></button>
+                    </div>
+                    <button type="button" class="pos-pay" @click="openPay()" :disabled="!canPay()">Bayar</button>
                 </div>
             </div>
         </aside>
@@ -329,11 +310,6 @@ function posApp() {
         channel() {
             return this.order_type === 'pickup' ? 'pickup' : (this.order_type === 'online' ? 'online' : 'pos');
         },
-        etaLabel() {
-            if (!this.order?.estimated_ready_at) return '';
-            const date = new Date(this.order.estimated_ready_at);
-            return 'ETA ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        },
         productMatch(name) { return !this.search || name.includes(this.search.toLowerCase()); },
         itemImage(item) { return item.image_url || this.images[item.product_id] || this.placeholder; },
         formatMoney(v) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v || 0); },
@@ -461,6 +437,9 @@ function posApp() {
         parentItems() {
             return (this.order?.items || []).filter((item) => !item.parent_id);
         },
+        canHold() {
+            return !!this.order && this.parentItems().length > 0;
+        },
         addonsOf(item) {
             return (this.order?.items || []).filter((addon) => addon.parent_id === item.id);
         },
@@ -517,7 +496,7 @@ function posApp() {
             this.order = await this.request(`/pos/${this.order.id}/transfer`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({ table_id: this.table_id })});
         },
         async hold() {
-            if (!this.order) return;
+            if (!this.canHold()) return;
             const held = await this.request(`/pos/${this.order.id}/hold`, { method: 'POST', headers: await this.csrf() });
             this.heldOrders = [held, ...this.heldOrders.filter((item) => item.id !== held.id)];
             this.order = null;

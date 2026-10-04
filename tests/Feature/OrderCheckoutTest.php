@@ -191,4 +191,32 @@ class OrderCheckoutTest extends TestCase
         $this->assertEquals($subtotal + $tax + $fee, (float) $order->grand_total);
         $this->assertStringContainsString('Service', app(EscPosPrinter::class)->receipt($order));
     }
+
+    public function test_checkout_prints_customer_and_staff_invoices(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $service = app(OrderService::class);
+        $order = $service->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+        $service->addItem($order, [
+            'product_id' => $this->sellableProduct->id,
+            'quantity' => 1,
+        ]);
+
+        $payload = $this->postJson(route('pos.checkout', $order->fresh()), [
+            'method' => PaymentMethod::Cash->value,
+            'amount' => 100000,
+            'tendered' => 100000,
+            'order_type' => OrderType::Pickup->value,
+        ])->assertOk()->json();
+
+        $raw = base64_decode($payload['receipt_escpos']);
+        $this->assertStringContainsString('CUSTOMER', $raw);
+        $this->assertStringContainsString('KARYAWAN', $raw);
+        $this->assertSame(2, substr_count($raw, "\x1D\x56\x00"));
+        $this->assertStringContainsString('CUSTOMER', $payload['receipt_html']);
+        $this->assertStringContainsString('KARYAWAN', $payload['receipt_html']);
+    }
 }

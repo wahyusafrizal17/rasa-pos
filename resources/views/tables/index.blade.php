@@ -1,20 +1,33 @@
 @extends('layouts.app')
 @section('title', 'Tables')
-@section('breadcrumb', 'Front of house')
+@section('breadcrumb', 'Operasional')
 @section('content')
+@php
+    $openForm = $errors->any() ? old('_form') : null;
+    $availableCount = $tables->where('status', \App\Enums\TableStatus::Available)->count();
+    $occupiedCount = $tables->where('status', \App\Enums\TableStatus::Occupied)->count();
+    $reservedCount = $tables->where('status', \App\Enums\TableStatus::Reserved)->count();
+@endphp
 <div
     class="tables-page"
     x-data="{
-        createOpen: false,
-        editOpen: false,
-        reserveOpen: false,
-        transferOpen: false,
-        mergeOpen: false,
-        splitOpen: false,
-        splitSource: '',
+        createOpen: {{ $openForm === 'create' ? 'true' : 'false' }},
+        editOpen: {{ $openForm === 'edit' ? 'true' : 'false' }},
+        reserveOpen: {{ $openForm === 'reserve' ? 'true' : 'false' }},
+        transferOpen: {{ $openForm === 'transfer' ? 'true' : 'false' }},
+        mergeOpen: {{ $openForm === 'merge' ? 'true' : 'false' }},
+        splitOpen: {{ $openForm === 'split' ? 'true' : 'false' }},
+        splitSource: @js(old('source_id', '')),
         splitItems: [],
-        editing: { id: null, code: '', name: '', capacity: 2, shape: 'square', zone: '' },
-        reserveTableId: '',
+        editing: {
+            id: @js(old('_table_id')),
+            code: @js(old('code', '')),
+            name: @js(old('name', '')),
+            capacity: @js((int) old('capacity', 2)),
+            shape: @js(old('shape', 'square')),
+            zone: @js(old('zone', '')),
+        },
+        reserveTableId: @js(old('table_id', '')),
         openEdit(table) {
             this.editing = table;
             this.editOpen = true;
@@ -31,111 +44,137 @@
             this.splitItems = table?.items || [];
         }
     }"
+    x-init="if (splitSource) loadSplitItems()"
 >
-    @php
-        $availableCount = $tables->where('status', \App\Enums\TableStatus::Available)->count();
-        $occupiedCount = $tables->where('status', \App\Enums\TableStatus::Occupied)->count();
-        $reservedCount = $tables->where('status', \App\Enums\TableStatus::Reserved)->count();
-    @endphp
-
-    <section class="card overflow-hidden">
-        <div class="tables-toolbar">
+    <div class="mb-5 grid gap-4 md:grid-cols-3">
+        <div class="stat-card">
             <div>
-                <p class="stat-kicker">Floor plan</p>
-                <h1 class="mt-1 text-xl font-semibold tracking-tight text-heading">Atur posisi meja</h1>
-                <p class="mt-1 text-sm text-muted">Geser kartu untuk mengubah layout. Status terbarui otomatis.</p>
+                <p class="stat-kicker">Available</p>
+                <p class="stat-value" id="count-available">{{ $availableCount }}</p>
+                <p class="stat-hint">Siap dipakai</p>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <span class="stat-icon bg-[#e8fadf] text-[#28c76f]">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </span>
+        </div>
+        <div class="stat-card">
+            <div>
+                <p class="stat-kicker">Occupied</p>
+                <p class="stat-value" id="count-occupied">{{ $occupiedCount }}</p>
+                <p class="stat-hint">Sedang dipakai</p>
+            </div>
+            <span class="stat-icon bg-[#e0f9fc] text-[#00cfe8]">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 8h16M4 16h16M8 4v16M16 4v16"/></svg>
+            </span>
+        </div>
+        <div class="stat-card">
+            <div>
+                <p class="stat-kicker">Reserved</p>
+                <p class="stat-value" id="count-reserved">{{ $reservedCount }}</p>
+                <p class="stat-hint">Sudah dibooking</p>
+            </div>
+            <span class="stat-icon bg-[#fff3e8] text-[#ff9f43]">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z"/></svg>
+            </span>
+        </div>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div class="card-header">
+            <div>
+                <h5 class="card-header-title">Daftar meja</h5>
+                <p class="card-header-subtitle">Status terbarui otomatis. Reserve, transfer, merge, dan split tetap dari sini.</p>
+            </div>
+            <div class="card-header-actions">
                 <button type="button" class="btn-ghost !py-2" @click="reserveOpen = true">Reservasi</button>
                 <button type="button" class="btn-ghost !py-2" @click="transferOpen = true">Transfer</button>
                 <button type="button" class="btn-ghost !py-2" @click="mergeOpen = true">Merge</button>
-                <button type="button" class="btn-ghost !py-2" @click="splitOpen = true">Split</button>
-                <button type="button" class="btn-add !py-2" @click="createOpen = true">Tambah meja</button>
+                @can('tables.manage')
+                    <button type="button" class="btn-ghost !py-2" @click="splitOpen = true">Split</button>
+                    <button type="button" class="btn-add" @click="createOpen = true">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                        Tambah meja
+                    </button>
+                @endcan
             </div>
         </div>
-        <div class="tables-stats">
-            <div class="tables-stat tables-stat-available">
-                <span>Available</span>
-                <strong id="count-available">{{ $availableCount }}</strong>
-            </div>
-            <div class="tables-stat tables-stat-occupied">
-                <span>Occupied</span>
-                <strong id="count-occupied">{{ $occupiedCount }}</strong>
-            </div>
-            <div class="tables-stat tables-stat-reserved">
-                <span>Reserved</span>
-                <strong id="count-reserved">{{ $reservedCount }}</strong>
-            </div>
+        <div class="table-wrap">
+            <table class="list-table">
+                <thead>
+                    <tr>
+                        <th class="col-no">No.</th>
+                        <th>Kode</th>
+                        <th>Nama</th>
+                        <th>Zona</th>
+                        <th>Kapasitas</th>
+                        <th>Status</th>
+                        <th>Keterangan</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($tables as $table)
+                        @php
+                            $guest = $table->reservations->first();
+                            $order = $table->orders->first();
+                        @endphp
+                        <tr data-table-id="{{ $table->id }}">
+                            <td class="col-no">{{ $loop->iteration }}</td>
+                            <td>
+                                <a href="{{ route('tables.show', $table) }}" class="font-semibold text-heading hover:underline">{{ $table->code }}</a>
+                            </td>
+                            <td>{{ $table->name }}</td>
+                            <td class="text-muted">{{ $table->zone ?: '—' }}</td>
+                            <td>{{ $table->capacity }} pax</td>
+                            <td>
+                                <x-status :value="$table->status->color()" data-table-status>{{ $table->status->label() }}</x-status>
+                            </td>
+                            <td>
+                                @if ($guest)
+                                    {{ $guest->guest_name }}
+                                @elseif ($order)
+                                    {{ (int) $order->items_count }} item{{ $table->open_minutes ? ' · '.$table->open_minutes.' menit' : '' }}
+                                    @if ($order->notes)
+                                        <span class="mt-0.5 block text-[12px] text-muted">{{ $order->notes }}</span>
+                                    @endif
+                                @elseif ($table->open_minutes)
+                                    {{ $table->open_minutes }} menit
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td class="col-actions">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <a href="{{ route('tables.show', $table) }}" class="table-action" title="Lihat">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.3 12S6 6 12 6s9.7 6 9.7 6-3.7 6-9.7 6S2.3 12 2.3 12z"/><circle cx="12" cy="12" r="2.5" stroke-width="1.8"/></svg>
+                                    </a>
+                                    <button type="button" class="table-action" title="Reservasi" @click="openReserve({{ $table->id }})">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3M4 11h16M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z"/></svg>
+                                    </button>
+                                    @can('tables.manage')
+                                        <button type="button" class="table-action" title="Edit" @click="openEdit(@js(['id' => $table->id, 'code' => $table->code, 'name' => $table->name, 'capacity' => $table->capacity, 'shape' => $table->shape, 'zone' => $table->zone]))">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                                        </button>
+                                        <form method="POST" action="{{ route('tables.destroy', $table) }}" onsubmit="return confirm('Hapus meja ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="table-action table-action-danger" title="Hapus">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M9 7V5h6v2m-7 0v12a1 1 0 001 1h6a1 1 0 001-1V7"/></svg>
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="py-16 text-center text-sm text-slate-400">Belum ada meja.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-        <div class="floor-canvas">
-        @forelse ($tables as $index => $table)
-            @php
-                $statusClass = match ($table->status) {
-                    \App\Enums\TableStatus::Available => 'table-tile-available',
-                    \App\Enums\TableStatus::Occupied => 'table-tile-occupied',
-                    \App\Enums\TableStatus::Reserved => 'table-tile-reserved',
-                    default => '',
-                };
-                $badge = match ($table->status) {
-                    \App\Enums\TableStatus::Available => 'tables-tile-badge-available',
-                    \App\Enums\TableStatus::Occupied => 'tables-tile-badge-occupied',
-                    \App\Enums\TableStatus::Reserved => 'tables-tile-badge-reserved',
-                    default => 'tables-tile-badge-available',
-                };
-                $guest = $table->reservations->first();
-                $order = $table->orders->first();
-                $shapeClass = match ($table->shape) {
-                    'round' => '!rounded-[36px]',
-                    'rect' => '!rounded-2xl',
-                    default => '',
-                };
-            @endphp
-            <div
-                class="absolute z-10"
-                x-data="tableDrag({{ $table->id }}, {{ (int) ($table->pos_x ?? (32 + ($index % 5) * 196)) }}, {{ (int) ($table->pos_y ?? (32 + intdiv($index, 5) * 180)) }})"
-                :style="`left:${x}px;top:${y}px`"
-                @mousedown.prevent="start($event)"
-                @mousemove.window="move($event)"
-                @mouseup.window="end()"
-            >
-                <div class="table-tile {{ $statusClass }} {{ $shapeClass }}" data-table-id="{{ $table->id }}">
-                    <div class="flex items-start justify-between gap-2">
-                        <a href="{{ route('tables.show', $table) }}" class="text-[17px] font-semibold leading-none tracking-tight text-heading" @mousedown.stop>{{ $table->code }}</a>
-                        <span class="tables-tile-badge {{ $badge }}" data-table-status>{{ $table->status->label() }}</span>
-                    </div>
-                    <p class="mt-2 text-xs text-muted">{{ $table->name }} · {{ $table->capacity }} pax</p>
-                    @if ($table->zone)
-                        <p class="mt-0.5 text-[11px] text-muted">{{ $table->zone }}</p>
-                    @endif
-                    @if ($guest)
-                        <p class="tables-tile-guest">{{ $guest->guest_name }}</p>
-                    @elseif ($order)
-                        <p class="tables-tile-guest">{{ (int) $order->items_count }} item{{ $table->open_minutes ? ' · '.$table->open_minutes.' menit' : '' }}</p>
-                        @if ($order->notes)
-                            <p class="mt-0.5 text-[11px] text-muted">{{ $order->notes }}</p>
-                        @endif
-                    @elseif ($table->open_minutes)
-                        <p class="tables-tile-guest">{{ $table->open_minutes }} menit</p>
-                    @endif
-                    <div class="tables-tile-actions" @mousedown.stop>
-                        <button type="button" @click="openEdit(@js(['id' => $table->id, 'code' => $table->code, 'name' => $table->name, 'capacity' => $table->capacity, 'shape' => $table->shape, 'zone' => $table->zone]))">Edit</button>
-                        <button type="button" @click="openReserve({{ $table->id }})">Reserve</button>
-                        <form method="POST" action="{{ route('tables.destroy', $table) }}" class="ml-auto" onsubmit="return confirm('Hapus meja ini?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="is-danger">Hapus</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p class="text-sm font-medium text-heading">Belum ada meja</p>
-                <p class="mt-1 text-xs text-muted">Tambahkan meja untuk mulai mengatur floor plan.</p>
-            </div>
-        @endforelse
-        </div>
-    </section>
+    </div>
 
     <div class="card overflow-hidden">
         <div class="card-header">
@@ -188,32 +227,36 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="createOpen" x-cloak>
         <div class="card w-full max-w-lg p-6" @click.outside="createOpen = false">
             <h3 class="text-lg font-semibold text-heading">Tambah meja</h3>
+            @if ($openForm === 'create')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" action="{{ route('tables.store') }}" class="mt-5 space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="create">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="label">Kode</label>
-                        <input class="input" name="code" required maxlength="20" placeholder="T-01">
+                        <input class="input" name="code" required maxlength="20" placeholder="T-01" value="{{ old('code') }}">
                     </div>
                     <div>
                         <label class="label">Nama</label>
-                        <input class="input" name="name" required maxlength="50" placeholder="Meja jendela">
+                        <input class="input" name="name" required maxlength="50" placeholder="Meja jendela" value="{{ old('name') }}">
                     </div>
                     <div>
                         <label class="label">Kapasitas</label>
-                        <input class="input" type="number" name="capacity" min="1" value="2" required>
+                        <input class="input" type="number" name="capacity" min="1" value="{{ old('capacity', 2) }}" required>
                     </div>
                     <div>
                         <label class="label">Bentuk</label>
                         <select name="shape" class="input">
-                            <option value="square">Square</option>
-                            <option value="round">Round</option>
-                            <option value="rect">Rect</option>
+                            <option value="square" @selected(old('shape', 'square') === 'square')>Square</option>
+                            <option value="round" @selected(old('shape') === 'round')>Round</option>
+                            <option value="rect" @selected(old('shape') === 'rect')>Rect</option>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="label">Zona</label>
-                        <input class="input" name="zone" maxlength="50" placeholder="Indoor / Terrace">
+                        <input class="input" name="zone" maxlength="50" placeholder="Indoor / Terrace" value="{{ old('zone') }}">
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -227,9 +270,14 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="editOpen" x-cloak>
         <div class="card w-full max-w-lg p-6" @click.outside="editOpen = false">
             <h3 class="text-lg font-semibold">Edit meja</h3>
+            @if ($openForm === 'edit')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" :action="`{{ url('/tables') }}/${editing.id}`" class="mt-5 space-y-4">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="_form" value="edit">
+                <input type="hidden" name="_table_id" :value="editing.id">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="label">Kode</label>
@@ -267,8 +315,12 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="reserveOpen" x-cloak>
         <div class="card w-full max-w-lg p-6" @click.outside="reserveOpen = false">
             <h3 class="text-lg font-semibold">Reservasi meja</h3>
+            @if ($openForm === 'reserve')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" action="{{ route('tables.reserve') }}" class="mt-5 space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="reserve">
                 <div>
                     <label class="label">Meja</label>
                     <select name="table_id" class="input" required x-model="reserveTableId">
@@ -281,32 +333,32 @@
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="label">Nama tamu</label>
-                        <input class="input" name="guest_name" required maxlength="100">
+                        <input class="input" name="guest_name" required maxlength="100" value="{{ old('guest_name') }}">
                     </div>
                     <div>
                         <label class="label">Telepon</label>
-                        <input class="input" name="guest_phone" maxlength="30">
+                        <input class="input" name="guest_phone" maxlength="30" value="{{ old('guest_phone') }}">
                     </div>
                     <div>
                         <label class="label">Jumlah tamu</label>
-                        <input class="input" type="number" name="guest_count" min="1" value="2" required>
+                        <input class="input" type="number" name="guest_count" min="1" value="{{ old('guest_count', 2) }}" required>
                     </div>
                     <div>
                         <label class="label">Waktu</label>
-                        <input class="input" type="datetime-local" name="reserved_at" required>
+                        <input class="input" type="datetime-local" name="reserved_at" required value="{{ old('reserved_at') }}">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="label">Pelanggan (opsional)</label>
                         <select name="customer_id" class="input">
                             <option value="">Tidak terkait</option>
                             @foreach ($customers as $customer)
-                                <option value="{{ $customer->id }}">{{ $customer->name }} · {{ $customer->phone }}</option>
+                                <option value="{{ $customer->id }}" @selected((string) old('customer_id') === (string) $customer->id)>{{ $customer->name }} · {{ $customer->phone }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="label">Catatan</label>
-                        <input class="input" name="notes" placeholder="Permintaan khusus">
+                        <input class="input" name="notes" placeholder="Permintaan khusus" value="{{ old('notes') }}">
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -320,14 +372,18 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="transferOpen" x-cloak>
         <div class="card w-full max-w-md p-6" @click.outside="transferOpen = false">
             <h3 class="text-lg font-semibold">Transfer meja</h3>
+            @if ($openForm === 'transfer')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" action="{{ route('tables.transfer') }}" class="mt-5 space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="transfer">
                 <div>
                     <label class="label">Dari</label>
                     <select name="from_id" class="input" required>
                         <option value="">Pilih meja sumber</option>
                         @foreach ($tables as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->status->label() }}</option>
+                            <option value="{{ $table->id }}" @selected((string) old('from_id') === (string) $table->id)>{{ $table->code }} · {{ $table->status->label() }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -336,7 +392,7 @@
                     <select name="to_id" class="input" required>
                         <option value="">Pilih meja tujuan</option>
                         @foreach ($tables as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->status->label() }}</option>
+                            <option value="{{ $table->id }}" @selected((string) old('to_id') === (string) $table->id)>{{ $table->code }} · {{ $table->status->label() }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -351,8 +407,12 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="splitOpen" x-cloak>
         <div class="card w-full max-w-md p-6" @click.outside="splitOpen = false">
             <h3 class="text-lg font-semibold">Split meja</h3>
+            @if ($openForm === 'split')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" action="{{ route('tables.split') }}" class="mt-5 space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="split">
                 <div>
                     <label class="label">Sumber</label>
                     <select name="source_id" class="input" required x-model="splitSource" @change="loadSplitItems()">
@@ -379,7 +439,7 @@
                     <select name="target_id" class="input" required>
                         <option value="">Pilih meja tujuan</option>
                         @foreach ($tables as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->status->label() }}</option>
+                            <option value="{{ $table->id }}" @selected((string) old('target_id') === (string) $table->id)>{{ $table->code }} · {{ $table->status->label() }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -394,16 +454,20 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="mergeOpen" x-cloak>
         <div class="card w-full max-w-md p-6" @click.outside="mergeOpen = false">
             <h3 class="text-lg font-semibold">Merge meja</h3>
-            <p class="mt-1 text-sm text-muted">Order meja sumber pindah ke meja target. Meja sumber jadi Available — kartunya tidak disatukan.</p>
+            <p class="mt-1 text-sm text-muted">Order meja sumber pindah ke meja target. Meja sumber jadi Available.</p>
+            @if ($openForm === 'merge')
+                <p class="mt-2 text-sm text-brand">{{ $errors->first() }}</p>
+            @endif
             <form method="POST" action="{{ route('tables.merge') }}" class="mt-5 space-y-4">
                 @csrf
+                <input type="hidden" name="_form" value="merge">
                 @php $mergeable = $tables->filter(fn ($table) => $table->orders->isNotEmpty()); @endphp
                 <div>
                     <label class="label">Sumber (dikosongkan)</label>
                     <select name="source_id" class="input" required>
                         <option value="">Pilih meja sumber</option>
                         @forelse ($mergeable as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ (int) $table->orders->first()?->items_count }} item</option>
+                            <option value="{{ $table->id }}" @selected((string) old('source_id') === (string) $table->id)>{{ $table->code }} · {{ (int) $table->orders->first()?->items_count }} item</option>
                         @empty
                             <option value="" disabled>Tidak ada meja berorder</option>
                         @endforelse
@@ -414,7 +478,7 @@
                     <select name="target_id" class="input" required>
                         <option value="">Pilih meja target</option>
                         @forelse ($mergeable as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ (int) $table->orders->first()?->items_count }} item</option>
+                            <option value="{{ $table->id }}" @selected((string) old('target_id') === (string) $table->id)>{{ $table->code }} · {{ (int) $table->orders->first()?->items_count }} item</option>
                         @empty
                             <option value="" disabled>Tidak ada meja berorder</option>
                         @endforelse
@@ -432,41 +496,10 @@
 
 @push('scripts')
 <script>
-    window.tableDrag = function (id, startX, startY) {
-        return {
-            x: startX,
-            y: startY,
-            dragging: false,
-            startClientX: 0,
-            startClientY: 0,
-            originX: 0,
-            originY: 0,
-            start(event) {
-                this.dragging = true;
-                this.startClientX = event.clientX;
-                this.startClientY = event.clientY;
-                this.originX = this.x;
-                this.originY = this.y;
-            },
-            move(event) {
-                if (! this.dragging) return;
-                this.x = Math.max(0, this.originX + (event.clientX - this.startClientX));
-                this.y = Math.max(0, this.originY + (event.clientY - this.startClientY));
-            },
-            async end() {
-                if (! this.dragging) return;
-                this.dragging = false;
-                await fetch(@json(url('/tables')) + '/' + id + '/move', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    },
-                    body: JSON.stringify({ pos_x: Math.round(this.x), pos_y: Math.round(this.y) }),
-                });
-            },
-        };
+    const statusClass = {
+        available: 'badge bg-[#e8fadf] text-[#28c76f]',
+        occupied: 'badge bg-[#e0f9fc] text-[#00cfe8]',
+        reserved: 'badge bg-[#fff3e8] text-[#ff9f43]',
     };
 
     async function pollTables() {
@@ -475,13 +508,11 @@
             if (! res.ok) return;
             const data = await res.json();
             (data.tables || []).forEach((table) => {
-                const tile = document.querySelector(`[data-table-id="${table.id}"]`);
-                if (! tile) return;
-                tile.classList.remove('table-tile-available', 'table-tile-occupied', 'table-tile-reserved');
-                tile.classList.add('table-tile-' + (table.status || 'available'));
-                const badge = tile.querySelector('[data-table-status]');
+                const row = document.querySelector(`[data-table-id="${table.id}"]`);
+                if (! row) return;
+                const badge = row.querySelector('[data-table-status]');
                 if (badge) {
-                    badge.className = 'tables-tile-badge tables-tile-badge-' + (table.status || 'available');
+                    badge.className = statusClass[table.status] || statusClass.available;
                     badge.textContent = table.label;
                 }
             });

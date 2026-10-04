@@ -58,9 +58,9 @@ class Bom extends Model
                     'component_name' => $item->component?->name ?? '—',
                     'sku' => $item->component?->sku ?? '—',
                     'unit' => $unit !== '' ? $unit : '—',
-                    'quantity_label' => $this->formatQty($qty, $unit),
-                    'waste_label' => number_format((float) ($item->waste_percentage ?? 0), 1).'%',
-                    'yield_label' => number_format((float) ($item->yield_percentage ?? 100), 1).'%',
+                    'quantity_label' => qty_label($qty, $unit),
+                    'waste_label' => qty_label($item->waste_percentage ?? 0).'%',
+                    'yield_label' => qty_label($item->yield_percentage ?? 100).'%',
                 ];
             })
             ->all();
@@ -70,7 +70,7 @@ class Bom extends Model
                 'level' => (int) ($row['level'] ?? 1),
                 'name' => $row['name'] ?? '—',
                 'unit' => $row['unit'] ?? '—',
-                'quantity_label' => $this->formatQty((float) ($row['quantity'] ?? 0), (string) ($row['unit'] ?? '')),
+                'quantity_label' => qty_label((float) ($row['quantity'] ?? 0), (string) ($row['unit'] ?? '')),
             ])
             ->values()
             ->all();
@@ -82,9 +82,9 @@ class Bom extends Model
             'sku' => $this->product?->sku ?? '—',
             'version' => $this->version,
             'yield_percentage' => (string) (float) $this->yield_percentage,
-            'yield_label' => number_format((float) $this->yield_percentage, 1).'%',
+            'yield_label' => qty_label($this->yield_percentage).'%',
             'waste_percentage' => (string) (float) ($this->waste_percentage ?? 0),
-            'waste_label' => number_format((float) ($this->waste_percentage ?? 0), 1).'%',
+            'waste_label' => qty_label($this->waste_percentage ?? 0).'%',
             'active_from' => $this->active_from?->format('Y-m-d') ?? '',
             'active_until' => $this->active_until?->format('Y-m-d') ?? '',
             'period_label' => $this->periodLabel(),
@@ -106,12 +106,5 @@ class Bom extends Model
         }
 
         return ($this->active_from?->format('d/m/Y') ?? '—').' – '.($this->active_until?->format('d/m/Y') ?? '—');
-    }
-
-    protected function formatQty(float $value, string $unit): string
-    {
-        $label = number_format($value, 4);
-
-        return $unit !== '' && $unit !== '—' ? $label.' '.$unit : $label;
     }
 }

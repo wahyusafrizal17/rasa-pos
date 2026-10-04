@@ -56,9 +56,9 @@
                             <td class="font-medium">{{ $row->reference_number }}</td>
                             <td>{{ $row->product?->name }}</td>
                             <td>{{ $row->type?->label() ?? $row->type?->value }}</td>
-                            <td>{{ number_format($row->quantity, 2) }}</td>
-                            <td>{{ number_format($row->before_stock, 2) }}</td>
-                            <td>{{ number_format($row->after_stock, 2) }}</td>
+                            <td>{{ qty_label($row->quantity) }}</td>
+                            <td>{{ qty_label($row->before_stock) }}</td>
+                            <td>{{ qty_label($row->after_stock) }}</td>
                         </tr>
                     @empty
                         <tr>

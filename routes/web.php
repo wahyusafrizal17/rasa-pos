@@ -67,8 +67,6 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
         Route::get('/{order}/ticket/{station}', [PosController::class, 'ticket'])->name('ticket');
     });
 
-    Route::get('/kitchen', [CheckerController::class, 'kitchen'])->name('kitchen.index');
-    Route::get('/bar', [CheckerController::class, 'bar'])->name('bar.index');
     Route::post('/order-items/{item}/status', [CheckerController::class, 'updateItem'])->name('order-items.status');
     Route::get('/print-jobs', [CheckerController::class, 'pendingJobs'])->name('print-jobs.index');
     Route::post('/print-jobs/{order}', [CheckerController::class, 'ackJob'])->name('print-jobs.ack');

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Bundles')
-@section('breadcrumb', 'Marketing')
+@section('breadcrumb', 'Katalog')
 @section('content')
     @php
         $formError = $errors->any();

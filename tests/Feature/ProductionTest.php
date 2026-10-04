@@ -51,6 +51,7 @@ class ProductionTest extends TestCase
 
         $this->assertSame(ProductionStatus::Draft, $order->status);
         $this->assertGreaterThan(0, $order->items()->count());
+        $this->assertStringNotContainsString('.00', $order->toModalArray()['planned_label']);
 
         $completed = $service->complete($order, 9.5);
 
@@ -96,5 +97,14 @@ class ProductionTest extends TestCase
                 ->where('reference_id', $completed->id)
                 ->exists()
         );
+    }
+
+    public function test_bom_quantity_labels_drop_trailing_decimals(): void
+    {
+        $labels = collect($this->bom->toModalArray()['items'])->pluck('quantity_label');
+
+        $this->assertTrue($labels->contains('1 KG'));
+        $this->assertTrue($labels->contains('0.05 KG'));
+        $this->assertFalse($labels->contains(fn (string $label) => str_contains($label, '.00')));
     }
 }

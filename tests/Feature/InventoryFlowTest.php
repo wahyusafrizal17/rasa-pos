@@ -157,5 +157,7 @@ class InventoryFlowTest extends TestCase
 
         $this->assertSame('35 KG', qty_label(35.00, 'KG'));
         $this->assertSame('0.05 KG', qty_label(0.05, 'KG'));
+        $this->assertSame('2 KG', qty_label(2.0000, 'KG'));
+        $this->assertSame('2', qty_label(2.0000, '—'));
     }
 }

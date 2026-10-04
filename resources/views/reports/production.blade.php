@@ -54,9 +54,9 @@
                         <tr>
                             <td class="font-medium">{{ $row->number }}</td>
                             <td>{{ $row->product?->name }}</td>
-                            <td>{{ number_format($row->quantity_planned, 2) }}</td>
-                            <td>{{ number_format($row->quantity_produced ?? 0, 2) }}</td>
-                            <td>{{ number_format($row->yield_percentage ?? 0, 1) }}%</td>
+                            <td>{{ qty_label($row->quantity_planned) }}</td>
+                            <td>{{ qty_label($row->quantity_produced ?? 0) }}</td>
+                            <td>{{ qty_label($row->yield_percentage ?? 0) }}%</td>
                         </tr>
                     @empty
                         <tr>

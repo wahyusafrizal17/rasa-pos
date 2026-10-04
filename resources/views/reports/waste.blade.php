@@ -53,7 +53,7 @@
                         <tr>
                             <td class="font-medium">{{ $row->number }}</td>
                             <td>{{ $row->product?->name }}</td>
-                            <td>{{ number_format($row->quantity, 2) }}</td>
+                            <td>{{ qty_label($row->quantity) }}</td>
                             <td>{{ $row->reason?->label() ?? $row->reason?->value }}</td>
                         </tr>
                     @empty

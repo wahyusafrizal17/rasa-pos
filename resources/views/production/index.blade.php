@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Production')
-@section('breadcrumb', 'Production')
+@section('title', 'Production Orders')
+@section('breadcrumb', 'Produksi')
 @section('content')
     @php
         $formError = collect($errors->keys())->contains(fn ($key) => in_array($key, ['outlet_id', 'product_id', 'bom_id', 'quantity_planned', 'production_date', 'notes'], true));

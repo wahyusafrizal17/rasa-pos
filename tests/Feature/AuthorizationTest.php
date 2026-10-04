@@ -73,27 +73,55 @@ class AuthorizationTest extends TestCase
             ->assertOk();
     }
 
-    public function test_kitchen_can_open_kitchen_display_but_not_bar(): void
+    public function test_sidebar_follows_clean_menu_tree(): void
     {
-        $this->actingAsAtOutlet($this->kitchen)
-            ->get(route('kitchen.index'))
+        $this->actingAsAtOutlet($this->admin)
+            ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Kitchen');
-
-        $this->actingAsAtOutlet($this->kitchen)
-            ->get(route('bar.index'))
-            ->assertForbidden();
+            ->assertSee('>Sales Orders<', false)
+            ->assertSee('>Production Orders<', false)
+            ->assertSee('>Operasional<', false)
+            ->assertSee('>Marketing<', false)
+            ->assertDontSee('>Penjualan<', false)
+            ->assertSee('>Katalog<', false)
+            ->assertSee('>Pengaturan<', false)
+            ->assertSee(route('marketing.bundles'), false)
+            ->assertDontSee(route('reports.promo', ['nav' => 'penjualan']), false)
+            ->assertDontSee('>Kitchen<', false);
     }
 
-    public function test_cashier_cannot_open_station_displays(): void
+    public function test_penjualan_does_not_include_promo(): void
     {
-        $this->actingAsAtOutlet($this->cashier)
-            ->get(route('kitchen.index'))
-            ->assertForbidden();
+        $html = $this->actingAsAtOutlet($this->admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('nav=penjualan', $html);
+
+        $promo = $this->get(route('reports.promo'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('data-nav="Marketing" data-open="0"', $promo);
+        $this->assertStringContainsString('data-nav="Laporan" data-open="1"', $promo);
+    }
+
+    public function test_kitchen_and_bar_menus_are_removed(): void
+    {
+        $this->actingAsAtOutlet($this->admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('>Kitchen<', false)
+            ->assertDontSee('>Bar<', false);
+
+        $this->actingAsAtOutlet($this->kitchen)
+            ->get('/kitchen')
+            ->assertNotFound();
 
         $this->actingAsAtOutlet($this->cashier)
-            ->get(route('bar.index'))
-            ->assertForbidden();
+            ->get('/bar')
+            ->assertNotFound();
     }
 
     public function test_kitchen_cannot_access_pos_without_permission(): void

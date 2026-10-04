@@ -423,7 +423,10 @@
                 },
                 liveDiffLabel(item) {
                     const diff = this.liveDiff(item);
-                    const label = (diff > 0 ? '+' : '') + Number(diff).toFixed(2);
+                    const n = Number(diff);
+                    const rounded = Math.round(n);
+                    const body = Math.abs(n - rounded) < 0.0005 ? String(rounded) : String(n);
+                    const label = (diff > 0 ? '+' : '') + body;
                     return item.unit ? label + ' ' + item.unit : label;
                 },
                 liveDiffTone(item) {
