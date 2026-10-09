@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'outlet' => \App\Http\Middleware\SetCurrentOutlet::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/faspay',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -11,6 +11,7 @@ use App\Http\Controllers\BomController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FaspayWebhookController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\OrderController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\WasteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
+Route::post('/webhooks/faspay', [FaspayWebhookController::class, 'notify'])->name('webhooks.faspay');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -62,6 +64,8 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
         Route::post('/{order}/hold', [PosController::class, 'hold'])->name('hold');
         Route::get('/{order}/recall', [PosController::class, 'recall'])->name('recall');
         Route::post('/{order}/checkout', [PosController::class, 'checkout'])->name('checkout');
+        Route::post('/{order}/qris', [PosController::class, 'startQris'])->name('qris');
+        Route::get('/{order}/qris/status', [PosController::class, 'qrisStatus'])->name('qris.status');
         Route::post('/{order}/cancel', [PosController::class, 'cancel'])->name('cancel');
         Route::get('/{order}/receipt', [PosController::class, 'receipt'])->name('receipt');
         Route::get('/{order}/ticket/{station}', [PosController::class, 'ticket'])->name('ticket');

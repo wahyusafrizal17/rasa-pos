@@ -196,12 +196,16 @@
                     <p class="text-xs font-medium text-brand" x-show="cashShort()">Uang diterima masih kurang dari total.</p>
                 </div>
 
-                <p class="mt-4 text-xs text-muted" x-show="method !== 'cash'">Nominal akan dicatat sesuai total order.</p>
+                <p class="mt-4 text-xs text-muted" x-show="method !== 'cash' && method !== 'qris'">Nominal akan dicatat sesuai total order.</p>
+                <div class="mt-5 text-center" x-show="method === 'qris' && qrisUrl" x-cloak>
+                    <img :src="qrisUrl" alt="QRIS" class="mx-auto h-56 w-56 rounded-xl bg-white object-contain p-2">
+                    <p class="mt-2 text-xs text-muted">Scan QRIS. Menunggu pembayaran Faspay…</p>
+                </div>
                 <p class="mt-3 text-xs font-medium text-brand" x-show="notice" x-text="notice"></p>
 
                 <div class="mt-6 grid grid-cols-2 gap-2">
-                    <button type="button" class="btn-ghost !rounded-xl" @click="payOpen = false">Batal</button>
-                    <button type="button" class="btn-brand !rounded-xl" @click="checkout()" :disabled="!canCompletePay()">Selesaikan</button>
+                    <button type="button" class="btn-ghost !rounded-xl" @click="closePay()">Batal</button>
+                    <button type="button" class="btn-brand !rounded-xl" @click="checkout()" :disabled="!canCompletePay() || !!qrisUrl" x-text="method === 'qris' ? (qrisUrl ? 'Menunggu…' : 'Tampilkan QR') : 'Selesaikan'"></button>
                 </div>
             </div>
         </div>
@@ -267,13 +271,14 @@ function posApp() {
     return {
         order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
         discount_id: '', method: 'cash', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, notice: '',
+        qrisUrl: '', qrisTimer: null,
         pendingAdd: null, selectedAddonIds: [],
         productAddons: @json($productAddons),
         addons: [],
         paymentMethods: [
             { id: 'cash', label: 'Tunai', hint: 'Hitung kembalian' },
-            { id: 'card', label: 'Kartu', hint: 'Debit / kredit' },
-            { id: 'qris', label: 'QRIS', hint: 'Scan QR' },
+            { id: 'edc', label: 'EDC', hint: 'Mesin EDC' },
+            { id: 'qris', label: 'QRIS', hint: 'Scan QR Faspay' },
             { id: 'transfer', label: 'Transfer', hint: 'Bank transfer' },
         ],
         heldOrders: @json($heldOrders),
@@ -285,6 +290,7 @@ function posApp() {
             window.addEventListener('online', () => { this.online = true; this.flushQueue(); });
             window.addEventListener('offline', () => { this.online = false; });
             this.$watch('table_id', () => this.transferTable());
+            this.$watch('payOpen', (open) => { if (!open) this.stopQrisPoll(); });
             this.restoreDraft();
             this.loadHeld();
         },
@@ -371,9 +377,60 @@ function posApp() {
             this.payOpen = true;
         },
         setMethod(id) {
+            this.stopQrisPoll();
+            this.qrisUrl = '';
             this.method = id;
             this.notice = '';
             if (id !== 'cash') this.tendered = this.grandTotal();
+        },
+        closePay() {
+            this.stopQrisPoll();
+            this.qrisUrl = '';
+            this.payOpen = false;
+        },
+        stopQrisPoll() {
+            if (this.qrisTimer) {
+                clearInterval(this.qrisTimer);
+                this.qrisTimer = null;
+            }
+        },
+        async finishPaid(data) {
+            this.stopQrisPoll();
+            this.payOpen = false;
+            this.qrisUrl = '';
+            if (!data.order) return;
+            const qzOk = window.RasaQz?.printReceipt
+                ? await window.RasaQz.printReceipt(data)
+                : false;
+            this.notice = qzOk
+                ? 'Pembayaran berhasil, struk dicetak.'
+                : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
+            this.order = null;
+            this.tendered = 0;
+            localStorage.removeItem('pos_offline_draft');
+        },
+        async startQris() {
+            this.busy = true;
+            this.notice = '';
+            try {
+                const data = await this.request(`/pos/${this.order.id}/qris`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
+                    order_type: this.order_type, table_id: this.table_id || null,
+                })});
+                this.qrisUrl = data.qr_url;
+                this.stopQrisPoll();
+                this.qrisTimer = setInterval(() => this.checkQris(), 2000);
+            } catch (e) {
+                this.notice = e.message || 'QRIS Faspay gagal.';
+            } finally {
+                this.busy = false;
+            }
+        },
+        async checkQris() {
+            if (!this.order?.id) return;
+            try {
+                const data = await this.request(`/pos/${this.order.id}/qris/status`, { headers: await this.csrf() });
+                if (data.paid) await this.finishPaid(data);
+            } catch (e) {}
         },
         persistDraft() {
             const payload = {
@@ -525,6 +582,10 @@ function posApp() {
                 this.notice = this.cashShort() ? 'Uang diterima masih kurang dari total.' : 'Tidak bisa menyelesaikan pembayaran.';
                 return;
             }
+            if (this.method === 'qris') {
+                await this.startQris();
+                return;
+            }
             this.busy = true;
             this.notice = '';
             try {
@@ -533,18 +594,7 @@ function posApp() {
                     method: this.method, amount: this.grandTotal(), tendered: paid,
                     order_type: this.order_type, table_id: this.table_id || null,
                 })});
-                this.payOpen = false;
-                if (data.order) {
-                    const qzOk = window.RasaQz?.printReceipt
-                        ? await window.RasaQz.printReceipt(data)
-                        : false;
-                    this.notice = qzOk
-                        ? 'Pembayaran berhasil, struk dicetak.'
-                        : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
-                    this.order = null;
-                    this.tendered = 0;
-                    localStorage.removeItem('pos_offline_draft');
-                }
+                await this.finishPaid(data);
             } catch (e) {
                 this.notice = e.message || 'Pembayaran gagal.';
             } finally {

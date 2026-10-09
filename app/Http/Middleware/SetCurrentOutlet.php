@@ -21,19 +21,14 @@ class SetCurrentOutlet
             session(['current_outlet_id' => (int) $request->input('switch_outlet')]);
         }
 
-        if (! session('current_outlet_id')) {
+        $current = current_outlet_id();
+        $exists = $current && Outlet::query()->whereKey($current)->exists();
+        if (! $exists) {
             $outlet = $user->defaultOutlet()
                 ?? Outlet::query()->where('is_active', true)->first();
-
-            if ($outlet) {
-                session(['current_outlet_id' => $outlet->id]);
-            }
-        }
-
-        $current = current_outlet_id();
-        if ($current && ! $user->canAccessOutlet($current) && ! $user->isSuperAdmin() && ! $user->hasRole('admin')) {
-            $fallback = $user->defaultOutlet();
-            session(['current_outlet_id' => $fallback?->id]);
+            session(['current_outlet_id' => $outlet?->id]);
+        } elseif (! $user->canAccessOutlet($current) && ! $user->isSuperAdmin() && ! $user->hasRole('admin')) {
+            session(['current_outlet_id' => $user->defaultOutlet()?->id]);
         }
 
         return $next($request);

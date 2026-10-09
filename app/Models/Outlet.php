@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
-#[Fillable(['code', 'name', 'city', 'address', 'phone', 'is_central_kitchen', 'is_active', 'opens_at', 'closes_at'])]
+#[Fillable(['code', 'zoho_location_id', 'name', 'city', 'address', 'phone', 'is_central_kitchen', 'is_active', 'opens_at', 'closes_at'])]
 class Outlet extends Model
 {
     use AppliesFillableAttribute, SoftDeletes;

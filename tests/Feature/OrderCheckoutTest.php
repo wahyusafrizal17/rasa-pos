@@ -219,4 +219,42 @@ class OrderCheckoutTest extends TestCase
         $this->assertStringContainsString('CUSTOMER', $payload['receipt_html']);
         $this->assertStringContainsString('KARYAWAN', $payload['receipt_html']);
     }
+
+    public function test_pos_checkout_accepts_edc_and_rejects_card(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $service = app(OrderService::class);
+        $order = $service->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+        $service->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
+
+        $this->postJson(route('pos.checkout', $order), [
+            'method' => 'card',
+            'tendered' => 50000,
+        ])->assertUnprocessable();
+
+        $this->postJson(route('pos.checkout', $order->fresh()), [
+            'method' => 'edc',
+            'tendered' => 50000,
+        ])->assertOk()
+            ->assertJsonPath('order.payment_status', 'paid');
+
+        $this->assertSame(PaymentMethod::Edc, $order->fresh()->payments->first()->method);
+    }
+
+    public function test_pos_payment_picker_lists_four_methods(): void
+    {
+        $this->actingAsAtOutlet($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertSee('id: \'edc\'', false)
+            ->assertSee('label: \'EDC\'', false)
+            ->assertSee('id: \'qris\'', false)
+            ->assertSee('id: \'transfer\'', false)
+            ->assertSee('id: \'cash\'', false)
+            ->assertDontSee('id: \'card\'', false)
+            ->assertDontSee('Kartu', false);
+    }
 }

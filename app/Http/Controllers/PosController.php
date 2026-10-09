@@ -12,6 +12,7 @@ use App\Services\DiscountService;
 use App\Services\EscPosPrinter;
 use App\Services\InventoryService;
 use App\Services\OrderService;
+use App\Services\FaspayService;
 use App\Services\PrinterRoutingService;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
@@ -207,7 +208,7 @@ class PosController extends Controller
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
 
         $data = $request->validate([
-            'method' => ['required', 'in:cash,card,qris,transfer'],
+            'method' => ['required', 'in:cash,edc,transfer'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'tendered' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],
@@ -217,16 +218,30 @@ class PosController extends Controller
 
         $completed = $orders->checkout($order, $data)->load(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
 
-        $escpos = app(EscPosPrinter::class);
+        return response()->json($this->paidPayload($completed, $printers));
+    }
 
-        return response()->json([
-            'order' => $completed,
-            'print_jobs' => $this->escposJobs($printers->route($completed), $completed),
-            'receipt_escpos' => base64_encode($escpos->receipts($completed)),
-            'receipt_html' => $escpos->receiptsHtml($completed),
-            'receipt_height_mm' => $escpos->receiptsHeightMm($completed),
-            'qz_printer' => setting('qz_printer', ''),
-        ]);
+    public function startQris(Request $request, Order $order, FaspayService $faspay): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('orders.checkout'), 403);
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+
+        return response()->json($faspay->startQris($order->load(['customer', 'items'])));
+    }
+
+    public function qrisStatus(Request $request, Order $order, FaspayService $faspay, PrinterRoutingService $printers): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('orders.checkout'), 403);
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+
+        $result = $faspay->sync($order);
+        if (! $result['paid']) {
+            return response()->json(['paid' => false]);
+        }
+
+        $completed = $order->fresh(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
+
+        return response()->json(['paid' => true] + $this->paidPayload($completed, $printers));
     }
 
     public function cancel(Request $request, Order $order, OrderService $orders): JsonResponse|RedirectResponse
@@ -298,6 +313,20 @@ class PosController extends Controller
             'items_count' => $order->items->count(),
             'held_at' => $order->held_at?->toIso8601String(),
             'status' => $order->status?->value,
+        ];
+    }
+
+    protected function paidPayload($order, PrinterRoutingService $printers): array
+    {
+        $escpos = app(EscPosPrinter::class);
+
+        return [
+            'order' => $order,
+            'print_jobs' => $this->escposJobs($printers->route($order), $order),
+            'receipt_escpos' => base64_encode($escpos->receipts($order)),
+            'receipt_html' => $escpos->receiptsHtml($order),
+            'receipt_height_mm' => $escpos->receiptsHeightMm($order),
+            'qz_printer' => setting('qz_printer', ''),
         ];
     }
 

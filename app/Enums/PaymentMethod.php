@@ -5,15 +5,15 @@ namespace App\Enums;
 enum PaymentMethod: string
 {
     case Cash = 'cash';
-    case Card = 'card';
+    case Edc = 'edc';
     case Qris = 'qris';
     case Transfer = 'transfer';
 
     public function label(): string
     {
         return match ($this) {
-            self::Cash => 'Cash',
-            self::Card => 'Card',
+            self::Cash => 'Tunai',
+            self::Edc => 'EDC',
             self::Qris => 'QRIS',
             self::Transfer => 'Transfer',
         };

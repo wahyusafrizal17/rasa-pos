@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'sku', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
+    'sku', 'zoho_item_id', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
     'price', 'cost', 'is_sellable', 'is_addon', 'is_stockable', 'is_active',
     'minimum_stock', 'reorder_level', 'maximum_stock', 'station', 'prep_minutes',
 ])]

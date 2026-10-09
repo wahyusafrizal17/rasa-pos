@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'order_number', 'outlet_id', 'user_id', 'customer_id', 'table_id', 'discount_id',
+    'order_number', 'zoho_salesorder_id', 'zoho_invoice_id', 'zoho_payment_id',
+    'outlet_id', 'user_id', 'customer_id', 'table_id', 'discount_id',
     'channel', 'order_type', 'status', 'payment_status', 'subtotal', 'discount_amount',
     'tax_amount', 'tax_rate', 'service_charge',
     'grand_total', 'guest_count', 'notes', 'estimated_ready_at', 'held_at',

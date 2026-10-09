@@ -289,7 +289,7 @@ class OrderService
 
     public function checkout(Order $order, array $payment): Order
     {
-        return DB::transaction(function () use ($order, $payment) {
+        $order = DB::transaction(function () use ($order, $payment) {
             $order = $order->fresh(['items.product', 'discount', 'customer']);
             $this->assertMutable($order);
 
@@ -309,7 +309,7 @@ class OrderService
 
             Payment::query()->create([
                 'order_id' => $order->id,
-                'user_id' => Auth::id(),
+                'user_id' => $payment['user_id'] ?? Auth::id(),
                 'method' => $method,
                 'amount' => min($amount, (float) $order->grand_total),
                 'tendered' => $tendered,
@@ -326,6 +326,10 @@ class OrderService
 
             return $order->fresh(['items', 'payments', 'customer', 'table']);
         });
+
+        $this->pushZoho($order);
+
+        return $order->fresh(['items', 'payments', 'customer', 'table']);
     }
 
     public function complete(Order $order): Order
@@ -505,6 +509,19 @@ class OrderService
             throw ValidationException::withMessages([
                 'status' => 'Order ini sudah ditutup dan tidak dapat diubah.',
             ]);
+        }
+    }
+
+    protected function pushZoho(Order $order): void
+    {
+        if ($order->payment_status !== PaymentStatus::Paid) {
+            return;
+        }
+
+        try {
+            app(ZohoBooksPush::class)->push($order);
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 }

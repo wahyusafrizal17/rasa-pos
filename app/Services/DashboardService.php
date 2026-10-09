@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\ProductionStatus;
 use App\Enums\StockMovementType;
@@ -170,7 +171,12 @@ class DashboardService
             ->where('payments.created_at', '>=', $from)
             ->selectRaw('payments.method, SUM(payments.amount) as total')
             ->groupBy('payments.method')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $row->method = PaymentMethod::tryFrom($row->method)?->label() ?? $row->method;
+
+                return $row;
+            });
 
         return [
             'sales_trend' => $salesTrend,
