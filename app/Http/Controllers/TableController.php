@@ -184,6 +184,19 @@ class TableController extends Controller
         ]);
     }
 
+    public function ready(Request $request, DiningTable $table, TableService $tables): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('tables.view'), 403);
+
+        if ($table->status === TableStatus::Available) {
+            return back()->with('success', 'Meja sudah ready.');
+        }
+
+        $tables->release($table->id);
+
+        return back()->with('success', $table->code.' siap dipakai lagi.');
+    }
+
     public function reserve(Request $request, TableService $tables): RedirectResponse
     {
         $data = $request->validate([

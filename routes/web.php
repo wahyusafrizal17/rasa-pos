@@ -88,6 +88,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::get('/tables/{table}', [TableController::class, 'show'])->name('tables.show');
     Route::put('/tables/{table}', [TableController::class, 'update'])->name('tables.update');
     Route::delete('/tables/{table}', [TableController::class, 'destroy'])->name('tables.destroy');
+    Route::post('/tables/{table}/ready', [TableController::class, 'ready'])->name('tables.ready');
     Route::post('/tables/{table}/move', [TableController::class, 'move'])->name('tables.move');
     Route::post('/tables/transfer', [TableController::class, 'transfer'])->name('tables.transfer');
     Route::post('/tables/merge', [TableController::class, 'merge'])->name('tables.merge');

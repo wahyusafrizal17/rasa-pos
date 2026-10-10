@@ -145,6 +145,12 @@
                             </td>
                             <td class="col-actions">
                                 <div class="flex items-center justify-end gap-1.5">
+                                    @if ($table->status !== \App\Enums\TableStatus::Available)
+                                        <form method="POST" action="{{ route('tables.ready', $table) }}">
+                                            @csrf
+                                            <button type="submit" class="btn-ghost !px-2.5 !py-1 !text-xs">Ready</button>
+                                        </form>
+                                    @endif
                                     <a href="{{ route('tables.show', $table) }}" class="table-action" title="Lihat">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.3 12S6 6 12 6s9.7 6 9.7 6-3.7 6-9.7 6S2.3 12 2.3 12z"/><circle cx="12" cy="12" r="2.5" stroke-width="1.8"/></svg>
                                     </a>

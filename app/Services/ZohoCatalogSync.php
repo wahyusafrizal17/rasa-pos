@@ -18,7 +18,7 @@ class ZohoCatalogSync
 {
     public function __construct(protected ZohoClient $zoho) {}
 
-    public function run(bool $fresh = false): array
+    public function run(bool $fresh = false, ?callable $onProgress = null): array
     {
         if ($fresh) {
             $this->wipeOperationalData();
@@ -27,8 +27,11 @@ class ZohoCatalogSync
         $locations = $this->zoho->paginate('/inventory/v1/locations', 'locations');
         $outlets = $this->syncOutlets($locations);
         $this->attachUsers($outlets);
+        $onProgress && $onProgress('Outlets '.$outlets->count());
 
         $items = $this->zoho->paginate('/inventory/v1/items', 'items');
+        $total = count($items);
+        $onProgress && $onProgress('Items '.$total);
         $products = 0;
         $stocks = 0;
 
@@ -42,6 +45,9 @@ class ZohoCatalogSync
             $product = $this->syncProduct($detail);
             $products++;
             $stocks += $this->syncStock($product, $outlets, $detail['locations'] ?? []);
+            if ($onProgress && $products % 25 === 0) {
+                $onProgress($products.'/'.$total);
+            }
         }
 
         return [

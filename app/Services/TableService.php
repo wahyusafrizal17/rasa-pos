@@ -18,6 +18,10 @@ class TableService
     {
         $table = DiningTable::query()->findOrFail($tableId);
 
+        if ($table->status !== TableStatus::Available && (int) $order->table_id !== $table->id) {
+            throw ValidationException::withMessages(['table_id' => 'Meja sedang dipakai.']);
+        }
+
         $table->update(['status' => TableStatus::Occupied]);
 
         TableSession::query()->create([

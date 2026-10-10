@@ -71,7 +71,7 @@
                     <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="table_id" x-show="order_type === 'dine_in'" x-cloak>
                         <option value="">Pilih meja</option>
                         @foreach ($tables as $table)
-                            <option value="{{ $table->id }}">{{ $table->code }} · {{ $table->capacity }} pax · {{ $table->status->label() }}</option>
+                            <option value="{{ $table->id }}" @disabled($table->status !== \App\Enums\TableStatus::Available)>{{ $table->code }} · {{ $table->capacity }} pax · {{ $table->status->label() }}</option>
                         @endforeach
                     </select>
                 </div>

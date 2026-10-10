@@ -13,7 +13,15 @@
             </div>
             <p class="mt-2 text-sm text-slate-500">{{ $table->name }} · {{ $table->outlet?->name }} · {{ $table->shape }}</p>
         </div>
-        <a href="{{ route('tables.index') }}" class="btn-ghost">Kembali ke daftar meja</a>
+        <div class="flex flex-wrap items-center gap-2">
+            @if ($table->status !== \App\Enums\TableStatus::Available)
+                <form method="POST" action="{{ route('tables.ready', $table) }}">
+                    @csrf
+                    <button type="submit" class="btn-brand">Ready</button>
+                </form>
+            @endif
+            <a href="{{ route('tables.index') }}" class="btn-ghost">Kembali ke daftar meja</a>
+        </div>
     </div>
 
     <div class="grid gap-4 xl:grid-cols-2">
