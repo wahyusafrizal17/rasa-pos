@@ -74,6 +74,11 @@ class PosController extends Controller
             'lowStockNames' => $lowStock->take(3)->pluck('name')->join(', '),
             'lowStockExtra' => max(0, $lowStock->count() - 3),
             'qzPrinter' => setting('qz_printer', ''),
+            'transferAccount' => [
+                'bank' => (string) setting('transfer_bank', ''),
+                'number' => (string) setting('transfer_account_number', ''),
+                'name' => (string) setting('transfer_account_name', ''),
+            ],
         ]);
     }
 

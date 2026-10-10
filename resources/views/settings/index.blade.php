@@ -76,6 +76,34 @@
                         <input class="input" type="text" name="receipt_footer" maxlength="255" value="{{ $settings['receipt_footer'] }}">
                         @error('receipt_footer')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
+                </div>
+            </section>
+
+            <section class="border-t border-line pt-8">
+                <h6 class="mb-4 text-sm font-semibold text-heading">Rekening transfer</h6>
+                <p class="mb-4 text-[13px] text-muted">Tampil di kasir saat metode bayar Transfer dipilih.</p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="label">Bank</label>
+                        <input class="input" type="text" name="transfer_bank" maxlength="80" value="{{ $settings['transfer_bank'] }}" placeholder="BCA">
+                        @error('transfer_bank')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Nomor rekening</label>
+                        <input class="input" type="text" name="transfer_account_number" maxlength="40" value="{{ $settings['transfer_account_number'] }}" placeholder="1234567890">
+                        @error('transfer_account_number')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="label">Nama pemilik rekening</label>
+                        <input class="input" type="text" name="transfer_account_name" maxlength="120" value="{{ $settings['transfer_account_name'] }}" placeholder="PT Rasa">
+                        @error('transfer_account_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </section>
+
+            <section class="border-t border-line pt-8">
+                <h6 class="mb-4 text-sm font-semibold text-heading">Printer</h6>
+                <div class="grid gap-4 sm:grid-cols-2">
                     <div class="sm:col-span-2">
                         <label class="label">Nama printer QZ Tray</label>
                         <input class="input" type="text" name="qz_printer" maxlength="120" value="{{ $settings['qz_printer'] }}" placeholder="GEZHI micro-printer">

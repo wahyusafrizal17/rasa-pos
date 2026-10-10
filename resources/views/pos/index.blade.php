@@ -196,7 +196,19 @@
                     <p class="text-xs font-medium text-brand" x-show="cashShort()">Uang diterima masih kurang dari total.</p>
                 </div>
 
-                <p class="mt-4 text-xs text-muted" x-show="method !== 'cash' && method !== 'qris'">Nominal akan dicatat sesuai total order.</p>
+                <div class="mt-5 rounded-2xl bg-[#f6f6f6] px-4 py-3.5 text-[13px]" x-show="method === 'transfer'" x-cloak>
+                    <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Transfer ke</p>
+                    <template x-if="transferAccount.bank || transferAccount.number || transferAccount.name">
+                        <div class="mt-2 space-y-1">
+                            <p class="font-semibold text-heading" x-text="transferAccount.bank"></p>
+                            <p class="text-[18px] font-semibold tracking-wide text-heading" x-text="transferAccount.number"></p>
+                            <p class="text-muted" x-text="transferAccount.name"></p>
+                        </div>
+                    </template>
+                    <p class="mt-2 text-muted" x-show="!transferAccount.bank && !transferAccount.number && !transferAccount.name">Rekening belum diisi di Pengaturan.</p>
+                    <p class="mt-2 text-xs text-muted">Nominal dicatat sesuai total order.</p>
+                </div>
+                <p class="mt-4 text-xs text-muted" x-show="method === 'edc'">Nominal akan dicatat sesuai total order.</p>
                 <div class="mt-5 text-center" x-show="method === 'qris' && qrisUrl" x-cloak>
                     <img :src="qrisUrl" alt="QRIS" class="mx-auto h-56 w-56 rounded-xl bg-white object-contain p-2">
                     <p class="mt-2 text-xs text-muted">Scan QRIS. Menunggu pembayaran Faspay…</p>
@@ -286,6 +298,7 @@ function posApp() {
         images: @json($productImages),
         placeholder: @json(asset('images/menu/placeholder.svg')),
         discountCatalog: @json($discountCatalog),
+        transferAccount: @json($transferAccount),
         init() {
             window.addEventListener('online', () => { this.online = true; this.flushQueue(); });
             window.addEventListener('offline', () => { this.online = false; });

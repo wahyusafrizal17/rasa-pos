@@ -16,6 +16,9 @@ class SettingController extends Controller
         'company_name',
         'receipt_footer',
         'qz_printer',
+        'transfer_bank',
+        'transfer_account_number',
+        'transfer_account_name',
     ];
 
     protected array $defaults = [
@@ -24,6 +27,9 @@ class SettingController extends Controller
         'company_name' => 'Rasa',
         'receipt_footer' => 'Terima kasih',
         'qz_printer' => '',
+        'transfer_bank' => '',
+        'transfer_account_number' => '',
+        'transfer_account_name' => '',
     ];
 
     public function index(): View
@@ -54,6 +60,9 @@ class SettingController extends Controller
             'company_name' => ['nullable', 'string', 'max:150'],
             'receipt_footer' => ['nullable', 'string', 'max:255'],
             'qz_printer' => ['nullable', 'string', 'max:120'],
+            'transfer_bank' => ['nullable', 'string', 'max:80'],
+            'transfer_account_number' => ['nullable', 'string', 'max:40'],
+            'transfer_account_name' => ['nullable', 'string', 'max:120'],
         ], [
             'tax_rate.required' => 'Tarif pajak wajib diisi.',
             'tax_rate.max' => 'Tarif pajak maksimal 100%.',
