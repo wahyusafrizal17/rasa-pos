@@ -11,7 +11,7 @@ use App\Http\Controllers\BomController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\FaspayWebhookController;
+use App\Http\Controllers\QrisWebhookController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\OrderController;
@@ -31,7 +31,7 @@ use App\Http\Controllers\WasteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
-Route::post('/webhooks/faspay', [FaspayWebhookController::class, 'notify'])->name('webhooks.faspay');
+Route::post('/webhooks/qris', [QrisWebhookController::class, 'notify'])->name('webhooks.qris');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

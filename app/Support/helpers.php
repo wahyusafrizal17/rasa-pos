@@ -74,3 +74,32 @@ function service_charge_rate(): float
 {
     return (float) setting('service_charge', 0);
 }
+
+function integration_setting_map(): array
+{
+    return [
+        'qris_api_key' => 'qris.api_key',
+        'qris_base_url' => 'qris.base_url',
+        'qris_callback_token' => 'qris.callback_token',
+        'zoho_client_id' => 'zoho.client_id',
+        'zoho_client_secret' => 'zoho.client_secret',
+        'zoho_refresh_token' => 'zoho.refresh_token',
+        'zoho_organization_id' => 'zoho.organization_id',
+        'zoho_token_url' => 'zoho.token_url',
+        'zoho_base_url' => 'zoho.base_url',
+        'zoho_customer_id' => 'zoho.customer_id',
+        'zoho_cf_source' => 'zoho.cf_source',
+    ];
+}
+
+function apply_integration_settings(): void
+{
+    foreach (integration_setting_map() as $settingKey => $configKey) {
+        $value = setting($settingKey, '');
+        if ($value === null || $value === '') {
+            continue;
+        }
+
+        config([$configKey => $value]);
+    }
+}

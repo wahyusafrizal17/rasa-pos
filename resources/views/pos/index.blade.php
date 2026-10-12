@@ -145,7 +145,7 @@
                 <p class="text-[11px] text-muted" x-show="needsTable()" x-cloak>Pilih meja dulu untuk dine-in sebelum bayar.</p>
                 <div class="grid grid-cols-[1fr_1.6fr] gap-2">
                     <div class="relative">
-                        <button type="button" class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#efe8e1] bg-white text-sm font-medium text-heading transition hover:bg-[#faf7f3] disabled:cursor-not-allowed disabled:opacity-40" @click="hold()" :disabled="!canHold()">Hold</button>
+                        <button type="button" class="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#efe8e1] bg-white text-sm font-medium text-heading transition hover:bg-[#faf7f3] disabled:cursor-not-allowed disabled:opacity-40" @click="hold()" :disabled="!canHold() || busy">Hold</button>
                         <button type="button" class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold leading-none text-white" x-show="heldCount() > 0" x-text="heldCount()" x-cloak @click.stop="openHeldList()" title="Lihat order hold"></button>
                     </div>
                     <button type="button" class="pos-pay" @click="openPay()" :disabled="!canPay()">Bayar</button>
@@ -209,16 +209,51 @@
                     <p class="mt-2 text-xs text-muted">Nominal dicatat sesuai total order.</p>
                 </div>
                 <p class="mt-4 text-xs text-muted" x-show="method === 'edc'">Nominal akan dicatat sesuai total order.</p>
-                <div class="mt-5 text-center" x-show="method === 'qris' && qrisUrl" x-cloak>
-                    <img :src="qrisUrl" alt="QRIS" class="mx-auto h-56 w-56 rounded-xl bg-white object-contain p-2">
-                    <p class="mt-2 text-xs text-muted">Scan QRIS. Menunggu pembayaran Faspay…</p>
-                </div>
                 <p class="mt-3 text-xs font-medium text-brand" x-show="notice" x-text="notice"></p>
 
                 <div class="mt-6 grid grid-cols-2 gap-2">
                     <button type="button" class="btn-ghost !rounded-xl" @click="closePay()">Batal</button>
-                    <button type="button" class="btn-brand !rounded-xl" @click="checkout()" :disabled="!canCompletePay() || !!qrisUrl" x-text="method === 'qris' ? (qrisUrl ? 'Menunggu…' : 'Tampilkan QR') : 'Selesaikan'"></button>
+                    <button type="button" class="btn-brand !rounded-xl" @click="checkout()" :disabled="!canCompletePay() || busy" x-text="busy ? 'Memproses…' : (method === 'qris' ? 'Tampilkan QR' : 'Selesaikan')"></button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" x-show="qrisOpen" x-cloak @click.self="closeQris()">
+        <div class="pay-modal">
+            <div class="pay-modal-hero">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">QRIS</p>
+                        <p class="mt-0.5 truncate text-[13px] text-white/70" x-text="order?.order_number || 'Draft'"></p>
+                    </div>
+                    <p class="shrink-0 text-[20px] font-semibold leading-none tracking-tight text-white" x-text="formatMoney(grandTotal())"></p>
+                </div>
+            </div>
+            <div class="px-6 py-5 text-center">
+                <img :src="qrisUrl" alt="QRIS" class="mx-auto h-56 w-56 rounded-xl bg-[#f6f6f6] object-contain p-2" x-show="qrisUrl">
+                <div class="mt-4 space-y-2 rounded-2xl bg-[#f6f6f6] px-4 py-3.5 text-left text-[13px]">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-muted">Nominal</span>
+                        <span class="font-semibold text-heading" x-text="formatMoney(grandTotal())"></span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-muted">No. order</span>
+                        <span class="font-medium text-heading" x-text="order?.order_number || '—'"></span>
+                    </div>
+                    <div class="flex items-center justify-between gap-3" x-show="qrisRef">
+                        <span class="text-muted">Referensi</span>
+                        <span class="font-medium text-heading" x-text="qrisRef"></span>
+                    </div>
+                </div>
+                <p class="mt-3 inline-flex items-center gap-2 text-xs text-muted">
+                    <svg class="h-3.5 w-3.5 animate-spin text-brand" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                        <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                    </svg>
+                    Scan QRIS. Menunggu pembayaran…
+                </p>
+                <button type="button" class="btn-ghost mt-5 w-full !rounded-xl" @click="closeQris()">Batal</button>
             </div>
         </div>
     </div>
@@ -269,9 +304,19 @@
                 </template>
             </div>
             <div class="mt-6 flex gap-2">
-                <button type="button" class="btn-ghost flex-1" @click="confirmAddons([])">Lewati</button>
-                <button type="button" class="btn-primary flex-1" @click="confirmAddons(selectedAddonIds)">Tambah</button>
+                <button type="button" class="btn-ghost flex-1" @click="confirmAddons([])" :disabled="busy">Lewati</button>
+                <button type="button" class="btn-primary flex-1" @click="confirmAddons(selectedAddonIds)" :disabled="busy">Tambah</button>
             </div>
+        </div>
+    </div>
+
+    <div class="fixed inset-0 z-[80] flex items-center justify-center bg-black/35" x-show="busy" x-cloak>
+        <div class="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-[0_16px_40px_rgba(0,0,0,0.18)]">
+            <svg class="h-5 w-5 animate-spin text-brand" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+            </svg>
+            <p class="text-sm font-medium text-heading">Memproses…</p>
         </div>
     </div>
 </div>
@@ -282,15 +327,15 @@
 function posApp() {
     return {
         order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
-        discount_id: '', method: 'cash', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, notice: '',
-        qrisUrl: '', qrisTimer: null,
+        discount_id: '', method: 'cash', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, busyCount: 0, notice: '',
+        qrisUrl: '', qrisRef: '', qrisOpen: false, qrisTimer: null,
         pendingAdd: null, selectedAddonIds: [],
         productAddons: @json($productAddons),
         addons: [],
         paymentMethods: [
             { id: 'cash', label: 'Tunai', hint: 'Hitung kembalian' },
             { id: 'edc', label: 'EDC', hint: 'Mesin EDC' },
-            { id: 'qris', label: 'QRIS', hint: 'Scan QR Faspay' },
+            { id: 'qris', label: 'QRIS', hint: 'Scan QR' },
             { id: 'transfer', label: 'Transfer', hint: 'Bank transfer' },
         ],
         heldOrders: @json($heldOrders),
@@ -303,7 +348,7 @@ function posApp() {
             window.addEventListener('online', () => { this.online = true; this.flushQueue(); });
             window.addEventListener('offline', () => { this.online = false; });
             this.$watch('table_id', () => this.transferTable());
-            this.$watch('payOpen', (open) => { if (!open) this.stopQrisPoll(); });
+            this.$watch('payOpen', (open) => { if (!open && !this.qrisOpen) this.stopQrisPoll(); });
             this.restoreDraft();
             this.loadHeld();
         },
@@ -318,12 +363,12 @@ function posApp() {
             return parts.join(' · ');
         },
         async openHeldList() {
-            await this.loadHeld();
+            await this.loadHeld(false);
             this.openHeld = true;
         },
-        async loadHeld() {
+        async loadHeld(silent = true) {
             try {
-                this.heldOrders = await this.request('{{ route('pos.held', absolute: false) }}', { headers: await this.csrf() });
+                this.heldOrders = await this.request('{{ route('pos.held', absolute: false) }}', { headers: await this.csrf(), silent });
             } catch (e) {}
         },
         channel() {
@@ -392,14 +437,22 @@ function posApp() {
         setMethod(id) {
             this.stopQrisPoll();
             this.qrisUrl = '';
+            this.qrisRef = '';
+            this.qrisOpen = false;
             this.method = id;
             this.notice = '';
             if (id !== 'cash') this.tendered = this.grandTotal();
         },
         closePay() {
+            this.closeQris(false);
+            this.payOpen = false;
+        },
+        closeQris(backToPay = true) {
             this.stopQrisPoll();
             this.qrisUrl = '';
-            this.payOpen = false;
+            this.qrisRef = '';
+            this.qrisOpen = false;
+            if (backToPay) this.payOpen = true;
         },
         stopQrisPoll() {
             if (this.qrisTimer) {
@@ -410,38 +463,47 @@ function posApp() {
         async finishPaid(data) {
             this.stopQrisPoll();
             this.payOpen = false;
+            this.qrisOpen = false;
             this.qrisUrl = '';
+            this.qrisRef = '';
             if (!data.order) return;
-            const qzOk = window.RasaQz?.printReceipt
-                ? await window.RasaQz.printReceipt(data)
-                : false;
-            this.notice = qzOk
-                ? 'Pembayaran berhasil, struk dicetak.'
-                : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
-            this.order = null;
-            this.tendered = 0;
-            localStorage.removeItem('pos_offline_draft');
+            this.busyCount += 1;
+            this.busy = true;
+            try {
+                const qzOk = window.RasaQz?.printReceipt
+                    ? await window.RasaQz.printReceipt(data)
+                    : false;
+                this.notice = qzOk
+                    ? 'Pembayaran berhasil, struk dicetak.'
+                    : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
+                this.order = null;
+                this.tendered = 0;
+                localStorage.removeItem('pos_offline_draft');
+            } finally {
+                this.busyCount = Math.max(0, this.busyCount - 1);
+                this.busy = this.busyCount > 0;
+            }
         },
         async startQris() {
-            this.busy = true;
             this.notice = '';
             try {
                 const data = await this.request(`/pos/${this.order.id}/qris`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
                     order_type: this.order_type, table_id: this.table_id || null,
                 })});
                 this.qrisUrl = data.qr_url;
+                this.qrisRef = data.reference_no || data.faspay_reference_no || '';
+                this.qrisOpen = true;
+                this.payOpen = false;
                 this.stopQrisPoll();
                 this.qrisTimer = setInterval(() => this.checkQris(), 2000);
             } catch (e) {
-                this.notice = e.message || 'QRIS Faspay gagal.';
-            } finally {
-                this.busy = false;
+                this.notice = e.message || 'QRIS gagal.';
             }
         },
         async checkQris() {
             if (!this.order?.id) return;
             try {
-                const data = await this.request(`/pos/${this.order.id}/qris/status`, { headers: await this.csrf() });
+                const data = await this.request(`/pos/${this.order.id}/qris/status`, { headers: await this.csrf(), silent: true });
                 if (data.paid) await this.finishPaid(data);
             } catch (e) {}
         },
@@ -488,14 +550,26 @@ function posApp() {
             const fromWindow = posAt > 0 ? path.slice(0, posAt) : '';
             return (fromLaravel || fromWindow) + url;
         },
-        async request(url, options) {
+        async request(url, options = {}) {
             if (!this.online) throw new Error('offline');
-            const res = await fetch(this.appUrl(url), options);
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Request gagal');
+            const silent = options.silent === true;
+            if (!silent) {
+                this.busyCount += 1;
+                this.busy = true;
             }
-            return res.json();
+            try {
+                const res = await fetch(this.appUrl(url), options);
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Request gagal');
+                }
+                return res.json();
+            } finally {
+                if (!silent) {
+                    this.busyCount = Math.max(0, this.busyCount - 1);
+                    this.busy = this.busyCount > 0;
+                }
+            }
         },
         async ensureOrder() {
             if (this.order) return this.order;
@@ -599,7 +673,6 @@ function posApp() {
                 await this.startQris();
                 return;
             }
-            this.busy = true;
             this.notice = '';
             try {
                 const paid = this.method === 'cash' ? this.tenderedAmount() : this.grandTotal();
@@ -610,8 +683,6 @@ function posApp() {
                 await this.finishPaid(data);
             } catch (e) {
                 this.notice = e.message || 'Pembayaran gagal.';
-            } finally {
-                this.busy = false;
             }
         }
     }

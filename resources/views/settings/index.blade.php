@@ -112,6 +112,75 @@
                     </div>
                 </div>
             </section>
+
+            <section class="border-t border-line pt-8">
+                <h6 class="mb-4 text-sm font-semibold text-heading">QRIS (Rasa Connect)</h6>
+                <p class="mb-4 text-[13px] text-muted">Generate QR dan webhook relay. Kosongkan untuk memakai nilai di .env. Callback: <code class="text-[12px]">{{ url('/webhooks/qris') }}</code></p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                        <label class="label">Base URL</label>
+                        <input class="input" type="url" name="qris_base_url" maxlength="255" value="{{ $settings['qris_base_url'] }}" placeholder="https://rasaconnect.com">
+                        @error('qris_base_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">API key</label>
+                        <input class="input" type="password" name="qris_api_key" maxlength="120" value="{{ $settings['qris_api_key'] }}" autocomplete="new-password">
+                        @error('qris_api_key')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Callback token</label>
+                        <input class="input" type="password" name="qris_callback_token" maxlength="120" value="{{ $settings['qris_callback_token'] }}" autocomplete="new-password">
+                        @error('qris_callback_token')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </section>
+
+            <section class="border-t border-line pt-8">
+                <h6 class="mb-4 text-sm font-semibold text-heading">Zoho</h6>
+                <p class="mb-4 text-[13px] text-muted">Dipakai sync katalog dan push invoice. Kosongkan untuk memakai nilai di .env.</p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="label">Client ID</label>
+                        <input class="input" type="text" name="zoho_client_id" maxlength="120" value="{{ $settings['zoho_client_id'] }}">
+                        @error('zoho_client_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Client secret</label>
+                        <input class="input" type="password" name="zoho_client_secret" maxlength="120" value="{{ $settings['zoho_client_secret'] }}" autocomplete="new-password">
+                        @error('zoho_client_secret')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="label">Refresh token</label>
+                        <input class="input" type="password" name="zoho_refresh_token" maxlength="255" value="{{ $settings['zoho_refresh_token'] }}" autocomplete="new-password">
+                        @error('zoho_refresh_token')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Organization ID</label>
+                        <input class="input" type="text" name="zoho_organization_id" maxlength="40" value="{{ $settings['zoho_organization_id'] }}">
+                        @error('zoho_organization_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Customer ID (walk-in)</label>
+                        <input class="input" type="text" name="zoho_customer_id" maxlength="40" value="{{ $settings['zoho_customer_id'] }}">
+                        @error('zoho_customer_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Token URL</label>
+                        <input class="input" type="url" name="zoho_token_url" maxlength="255" value="{{ $settings['zoho_token_url'] }}">
+                        @error('zoho_token_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Base URL</label>
+                        <input class="input" type="url" name="zoho_base_url" maxlength="255" value="{{ $settings['zoho_base_url'] }}">
+                        @error('zoho_base_url')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="label">Custom field source</label>
+                        <input class="input" type="text" name="zoho_cf_source" maxlength="40" value="{{ $settings['zoho_cf_source'] }}">
+                        @error('zoho_cf_source')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+            </section>
         </div>
 
         <div class="crud-modal-footer !rounded-none !border-t !border-line">

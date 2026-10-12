@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -49,5 +50,9 @@ class AppServiceProvider extends ServiceProvider
         }
 
         config(['livewire.asset_url' => url('/livewire/livewire.js')]);
+
+        if (Schema::hasTable('settings')) {
+            apply_integration_settings();
+        }
     }
 }

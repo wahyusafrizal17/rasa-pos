@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'outlet' => \App\Http\Middleware\SetCurrentOutlet::class,
         ]);
         $middleware->validateCsrfTokens(except: [
-            'webhooks/faspay',
+            'webhooks/qris',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

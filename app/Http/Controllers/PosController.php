@@ -12,7 +12,7 @@ use App\Services\DiscountService;
 use App\Services\EscPosPrinter;
 use App\Services\InventoryService;
 use App\Services\OrderService;
-use App\Services\FaspayService;
+use App\Services\QrisService;
 use App\Services\PrinterRoutingService;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
@@ -226,20 +226,20 @@ class PosController extends Controller
         return response()->json($this->paidPayload($completed, $printers));
     }
 
-    public function startQris(Request $request, Order $order, FaspayService $faspay): JsonResponse
+    public function startQris(Request $request, Order $order, QrisService $qris): JsonResponse
     {
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
         abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
 
-        return response()->json($faspay->startQris($order->load(['customer', 'items'])));
+        return response()->json($qris->startQris($order->load(['customer', 'items'])));
     }
 
-    public function qrisStatus(Request $request, Order $order, FaspayService $faspay, PrinterRoutingService $printers): JsonResponse
+    public function qrisStatus(Request $request, Order $order, QrisService $qris, PrinterRoutingService $printers): JsonResponse
     {
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
         abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
 
-        $result = $faspay->sync($order);
+        $result = $qris->sync($order);
         if (! $result['paid']) {
             return response()->json(['paid' => false]);
         }
