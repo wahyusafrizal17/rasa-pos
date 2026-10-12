@@ -12,6 +12,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ZohoCatalogSync
@@ -104,24 +105,66 @@ class ZohoCatalogSync
         $sold = (bool) ($item['can_be_sold'] ?? true);
         $active = ($item['status'] ?? 'active') === 'active';
         $stockable = (bool) ($item['track_inventory'] ?? (($item['item_type'] ?? '') === 'inventory'));
+        $existing = Product::query()->where('zoho_item_id', $itemId)->value('image');
+        $image = $this->syncImage($itemId, $item, $existing);
+
+        $data = [
+            'sku' => $sku,
+            'name' => $item['name'] ?? $sku,
+            'category_id' => $category->id,
+            'unit_id' => $unit->id,
+            'type' => $sold ? ProductType::Finished : ProductType::Raw,
+            'description' => $item['description'] ?? null,
+            'price' => (float) ($item['rate'] ?? 0),
+            'cost' => (float) ($item['purchase_rate'] ?? 0),
+            'is_sellable' => $sold && $active,
+            'is_stockable' => $stockable,
+            'is_active' => $active,
+            'reorder_level' => (float) ($item['reorder_level'] ?? 0),
+        ];
+        if ($image) {
+            $data['image'] = $image;
+        }
 
         return Product::query()->updateOrCreate(
             ['zoho_item_id' => $itemId],
-            [
-                'sku' => $sku,
-                'name' => $item['name'] ?? $sku,
-                'category_id' => $category->id,
-                'unit_id' => $unit->id,
-                'type' => $sold ? ProductType::Finished : ProductType::Raw,
-                'description' => $item['description'] ?? null,
-                'price' => (float) ($item['rate'] ?? 0),
-                'cost' => (float) ($item['purchase_rate'] ?? 0),
-                'is_sellable' => $sold && $active,
-                'is_stockable' => $stockable,
-                'is_active' => $active,
-                'reorder_level' => (float) ($item['reorder_level'] ?? 0),
-            ],
+            $data,
         );
+    }
+
+    protected function syncImage(string $itemId, array $item, ?string $existing): ?string
+    {
+        foreach ([$item['image_url'] ?? null, $item['item_images'][0]['image_url'] ?? null] as $url) {
+            if (is_string($url) && str_starts_with($url, 'http')) {
+                return $url;
+            }
+        }
+
+        if ($existing) {
+            return $existing; // ponytail: skip redownload; drop this if Zoho image edits must show same day
+        }
+
+        if (! filled($item['image_id'] ?? null) && ! filled($item['image_name'] ?? null) && ! filled($item['item_images'][0]['image_id'] ?? null)) {
+            return null;
+        }
+
+        $body = $this->zoho->download('/inventory/v1/items/'.$itemId.'/image');
+        if ($body === null) {
+            return null;
+        }
+
+        $ext = strtolower((string) pathinfo((string) ($item['image_name'] ?? ''), PATHINFO_EXTENSION));
+        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'], true)) {
+            $ext = str_starts_with($body, "\x89PNG") ? 'png' : 'jpg';
+        }
+        if ($ext === 'jpeg') {
+            $ext = 'jpg';
+        }
+
+        $path = 'products/zoho-'.$itemId.'.'.$ext;
+        Storage::disk('public')->put($path, $body);
+
+        return $path;
     }
 
     protected function syncStock(Product $product, $outlets, array $locations): int

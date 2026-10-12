@@ -190,4 +190,24 @@ class AuthorizationTest extends TestCase
 
         $this->assertSame(OrderStatus::Ready, $order->fresh()->status);
     }
+
+    public function test_order_show_hides_workflow_and_item_checks(): void
+    {
+        $this->actingAsAtOutlet($this->cashier);
+        $orders = app(OrderService::class);
+        $order = $orders->createDraft([
+            'outlet_id' => $this->outlet->id,
+            'order_type' => OrderType::Pickup->value,
+        ]);
+        $orders->addItem($order, ['product_id' => $this->sellableProduct->id, 'quantity' => 1]);
+        $orders->submit($order);
+
+        $this->actingAsAtOutlet($this->admin)
+            ->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertSee('Daftar item')
+            ->assertDontSee('Alur pengerjaan', false)
+            ->assertDontSee('Tandai siap', false)
+            ->assertDontSee('Lanjut:', false);
+    }
 }

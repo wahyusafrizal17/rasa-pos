@@ -3,27 +3,8 @@
 @section('breadcrumb', 'Sales Orders')
 @section('content')
     @php
-        $flow = [
-            ['label' => 'Pesanan Baru', 'statuses' => ['new'], 'next' => 'processing'],
-            ['label' => 'Proses', 'statuses' => ['processing', 'preparing'], 'next' => 'ready'],
-            ['label' => 'Siap', 'statuses' => ['ready'], 'next' => 'completed'],
-            ['label' => 'Selesai', 'statuses' => ['completed'], 'next' => null],
-        ];
-        $current = $order->status->value;
-        $flowIndex = collect($flow)->search(fn ($step) => in_array($current, $step['statuses'], true));
-        $flowIndex = $flowIndex === false ? -1 : $flowIndex;
-        $nextStatus = $flowIndex === -1 ? 'new' : $flow[$flowIndex]['next'];
-        $nextLabel = match ($nextStatus) {
-            'new' => 'Pesanan Baru',
-            'processing' => 'Proses',
-            'ready' => 'Siap',
-            'completed' => 'Selesai',
-            default => null,
-        };
-        $linePercent = $flowIndex < 1 ? 0 : min(100, (int) round(($flowIndex / (count($flow) - 1)) * 100));
         $itemCount = $order->items->count();
-        $allItemsReady = $order->allItemsReady();
-        $canCheckItems = auth()->user()?->can('orders.check') || auth()->user()?->can('orders.manage');
+        $canCancel = auth()->user()?->can('orders.cancel') || auth()->user()?->can('orders.manage');
     @endphp
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -116,26 +97,18 @@
                                 <th>Harga</th>
                                 <th>Diskon</th>
                                 <th>Total</th>
-                                <th class="col-actions"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($order->items as $item)
-                                @php
-                                    $itemDone = in_array($item->status, ['ready', 'served'], true);
-                                    $itemStation = $item->station ?? $item->product?->station;
-                                    $canToggleItem = $canCheckItems
-                                        && (! auth()->user()->hasRole('kitchen') || $itemStation === 'kitchen')
-                                        && (! auth()->user()->hasRole('bar') || $itemStation === 'bar');
-                                @endphp
-                                <tr class="{{ $itemDone ? 'item-ready' : 'item-wait' }}">
+                                <tr>
                                     <td class="col-no">{{ $loop->iteration }}</td>
                                     <td>
                                         <p class="font-semibold">{{ $item->parent_id ? '+ ' : '' }}{{ $item->name }}</p>
                                         @if ($item->notes)
                                             <p class="text-xs text-muted">{{ $item->notes }}</p>
                                         @endif
-                                        <p class="text-xs text-muted">{{ $item->product?->sku }} · {{ $item->station }} · {{ $item->status }}</p>
+                                        <p class="text-xs text-muted">{{ $item->product?->sku }}</p>
                                         @if ($item->batch)
                                             <p class="text-xs text-muted">Batch {{ $item->batch->batch_number }}</p>
                                         @endif
@@ -144,29 +117,10 @@
                                     <td>{{ money($item->unit_price) }}</td>
                                     <td class="{{ $item->discount_amount > 0 ? 'font-medium text-[#ff9f43]' : 'text-muted' }}">{{ money($item->discount_amount) }}</td>
                                     <td class="font-semibold">{{ money($item->total) }}</td>
-                                    <td class="col-actions">
-                                        @if ($itemDone)
-                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1f9d57] text-white" title="Siap">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 12l5 5L19 7"/></svg>
-                                            </span>
-                                        @elseif ($canToggleItem)
-                                            <form method="POST" action="{{ route('order-items.status', $item) }}">
-                                                @csrf
-                                                <input type="hidden" name="status" value="ready">
-                                                <button class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d4d4d4] bg-white text-muted transition hover:border-[#1f9d57] hover:text-[#1f9d57]" type="submit" title="Tandai siap">
-                                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 12l5 5L19 7"/></svg>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e8e8] text-[#c0c0c0]" title="Belum siap">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 12l5 5L19 7"/></svg>
-                                            </span>
-                                        @endif
-                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-16 text-center text-sm text-muted">Tidak ada item pada order ini.</td>
+                                    <td colspan="6" class="py-16 text-center text-sm text-muted">Tidak ada item pada order ini.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -226,57 +180,6 @@
                 </div>
             </div>
 
-            @if ($order->status !== \App\Enums\OrderStatus::Cancelled)
-                <div class="card p-6">
-                    <p class="stat-kicker">Alur pengerjaan</p>
-                    <div class="relative mt-6">
-                        <div class="absolute left-[12%] right-[12%] top-4 h-[2px] bg-[#e8e8e8]"></div>
-                        <div class="absolute left-[12%] top-4 h-[2px] bg-[#1f9d57]" style="width: calc((100% - 24%) * {{ $linePercent }} / 100)"></div>
-                        <div class="relative flex justify-between">
-                            @foreach ($flow as $index => $step)
-                                @php $reached = $flowIndex >= $index; @endphp
-                                <div class="flex w-1/4 flex-col items-center">
-                                    <span class="flex h-8 w-8 items-center justify-center rounded-full {{ $reached ? 'bg-[#1f9d57] text-white' : 'bg-[#e8e8e8] text-[#b0b0b0]' }}">
-                                        @if ($reached)
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 12l5 5L19 7"/></svg>
-                                        @endif
-                                    </span>
-                                    <p class="mt-2 text-center text-[11px] font-semibold {{ $reached ? 'text-[#1f9d57]' : 'text-muted' }}">{{ $step['label'] }}</p>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    @if ($order->status->isOpen())
-                        @php
-                            $canAdvance = auth()->user()?->can('orders.manage') || auth()->user()?->can('orders.check');
-                            $canCancel = auth()->user()?->can('orders.cancel') || auth()->user()?->can('orders.manage');
-                        @endphp
-                        @if ($canAdvance || $canCancel)
-                            @php $needItemsReady = $nextStatus === 'ready' && ! $allItemsReady; @endphp
-                            <div class="mt-6 flex gap-2">
-                                @if ($canAdvance && $nextStatus)
-                                    <form method="POST" action="{{ route('orders.status', $order) }}" class="min-w-0 flex-1">
-                                        @csrf
-                                        <input type="hidden" name="status" value="{{ $nextStatus }}">
-                                        <button class="btn-add w-full" type="submit" @disabled($needItemsReady)>Lanjut: {{ $nextLabel }}</button>
-                                    </form>
-                                @endif
-                                @if ($canCancel)
-                                    <form id="cancel-order-form" method="POST" action="{{ route('pos.cancel', $order) }}" class="min-w-0 flex-1">
-                                        @csrf
-                                        <input type="hidden" name="reason">
-                                        <button id="cancel-order-btn" class="btn-ghost w-full text-brand hover:bg-brand-soft" style="border-color: #6f1715" type="button">Cancel order</button>
-                                    </form>
-                                @endif
-                            </div>
-                            @if ($needItemsReady)
-                                <p class="mt-2 text-center text-[12px] text-muted">Tandai semua item siap di Daftar item dulu.</p>
-                            @endif
-                        @endif
-                    @endif
-                </div>
-            @endif
-
             <div class="space-y-2">
                 <p class="stat-kicker px-1">Invoice</p>
                 @if ($order->payment_status === \App\Enums\PaymentStatus::Paid)
@@ -285,16 +188,19 @@
                         Cetak invoice
                     </a>
                 @endif
+                @if ($order->status->isOpen() && $canCancel)
+                    <form id="cancel-order-form" method="POST" action="{{ route('pos.cancel', $order) }}">
+                        @csrf
+                        <input type="hidden" name="reason">
+                        <button id="cancel-order-btn" class="btn-ghost w-full text-brand hover:bg-brand-soft" style="border-color: #6f1715" type="button">Cancel order</button>
+                    </form>
+                @endif
             </div>
         </div>
     </div>
 @endsection
 
 @push('scripts')
-    <style>
-        .list-table tr.item-wait td { background-color: #fff8e1 !important; }
-        .list-table tr.item-ready td { background-color: #e8f8ee !important; }
-    </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.getElementById('cancel-order-btn')?.addEventListener('click', async () => {

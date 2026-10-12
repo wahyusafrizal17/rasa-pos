@@ -9,7 +9,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('zoho:sync-catalog --no-interaction')
-    ->everyThirtyMinutes()
+    ->timezone('Asia/Jakarta')
+    ->twiceDaily(0, 12)
     ->withoutOverlapping(45)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/zoho-sync.log'));

@@ -36,6 +36,9 @@
                         <div class="menu-card-body">
                             <h3 class="menu-card-name">{{ $product->name }}</h3>
                             <p class="menu-card-price">{{ money($product->price) }}</p>
+                            @if ($product->is_stockable)
+                                <p class="m-0 truncate text-[11px] font-medium text-muted">Stok {{ qty_label($product->inventories->first()?->quantity ?? 0, $product->unit?->code ?? '') }}</p>
+                            @endif
                             @if ($product->variants->count())
                                 <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
                                     @foreach ($product->variants as $variant)
@@ -54,6 +57,9 @@
                         <div class="menu-card-body">
                             <h3 class="menu-card-name">{{ $bundle->name }}</h3>
                             <p class="menu-card-price">{{ money($bundle->price) }}</p>
+                            @if ($bundle->product?->is_stockable)
+                                <p class="m-0 truncate text-[11px] font-medium text-muted">Stok {{ qty_label($bundle->product->inventories->first()?->quantity ?? 0, $bundle->product->unit?->code ?? '') }}</p>
+                            @endif
                         </div>
                     </article>
                 @endforeach

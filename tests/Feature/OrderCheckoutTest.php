@@ -257,4 +257,16 @@ class OrderCheckoutTest extends TestCase
             ->assertDontSee('id: \'card\'', false)
             ->assertDontSee('Kartu', false);
     }
+
+    public function test_pos_catalog_shows_stock_per_item(): void
+    {
+        $this->sellableProduct->update(['image' => 'https://cdn.example.test/burger.png']);
+
+        $this->actingAsAtOutlet($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertSee('Chicken Burger')
+            ->assertSee('Stok 20 PCS')
+            ->assertSee('https://cdn.example.test/burger.png', false);
+    }
 }

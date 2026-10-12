@@ -7,14 +7,13 @@ use Tests\TestCase;
 
 class ZohoScheduleTest extends TestCase
 {
-    public function test_catalog_sync_runs_every_thirty_minutes(): void
+    public function test_catalog_sync_runs_twice_daily_jakarta(): void
     {
         $events = collect(app(Schedule::class)->events());
+        $event = $events->first(fn ($event) => str_contains((string) $event->command, 'zoho:sync-catalog'));
 
-        $this->assertTrue(
-            $events->contains(fn ($event) => str_contains((string) $event->command, 'zoho:sync-catalog')
-                && $event->expression === '*/30 * * * *'),
-            'zoho:sync-catalog should be scheduled every 30 minutes'
-        );
+        $this->assertNotNull($event);
+        $this->assertSame('0 0,12 * * *', $event->expression);
+        $this->assertSame('Asia/Jakarta', $event->timezone);
     }
 }

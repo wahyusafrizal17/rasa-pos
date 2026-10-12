@@ -54,6 +54,35 @@ class ZohoClient
         return $payload;
     }
 
+    public function download(string $path, array $query = []): ?string
+    {
+        $query['organization_id'] = config('zoho.organization_id');
+
+        if (! app()->runningUnitTests()) {
+            usleep(650000); // ponytail: Zoho ~100 req/min; drop if they raise the cap
+        }
+
+        try {
+            $response = Http::withToken($this->token(), 'Zoho-oauthtoken')
+                ->timeout(30)
+                ->retry(5, 2000, fn ($e) => method_exists($e, 'response') && $e->response?->status() === 429, false)
+                ->get(rtrim((string) config('zoho.base_url'), '/').$path, $query);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $body = $response->body();
+        if ($body === '' || str_starts_with(ltrim($body), '{')) {
+            return null;
+        }
+
+        return $body;
+    }
+
     public function paginate(string $path, string $key, array $query = []): array
     {
         $page = 1;

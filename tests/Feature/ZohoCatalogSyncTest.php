@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\ZohoCatalogSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\SeedsPosFixture;
 use Tests\TestCase;
 
@@ -35,11 +36,18 @@ class ZohoCatalogSyncTest extends TestCase
     {
         $this->assertSame('Outlet Bandung', $this->outlet->name);
 
+        Storage::fake('public');
+
         Http::fake([
             'accounts.zoho.com/oauth/v2/token' => Http::response([
                 'access_token' => 'tok_test',
                 'expires_in' => 3600,
             ], 200),
+            'www.zohoapis.com/inventory/v1/items/item-1/image*' => Http::response(
+                "\x89PNG\r\n\x1a\n",
+                200,
+                ['Content-Type' => 'image/png'],
+            ),
             'www.zohoapis.com/inventory/v1/locations*' => Http::response([
                 'code' => 0,
                 'locations' => [
@@ -72,6 +80,8 @@ class ZohoCatalogSyncTest extends TestCase
                     'rate' => 100000,
                     'purchase_rate' => 80000,
                     'unit' => 'Pieces',
+                    'image_name' => 'peach.png',
+                    'image_id' => 'img-1',
                     'reorder_level' => 2,
                     'custom_fields' => [
                         ['api_name' => 'cf_category', 'value' => 'Syrup'],
@@ -94,6 +104,8 @@ class ZohoCatalogSyncTest extends TestCase
                     'can_be_sold' => true,
                     'rate' => 100000,
                     'unit' => 'Pieces',
+                    'image_name' => 'peach.png',
+                    'image_id' => 'img-1',
                     'cf_category' => 'Syrup',
                 ]],
                 'page_context' => ['page' => 1, 'has_more_page' => false],
@@ -112,6 +124,8 @@ class ZohoCatalogSyncTest extends TestCase
         $product = Product::query()->where('zoho_item_id', 'item-1')->first();
         $this->assertNotNull($product);
         $this->assertSame('FDA010-PC04', $product->sku);
+        $this->assertSame('products/zoho-item-1.png', $product->image);
+        Storage::disk('public')->assertExists('products/zoho-item-1.png');
         $this->assertEquals(12, (float) Inventory::query()
             ->where('outlet_id', $bekasi->id)
             ->where('product_id', $product->id)

@@ -214,6 +214,7 @@ class MarketingController extends Controller
         ]);
 
         $data['code'] = filled($data['code'] ?? null) ? $data['code'] : null;
+        $data['minimum_transaction'] = $data['minimum_transaction'] ?? 0;
         if (($data['type'] ?? '') === 'bogo') {
             $data['value'] = $data['value'] ?? 0;
             $data['buy_qty'] = $data['buy_qty'] ?? 1;

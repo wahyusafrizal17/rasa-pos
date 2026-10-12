@@ -307,7 +307,6 @@
                                 <div x-show="form.type !== 'bogo'">
                                     <label class="label">Nilai</label>
                                     <input class="input" type="number" step="0.01" min="0" name="value" x-bind:required="form.type !== 'bogo'" x-model="form.value" placeholder="10 atau 5000">
-                                    <p class="mt-1 text-[12px] text-muted">Persentase: 10 untuk 10%. Nominal: jumlah potongan.</p>
                                     @error('value')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div x-show="form.type === 'bogo'" x-cloak>

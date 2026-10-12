@@ -103,6 +103,28 @@ class LoyaltyDiscountTableTest extends TestCase
         $this->assertSame(TableStatus::Occupied, $this->tableB->fresh()->status);
     }
 
+    public function test_admin_can_create_discount_without_minimum_transaction(): void
+    {
+        $this->actingAsAtOutlet($this->admin);
+
+        $this->post(route('marketing.discounts.store'), [
+            'name' => 'Promo 10.10',
+            'type' => 'percentage',
+            'scope' => 'order',
+            'value' => 10,
+            'minimum_transaction' => '',
+            'maximum_discount' => 15000,
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-31',
+        ])->assertRedirect(route('marketing.discounts'));
+
+        $this->assertDatabaseHas('discounts', [
+            'name' => 'Promo 10.10',
+            'minimum_transaction' => 0,
+            'maximum_discount' => 15000,
+        ]);
+    }
+
     public function test_admin_can_update_and_delete_discount(): void
     {
         $this->actingAsAtOutlet($this->admin);

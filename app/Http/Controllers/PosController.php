@@ -28,7 +28,13 @@ class PosController extends Controller
 
         $outletId = current_outlet_id();
 
-        $products = Product::query()->sellable()->where('is_addon', false)->with(['category', 'unit', 'variants', 'addons'])->orderBy('name')->get();
+        $products = Product::query()->sellable()->where('is_addon', false)->with([
+            'category',
+            'unit',
+            'variants',
+            'addons',
+            'inventories' => fn ($q) => $q->where('outlet_id', $outletId),
+        ])->orderBy('name')->get();
         $addons = Product::query()->sellable()->where('is_addon', true)->orderBy('name')->get();
         $lowStock = app(InventoryService::class)->lowStock($outletId);
 
@@ -42,7 +48,7 @@ class PosController extends Controller
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
             'bundles' => Bundle::query()
                 ->where('is_active', true)
-                ->with(['product', 'items.product', 'outlets'])
+                ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
                 ->get()
                 ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId))
                 ->values(),

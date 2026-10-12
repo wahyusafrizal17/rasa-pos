@@ -81,12 +81,7 @@ class ZohoBooksPush
             if (! $soLine) {
                 continue;
             }
-            $lines[] = [
-                'item_id' => $line['item_id'],
-                'quantity' => $line['quantity'],
-                'rate' => $line['rate'],
-                'salesorder_item_id' => (string) $soLine['line_item_id'],
-            ];
+            $lines[] = $line + ['salesorder_item_id' => (string) $soLine['line_item_id']];
         }
 
         if ($lines === []) {
@@ -112,6 +107,7 @@ class ZohoBooksPush
         $payment = $this->zoho->post('/books/v3/customerpayments', [
             'customer_id' => config('zoho.customer_id'),
             'payment_mode' => $this->paymentMode($method),
+            'account_id' => (string) config('zoho.payment_account_id'),
             'amount' => $amount,
             'date' => now()->toDateString(),
             'reference_number' => $order->payments->sortByDesc('id')->first()?->reference ?: $order->order_number,
@@ -136,6 +132,7 @@ class ZohoBooksPush
                 'item_id' => $itemId,
                 'quantity' => (float) $item->quantity,
                 'rate' => (float) $item->unit_price,
+                'tax_id' => (string) config('zoho.tax_id'),
             ];
         }
 
@@ -145,7 +142,7 @@ class ZohoBooksPush
     protected function paymentMode(PaymentMethod $method): string
     {
         return match ($method) {
-            PaymentMethod::Cash => 'cash',
+            PaymentMethod::Cash => 'Cash',
             PaymentMethod::Edc => 'creditcard',
             PaymentMethod::Transfer => 'banktransfer',
             PaymentMethod::Qris => 'others',

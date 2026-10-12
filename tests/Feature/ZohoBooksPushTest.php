@@ -65,6 +65,7 @@ class ZohoBooksPushTest extends TestCase
             && $request['location_id'] === 'loc-1'
             && $request['line_items'][0]['item_id'] === 'item-1'
             && (float) $request['line_items'][0]['quantity'] === 2.0
+            && $request['line_items'][0]['tax_id'] === '7386545000001141159'
             && $request['custom_fields'][0]['api_name'] === 'cf_source'
             && $request['custom_fields'][0]['value'] === 'POS');
 
@@ -73,12 +74,14 @@ class ZohoBooksPushTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/books/v3/invoices')
             && ! str_contains($request->url(), '/status/')
-            && $request['line_items'][0]['salesorder_item_id'] === 'li-1');
+            && $request['line_items'][0]['salesorder_item_id'] === 'li-1'
+            && $request['line_items'][0]['tax_id'] === '7386545000001141159');
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/invoices/inv-1/status/sent'));
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/books/v3/customerpayments')
-            && $request['payment_mode'] === 'cash'
+            && $request['payment_mode'] === 'Cash'
+            && $request['account_id'] === '7386545000004569992'
             && $request['invoices'][0]['invoice_id'] === 'inv-1');
     }
 
