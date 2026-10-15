@@ -244,7 +244,7 @@ class OrderCheckoutTest extends TestCase
         $this->assertSame(PaymentMethod::Edc, $order->fresh()->payments->first()->method);
     }
 
-    public function test_pos_payment_picker_lists_four_methods(): void
+    public function test_pos_payment_picker_lists_edc_and_qris_only(): void
     {
         $this->actingAsAtOutlet($this->cashier)
             ->get(route('pos.index'))
@@ -252,8 +252,8 @@ class OrderCheckoutTest extends TestCase
             ->assertSee('id: \'edc\'', false)
             ->assertSee('label: \'EDC\'', false)
             ->assertSee('id: \'qris\'', false)
-            ->assertSee('id: \'transfer\'', false)
-            ->assertSee('id: \'cash\'', false)
+            ->assertDontSee('id: \'transfer\'', false)
+            ->assertDontSee('id: \'cash\'', false)
             ->assertDontSee('id: \'card\'', false)
             ->assertDontSee('Kartu', false);
     }

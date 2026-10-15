@@ -185,35 +185,6 @@
                     </template>
                 </div>
 
-                <div class="mt-5 space-y-3" x-show="method === 'cash'">
-                    <div>
-                        <label class="label">Uang diterima</label>
-                        <input class="input !text-lg !font-semibold" type="text" inputmode="numeric" autocomplete="off" :value="formatRupiah(tendered)" @input="onTenderedInput($event)" placeholder="Rp 0">
-                        <div class="mt-2 flex flex-wrap gap-1.5">
-                            <template x-for="preset in cashPresets()" :key="preset">
-                                <button type="button" class="rounded-full border border-[#e8e8e8] bg-[#fafafa] px-2.5 py-1 text-[11px] font-medium text-heading transition hover:border-heading hover:bg-white" @click="tendered = preset" x-text="preset === grandTotal() ? 'Pas' : formatMoney(preset)"></button>
-                            </template>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between rounded-2xl bg-[#f6f6f6] px-4 py-3.5">
-                        <span class="text-[13px] text-muted">Kembalian</span>
-                        <span class="text-[22px] font-semibold tracking-tight text-heading" x-text="formatMoney(changeDue())"></span>
-                    </div>
-                    <p class="text-xs font-medium text-brand" x-show="cashShort()">Uang diterima masih kurang dari total.</p>
-                </div>
-
-                <div class="mt-5 rounded-2xl bg-[#f6f6f6] px-4 py-3.5 text-[13px]" x-show="method === 'transfer'" x-cloak>
-                    <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Transfer ke</p>
-                    <template x-if="transferAccount.bank || transferAccount.number || transferAccount.name">
-                        <div class="mt-2 space-y-1">
-                            <p class="font-semibold text-heading" x-text="transferAccount.bank"></p>
-                            <p class="text-[18px] font-semibold tracking-wide text-heading" x-text="transferAccount.number"></p>
-                            <p class="text-muted" x-text="transferAccount.name"></p>
-                        </div>
-                    </template>
-                    <p class="mt-2 text-muted" x-show="!transferAccount.bank && !transferAccount.number && !transferAccount.name">Rekening belum diisi di Pengaturan.</p>
-                    <p class="mt-2 text-xs text-muted">Nominal dicatat sesuai total order.</p>
-                </div>
                 <p class="mt-4 text-xs text-muted" x-show="method === 'edc'">Nominal akan dicatat sesuai total order.</p>
                 <p class="mt-3 text-xs font-medium text-brand" x-show="notice" x-text="notice"></p>
 
@@ -333,16 +304,14 @@
 function posApp() {
     return {
         order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
-        discount_id: '', method: 'cash', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, busyCount: 0, notice: '',
+        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, busyCount: 0, notice: '',
         qrisUrl: '', qrisRef: '', qrisOpen: false, qrisTimer: null,
         pendingAdd: null, selectedAddonIds: [],
         productAddons: @json($productAddons),
         addons: [],
         paymentMethods: [
-            { id: 'cash', label: 'Tunai', hint: 'Hitung kembalian' },
             { id: 'edc', label: 'EDC', hint: 'Mesin EDC' },
             { id: 'qris', label: 'QRIS', hint: 'Scan QR' },
-            { id: 'transfer', label: 'Transfer', hint: 'Bank transfer' },
         ],
         heldOrders: @json($heldOrders),
         online: navigator.onLine,
@@ -416,19 +385,11 @@ function posApp() {
         grandTotal() { return Number(this.order?.grand_total || 0); },
         tenderedAmount() { return Number(this.tendered || 0); },
         changeDue() { return Math.max(0, this.tenderedAmount() - this.grandTotal()); },
-        cashShort() { return this.method === 'cash' && this.tenderedAmount() < this.grandTotal(); },
         canPay() {
             return !!this.order?.items?.length && !this.busy && !this.needsTable();
         },
         canCompletePay() {
-            if (!this.canPay()) return false;
-            if (this.method === 'cash') return this.tenderedAmount() >= this.grandTotal();
-            return true;
-        },
-        cashPresets() {
-            const total = this.grandTotal();
-            const steps = [50000, 100000, 150000, 200000, 300000, 500000];
-            return [total, ...steps.filter((amount) => amount > total).slice(0, 3)];
+            return this.canPay();
         },
         openPay() {
             if (!this.canPay()) {
@@ -436,7 +397,7 @@ function posApp() {
                 return;
             }
             this.notice = '';
-            this.method = 'cash';
+            this.method = 'edc';
             this.tendered = this.grandTotal();
             this.payOpen = true;
         },
