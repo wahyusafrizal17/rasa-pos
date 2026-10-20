@@ -74,7 +74,6 @@ class SettingController extends Controller
             'stats' => [
                 'tax_rate' => (float) $settings['tax_rate'],
                 'service_charge' => (float) $settings['service_charge'],
-                'company_name' => (string) $settings['company_name'],
             ],
         ]);
     }

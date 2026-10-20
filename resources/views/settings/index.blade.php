@@ -2,7 +2,7 @@
 @section('title', 'Settings')
 @section('breadcrumb', 'Pengaturan')
 @section('content')
-    <div class="mb-5 grid gap-4 md:grid-cols-3">
+    <div class="mb-5 grid gap-4 md:grid-cols-2">
         <div class="stat-card">
             <div>
                 <p class="stat-kicker">Tarif pajak</p>
@@ -21,16 +21,6 @@
             </div>
             <span class="stat-icon bg-[#e8f8ee] text-[#1f9d57]">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5h6M9 9h6M5 5h.01M5 9h.01M5 13h14M5 17h14M5 21h14"/></svg>
-            </span>
-        </div>
-        <div class="stat-card">
-            <div>
-                <p class="stat-kicker">Nama perusahaan</p>
-                <p class="stat-value">{{ $stats['company_name'] ?: '—' }}</p>
-                <p class="stat-hint">Tampil di struk</p>
-            </div>
-            <span class="stat-icon bg-brand-soft text-brand">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16v12H4zM4 8l8 6 8-6"/></svg>
             </span>
         </div>
     </div>
@@ -59,22 +49,6 @@
                         <label class="label">Service charge (%)</label>
                         <input class="input" type="number" step="0.01" min="0" name="service_charge" value="{{ $settings['service_charge'] }}">
                         @error('service_charge')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-            </section>
-
-            <section class="border-t border-line pt-8">
-                <h6 class="mb-4 text-sm font-semibold text-heading">Identitas struk</h6>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="label">Nama perusahaan</label>
-                        <input class="input" type="text" name="company_name" maxlength="150" value="{{ $settings['company_name'] }}">
-                        @error('company_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label class="label">Footer struk</label>
-                        <input class="input" type="text" name="receipt_footer" maxlength="255" value="{{ $settings['receipt_footer'] }}">
-                        @error('receipt_footer')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
             </section>

@@ -68,7 +68,6 @@
                             ['label' => 'General', 'route' => 'settings.index', 'perm' => 'settings.manage', 'icon' => 'settings'],
                             ['label' => 'Outlets', 'route' => 'outlets.index', 'active' => 'outlets.*', 'perm' => 'outlets.view', 'icon' => 'building'],
                             ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'perm' => 'users.view', 'icon' => 'user'],
-                            ['label' => 'Printers', 'route' => 'printers.index', 'active' => 'printers.*', 'perm' => 'printers.view', 'icon' => 'printers'],
                             ['label' => 'Audit Logs', 'route' => 'audit.index', 'perm' => 'audit.view', 'icon' => 'document'],
                         ]],
                     ];

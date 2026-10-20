@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class ProductionService
 {
+    public const MAX_LEVEL = 6;
+
     public function __construct(
         protected InventoryService $inventory,
         protected NumberGenerator $numbers,
@@ -22,16 +24,30 @@ class ProductionService
     ) {}
 
     /**
-     * Expand BOM recursively up to 4 levels into a flat list of raw/semi requirements.
+     * Expand BOM recursively up to 6 levels into a flat list of requirements.
      *
      * @return array<int, array{product_id:int, quantity:float, level:int}>
      */
-    public function explode(Bom $bom, float $outputQty, int $maxLevel = 4): array
+    public function explode(Bom $bom, float $outputQty, int $maxLevel = self::MAX_LEVEL): array
     {
         $result = [];
         $this->walk($bom, $outputQty, 1, $maxLevel, $result);
 
         return $result;
+    }
+
+    /**
+     * Stockable materials at the end of a recipe. A component that still has
+     * its own BOM is a stage and is not deducted, until depth MAX_LEVEL.
+     *
+     * @return array<int, float> product_id => quantity in the component stock unit
+     */
+    public function recipeLeaves(Bom $bom, float $outputQty): array
+    {
+        $totals = [];
+        $this->collectLeaves($bom, $outputQty, 1, self::MAX_LEVEL, $totals);
+
+        return $totals;
     }
 
     public function create(array $data): ProductionOrder
@@ -198,5 +214,45 @@ class ProductionService
                 $this->walk($childBom, $qty, $level + 1, $maxLevel, $result);
             }
         }
+    }
+
+    /**
+     * @param  array<int, float>  $totals
+     */
+    protected function collectLeaves(Bom $bom, float $outputQty, int $level, int $maxLevel, array &$totals): void
+    {
+        if ($level > $maxLevel) {
+            return;
+        }
+
+        $bom->loadMissing('items.component.unit', 'items.unit');
+
+        foreach ($bom->items as $item) {
+            $qty = $this->stockQuantity($item, $outputQty);
+            $child = $level < $maxLevel ? $item->component?->activeBom() : null;
+
+            if ($child) {
+                $this->collectLeaves($child, $qty, $level + 1, $maxLevel, $totals);
+
+                continue;
+            }
+
+            if ($item->component?->is_stockable && $qty > 0) {
+                $totals[$item->component_id] = ($totals[$item->component_id] ?? 0) + $qty;
+            }
+        }
+    }
+
+    protected function stockQuantity(BomItem $item, float $outputQty): float
+    {
+        $qty = $item->requiredQuantity($outputQty);
+        $fromUnit = $item->unit;
+        $stockUnit = $item->component?->unit;
+
+        if ($fromUnit && $stockUnit) {
+            $qty = $fromUnit->convertTo($stockUnit, $qty);
+        }
+
+        return $qty;
     }
 }

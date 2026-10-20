@@ -323,7 +323,7 @@
                                 </div>
                                 <div>
                                     <label class="label">Level BOM</label>
-                                    <input class="input" type="number" name="bom_level" min="0" max="4" x-model="form.bom_level">
+                                    <input class="input" type="number" name="bom_level" min="0" max="6" x-model="form.bom_level">
                                 </div>
 
                                 <p class="sm:col-span-2 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Harga &amp; stok</p>

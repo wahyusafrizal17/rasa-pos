@@ -41,7 +41,7 @@
                 <div>
                     <p class="stat-kicker">Total BOM</p>
                     <p class="stat-value">{{ number_format($stats['total']) }}</p>
-                    <p class="stat-hint">Semua resep produksi</p>
+                    <p class="stat-hint">Semua resep menu</p>
                 </div>
                 <span class="stat-icon bg-[#e8f1ff] text-[#3b82f6]">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5h6M9 9h6M5 5h.01M5 9h.01M5 13h14M5 17h14M5 21h14"/></svg>
@@ -51,7 +51,7 @@
                 <div>
                     <p class="stat-kicker">Aktif</p>
                     <p class="stat-value">{{ number_format($stats['active']) }}</p>
-                    <p class="stat-hint">Dipakai saat produksi</p>
+                    <p class="stat-hint">Dipakai saat menu terjual</p>
                 </div>
                 <span class="stat-icon bg-[#e8f8ee] text-[#1f9d57]">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -226,7 +226,7 @@
                     </div>
 
                     <div class="mt-5 overflow-hidden rounded-xl border border-line">
-                        <p class="px-4 pt-4 text-sm font-medium">Explode 4 level (qty 1)</p>
+                        <p class="px-4 pt-4 text-sm font-medium">Explode 6 level (qty 1)</p>
                         <table class="list-table mt-2">
                             <thead>
                                 <tr>
@@ -273,7 +273,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 class="text-lg font-semibold text-heading" x-text="formMode === 'edit' ? 'Edit BOM' : 'Buat BOM'"></h3>
-                                    <p class="mt-1 text-[13px] text-muted">Resep bahan untuk satu unit produk jadi. Stok baru berubah saat produksi diselesaikan.</p>
+                                    <p class="mt-1 text-[13px] text-muted">Resep bahan untuk satu unit menu, sampai 6 tahap. Stok bahan paling bawah berkurang saat menu ini terjual.</p>
                                 </div>
                                 <button type="button" class="modal-close" @click="formOpen = false">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>

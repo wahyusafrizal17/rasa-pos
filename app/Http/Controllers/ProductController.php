@@ -160,7 +160,7 @@ class ProductController extends Controller
             'category_id' => ['nullable', 'exists:categories,id'],
             'unit_id' => ['required', 'exists:units,id'],
             'type' => ['required', 'in:raw,semi_finished,finished,package'],
-            'bom_level' => ['nullable', 'integer', 'min:0', 'max:4'],
+            'bom_level' => ['nullable', 'integer', 'min:0', 'max:6'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'string', 'max:500'],
             'image_file' => ['nullable', 'image', 'max:4096'],

@@ -31,6 +31,7 @@ class OrderService
         protected DiscountService $discounts,
         protected AuditService $audit,
         protected TableService $tables,
+        protected ProductionService $production,
     ) {}
 
     public function createDraft(array $data): Order
@@ -361,20 +362,24 @@ class OrderService
                     );
                 }
 
+                $this->consumeRecipe($order, $item->product, (float) $item->quantity);
+
                 if ($item->bundle_id) {
-                    $item->loadMissing('bundle.items');
+                    $item->loadMissing('bundle.items.product');
                     foreach ($item->bundle?->items ?? [] as $bundleItem) {
+                        $bundleQty = (float) $bundleItem->quantity * (float) $item->quantity;
                         if ($bundleItem->product?->is_stockable) {
                             $this->inventory->decrease(
                                 $order->outlet_id,
                                 $bundleItem->product_id,
-                                (float) $bundleItem->quantity * (float) $item->quantity,
+                                $bundleQty,
                                 StockMovementType::Sale,
                                 'Bundle '.$order->order_number,
                                 $order,
                                 $order->order_number,
                             );
                         }
+                        $this->consumeRecipe($order, $bundleItem->product, $bundleQty);
                     }
                 }
             }
@@ -396,6 +401,34 @@ class OrderService
 
             return $order->fresh(['items', 'payments', 'customer']);
         });
+    }
+
+    protected function consumeRecipe(Order $order, ?Product $product, float $qty): void
+    {
+        if (! $product || $qty <= 0) {
+            return;
+        }
+
+        $bom = $product->activeBom();
+        if (! $bom) {
+            return;
+        }
+
+        foreach ($this->production->recipeLeaves($bom, $qty) as $productId => $need) {
+            if ($need <= 0) {
+                continue;
+            }
+
+            $this->inventory->decrease(
+                $order->outlet_id,
+                (int) $productId,
+                $need,
+                StockMovementType::Sale,
+                'Resep '.$order->order_number,
+                $order,
+                $order->order_number,
+            );
+        }
     }
 
     public function cancel(Order $order, string $reason): Order
