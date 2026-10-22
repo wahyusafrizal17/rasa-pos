@@ -39,11 +39,13 @@
                             <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="menu-card-photo" loading="lazy">
                         </div>
                         <div class="menu-card-body">
-                            <h3 class="menu-card-name">{{ $product->name }}</h3>
+                            <div class="menu-card-head">
+                                <h3 class="menu-card-name">{{ $product->name }}</h3>
+                                @if ($product->is_stockable)
+                                    <span class="menu-stock-badge {{ $outOfStock ? 'is-out' : '' }}">{{ qty_label($stockQty, $product->unit?->code ?? '') }}</span>
+                                @endif
+                            </div>
                             <p class="menu-card-price">{{ money($product->price) }}</p>
-                            @if ($product->is_stockable)
-                                <p class="m-0 truncate text-[11px] font-medium text-muted">Stok {{ qty_label($product->inventories->first()?->quantity ?? 0, $product->unit?->code ?? '') }}</p>
-                            @endif
                             @if ($product->variants->count())
                                 <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
                                     @foreach ($product->variants as $variant)
@@ -64,11 +66,13 @@
                             <img src="{{ $bundle->product?->imageUrl() ?? asset('images/menu/placeholder.svg') }}" alt="{{ $bundle->name }}" class="menu-card-photo" loading="lazy">
                         </div>
                         <div class="menu-card-body">
-                            <h3 class="menu-card-name">{{ $bundle->name }}</h3>
+                            <div class="menu-card-head">
+                                <h3 class="menu-card-name">{{ $bundle->name }}</h3>
+                                @if ($bundle->product?->is_stockable)
+                                    <span class="menu-stock-badge {{ $bundleOut ? 'is-out' : '' }}">{{ qty_label($bundleStock, $bundle->product->unit?->code ?? '') }}</span>
+                                @endif
+                            </div>
                             <p class="menu-card-price">{{ money($bundle->price) }}</p>
-                            @if ($bundle->product?->is_stockable)
-                                <p class="m-0 truncate text-[11px] font-medium text-muted">Stok {{ qty_label($bundle->product->inventories->first()?->quantity ?? 0, $bundle->product->unit?->code ?? '') }}</p>
-                            @endif
                         </div>
                     </article>
                 @endforeach
