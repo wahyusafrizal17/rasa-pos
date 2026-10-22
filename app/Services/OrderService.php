@@ -103,6 +103,8 @@ class OrderService
                 return $existing->fresh();
             }
 
+            $this->assertInStock($order, $product, $qty);
+
             $item = $order->items()->create([
                 'product_id' => $product->id,
                 'product_variant_id' => $variant?->id,
@@ -146,6 +148,11 @@ class OrderService
         $order = $item->order;
         $this->assertMutable($order);
 
+        $next = (float) ($payload['quantity'] ?? $item->quantity);
+        if ($next > (float) $item->quantity + 0.0001 && $item->product) {
+            $this->assertInStock($order, $item->product, $next, $item->id);
+        }
+
         $item->fill([
             'quantity' => $payload['quantity'] ?? $item->quantity,
             'notes' => $payload['notes'] ?? $item->notes,
@@ -162,6 +169,31 @@ class OrderService
         }
 
         return $this->recalculate($order->fresh(['items', 'discount']));
+    }
+
+    protected function assertInStock(Order $order, Product $product, float $qty, ?int $exceptItemId = null): void
+    {
+        if (! $product->is_stockable || $qty <= 0) {
+            return;
+        }
+
+        $taken = (float) $order->items()
+            ->where('product_id', $product->id)
+            ->whereNull('parent_id')
+            ->when($exceptItemId, fn ($query) => $query->whereKeyNot($exceptItemId))
+            ->sum('quantity');
+
+        $available = $product->stockFor((int) $order->outlet_id);
+
+        if ($taken + $qty <= $available + 0.0001) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'quantity' => $available <= 0
+                ? "{$product->name} stok habis."
+                : "Stok {$product->name} tidak mencukupi.",
+        ]);
     }
 
     public function removeItem(OrderItem $item): Order

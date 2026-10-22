@@ -25,10 +25,15 @@
             </div>
             <div class="pos-grid">
                 @foreach ($products as $product)
+                    @php
+                        $stockQty = (float) ($product->inventories->first()?->quantity ?? 0);
+                        $outOfStock = $product->is_stockable && $stockQty <= 0;
+                    @endphp
                     <article
                         class="menu-card"
+                        @if ($outOfStock) style="opacity:.55;cursor:not-allowed" @endif
                         x-show="(!category || category == {{ $product->category_id }}) && productMatch('{{ strtolower($product->name) }}')"
-                        @click="addProduct({{ $product->id }}, null, null)"
+                        @click="addProduct({{ $product->id }}, null, null, false, null, {{ $outOfStock ? '0' : 'null' }})"
                     >
                         <div class="menu-card-visual">
                             <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="menu-card-photo" loading="lazy">
@@ -42,7 +47,7 @@
                             @if ($product->variants->count())
                                 <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
                                     @foreach ($product->variants as $variant)
-                                        <button type="button" class="rounded-full bg-[#f6f1eb] px-2.5 py-1 text-[11px] font-medium text-heading" @click="addProduct({{ $product->id }}, {{ $variant->id }}, null)">{{ $variant->name }}</button>
+                                        <button type="button" class="rounded-full bg-[#f6f1eb] px-2.5 py-1 text-[11px] font-medium text-heading" @click="addProduct({{ $product->id }}, {{ $variant->id }}, null, false, null, {{ $outOfStock ? '0' : 'null' }})">{{ $variant->name }}</button>
                                     @endforeach
                                 </div>
                             @endif
@@ -50,7 +55,11 @@
                     </article>
                 @endforeach
                 @foreach ($bundles as $bundle)
-                    <article class="menu-card" x-show="!category || category == {{ $bundle->product?->category_id ?? 0 }}" @click="addProduct({{ $bundle->product_id ?? $bundle->items->first()?->product_id }}, null, {{ $bundle->id }})">
+                    @php
+                        $bundleStock = (float) ($bundle->product?->inventories->first()?->quantity ?? 0);
+                        $bundleOut = (bool) ($bundle->product?->is_stockable && $bundleStock <= 0);
+                    @endphp
+                    <article class="menu-card" @if ($bundleOut) style="opacity:.55;cursor:not-allowed" @endif x-show="!category || category == {{ $bundle->product?->category_id ?? 0 }}" @click="addProduct({{ $bundle->product_id ?? $bundle->items->first()?->product_id }}, null, {{ $bundle->id }}, false, null, {{ $bundleOut ? '0' : 'null' }})">
                         <div class="menu-card-visual">
                             <img src="{{ $bundle->product?->imageUrl() ?? asset('images/menu/placeholder.svg') }}" alt="{{ $bundle->name }}" class="menu-card-photo" loading="lazy">
                         </div>
@@ -528,7 +537,9 @@ function posApp() {
                 const res = await fetch(this.appUrl(url), options);
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
-                    throw new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Request gagal');
+                    const error = new Error(data.message || Object.values(data.errors || {})[0]?.[0] || 'Request gagal');
+                    error.status = res.status;
+                    throw error;
                 }
                 return res.json();
             } finally {
@@ -557,7 +568,11 @@ function posApp() {
         addonsFor(productId) {
             return this.productAddons[productId] || this.productAddons[String(productId)] || [];
         },
-        async addProduct(productId, variantId, bundleId, fromQueue = false, addonIds = null) {
+        async addProduct(productId, variantId, bundleId, fromQueue = false, addonIds = null, stock = null) {
+            if (stock !== null && Number(stock) <= 0) {
+                this.notice = 'Stok habis.';
+                return;
+            }
             const extras = this.addonsFor(productId);
             if (!fromQueue && !bundleId && extras.length && addonIds === null) {
                 this.pendingAdd = { productId, variantId, bundleId };
@@ -573,6 +588,10 @@ function posApp() {
                 })});
                 this.persistDraft();
             } catch (e) {
+                if (e.status) {
+                    this.notice = e.message || 'Tidak bisa menambah item.';
+                    return;
+                }
                 if (!fromQueue) this.queue({ type: 'add', product_id: productId, variant_id: variantId, bundle_id: bundleId, addon_ids: addonIds || [] });
             }
         },
@@ -586,8 +605,14 @@ function posApp() {
         async changeQty(item, delta) {
             const qty = Number(item.quantity) + delta;
             if (qty <= 0) return this.removeItem(item.id);
+            const previous = item.quantity;
             item.quantity = qty;
-            await this.updateItem(item);
+            try {
+                await this.updateItem(item);
+            } catch (e) {
+                item.quantity = previous;
+                this.notice = e.message || 'Tidak bisa menambah item.';
+            }
         },
         async updateItem(item) {
             this.order = await this.request(`/pos/${this.order.id}/items/${item.id}`, { method: 'PUT', headers: await this.csrf(), body: JSON.stringify({ quantity: item.quantity, notes: item.notes })});

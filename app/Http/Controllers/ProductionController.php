@@ -60,12 +60,12 @@ class ProductionController extends Controller
             'boms' => Bom::query()
                 ->where('is_active', true)
                 ->with('product:id,name')
-                ->orderBy('version')
+                ->orderBy('id')
                 ->get()
                 ->map(fn (Bom $bom) => [
                     'id' => $bom->id,
                     'product_id' => (string) $bom->product_id,
-                    'label' => ($bom->product?->name ?? 'BOM').' · v'.$bom->version,
+                    'label' => $bom->product?->name ?? 'BOM',
                 ])
                 ->values(),
             'stats' => [

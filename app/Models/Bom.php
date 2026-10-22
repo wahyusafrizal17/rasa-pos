@@ -10,8 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'product_id', 'version', 'yield_percentage', 'waste_percentage',
-    'active_from', 'active_until', 'is_active', 'notes',
+    'product_id', 'is_active', 'notes',
 ])]
 class Bom extends Model
 {
@@ -20,10 +19,6 @@ class Bom extends Model
     protected function casts(): array
     {
         return [
-            'yield_percentage' => 'decimal:2',
-            'waste_percentage' => 'decimal:2',
-            'active_from' => 'date',
-            'active_until' => 'date',
             'is_active' => 'boolean',
         ];
     }
@@ -80,14 +75,6 @@ class Bom extends Model
             'product_id' => (string) $this->product_id,
             'product_name' => $this->product?->name ?? '—',
             'sku' => $this->product?->sku ?? '—',
-            'version' => $this->version,
-            'yield_percentage' => (string) (float) $this->yield_percentage,
-            'yield_label' => qty_label($this->yield_percentage).'%',
-            'waste_percentage' => (string) (float) ($this->waste_percentage ?? 0),
-            'waste_label' => qty_label($this->waste_percentage ?? 0).'%',
-            'active_from' => $this->active_from?->format('Y-m-d') ?? '',
-            'active_until' => $this->active_until?->format('Y-m-d') ?? '',
-            'period_label' => $this->periodLabel(),
             'is_active' => (bool) $this->is_active,
             'status_label' => $this->is_active ? 'Aktif' : 'Nonaktif',
             'notes' => $this->notes ?: '',
@@ -97,14 +84,5 @@ class Bom extends Model
             'exploded' => $exploded,
             'update_url' => route('boms.update', $this),
         ];
-    }
-
-    public function periodLabel(): string
-    {
-        if (! $this->active_from && ! $this->active_until) {
-            return 'Tanpa periode';
-        }
-
-        return ($this->active_from?->format('d/m/Y') ?? '—').' – '.($this->active_until?->format('d/m/Y') ?? '—');
     }
 }

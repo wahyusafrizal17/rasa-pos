@@ -99,7 +99,7 @@ class ProductionOrder extends Model
             'product_name' => $this->product?->name ?? '—',
             'sku' => $this->product?->sku ?? '—',
             'outlet_name' => $this->outlet?->name ?? '—',
-            'bom_label' => $this->bom ? (($this->bom->product?->name ?? 'BOM').' · v'.$this->bom->version) : 'Otomatis',
+            'bom_label' => $this->bom?->product?->name ?? ($this->bom ? 'BOM' : 'Otomatis'),
             'notes' => $this->notes ?: '—',
             'user_name' => $this->user?->name ?? '—',
             'planned' => $planned,

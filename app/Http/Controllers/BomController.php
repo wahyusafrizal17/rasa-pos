@@ -15,7 +15,7 @@ class BomController extends Controller
     {
         abort_unless($request->user()->hasPermission('production.view'), 403);
 
-        $filters = $request->only(['product', 'version', 'status']);
+        $filters = $request->only(['product', 'status']);
         $query = Bom::query()->with(['product', 'items.component.unit', 'items.unit']);
 
         if (filled($filters['product'] ?? null)) {
@@ -25,9 +25,6 @@ class BomController extends Controller
                         ->orWhere('sku', 'like', '%'.$filters['product'].'%');
                 });
             });
-        }
-        if (filled($filters['version'] ?? null)) {
-            $query->where('version', 'like', '%'.$filters['version'].'%');
         }
         if (($filters['status'] ?? '') === 'active') {
             $query->where('is_active', true);
@@ -109,31 +106,19 @@ class BomController extends Controller
     {
         return $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'version' => ['required', 'string', 'max:20'],
-            'yield_percentage' => ['required', 'numeric', 'min:1', 'max:200'],
-            'waste_percentage' => ['nullable', 'numeric', 'min:0'],
-            'active_from' => ['nullable', 'date'],
-            'active_until' => ['nullable', 'date', 'after_or_equal:active_from'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.component_id' => ['required', 'exists:products,id'],
             'items.*.unit_id' => ['nullable', 'exists:units,id'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.0001'],
-            'items.*.waste_percentage' => ['nullable', 'numeric', 'min:0'],
-            'items.*.yield_percentage' => ['nullable', 'numeric', 'min:1'],
         ], [
             'product_id.required' => 'Produk jadi wajib dipilih.',
-            'version.required' => 'Versi wajib diisi.',
-            'yield_percentage.required' => 'Yield wajib diisi.',
-            'yield_percentage.min' => 'Yield minimal 1%.',
-            'yield_percentage.max' => 'Yield maksimal 200%.',
-            'active_until.after_or_equal' => 'Tanggal akhir tidak boleh sebelum tanggal mulai.',
-            'items.required' => 'Minimal satu komponen.',
-            'items.min' => 'Minimal satu komponen.',
-            'items.*.component_id.required' => 'Komponen wajib dipilih.',
-            'items.*.quantity.required' => 'Kuantitas komponen wajib diisi.',
-            'items.*.quantity.min' => 'Kuantitas komponen minimal 0.0001.',
+            'items.required' => 'Minimal satu item.',
+            'items.min' => 'Minimal satu item.',
+            'items.*.component_id.required' => 'Item wajib dipilih.',
+            'items.*.quantity.required' => 'Kuantitas item wajib diisi.',
+            'items.*.quantity.min' => 'Kuantitas item minimal 0.0001.',
         ]) + ['is_active' => $request->boolean('is_active')];
     }
 

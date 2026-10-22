@@ -10,26 +10,19 @@
         if (! is_array($oldItems) || $oldItems === []) {
             $oldItems = data_get($focusPayload, 'items', []);
             if (! is_array($oldItems) || $oldItems === []) {
-                $oldItems = [['component_id' => '', 'unit_id' => '', 'quantity' => 1, 'waste_percentage' => 0, 'yield_percentage' => 100]];
+                $oldItems = [['component_id' => '', 'unit_id' => '', 'quantity' => 1]];
             }
         } else {
             $oldItems = array_values(array_map(fn ($item) => [
                 'component_id' => (string) ($item['component_id'] ?? ''),
                 'unit_id' => (string) ($item['unit_id'] ?? ''),
                 'quantity' => $item['quantity'] ?? 1,
-                'waste_percentage' => $item['waste_percentage'] ?? 0,
-                'yield_percentage' => $item['yield_percentage'] ?? 100,
             ], $oldItems));
         }
         $formOld = [
             'id' => old('_bom_id', data_get($focusPayload, 'id')),
             'mode' => old('_form_mode', 'create'),
             'product_id' => (string) old('product_id', data_get($focusPayload, 'product_id', '')),
-            'version' => old('version', data_get($focusPayload, 'version', '1.0')),
-            'yield_percentage' => old('yield_percentage', data_get($focusPayload, 'yield_percentage', '100')),
-            'waste_percentage' => old('waste_percentage', data_get($focusPayload, 'waste_percentage', '0')),
-            'active_from' => old('active_from', data_get($focusPayload, 'active_from', '')),
-            'active_until' => old('active_until', data_get($focusPayload, 'active_until', '')),
             'notes' => old('notes', data_get($focusPayload, 'notes', '')),
             'is_active' => old('is_active', data_get($focusPayload, 'is_active', true) ? '1' : '0') !== '0',
             'items' => $oldItems,
@@ -92,9 +85,7 @@
                         <tr>
                             <th class="col-no">No.</th>
                             <th>Produk</th>
-                            <th>Versi</th>
-                            <th>Yield</th>
-                            <th>Items</th>
+                            <th>Item</th>
                             <th>Status</th>
                             <th class="col-actions"></th>
                         </tr>
@@ -103,10 +94,6 @@
                             <th>
                                 <input form="bom-filters" class="col-filter" type="search" name="product" value="{{ $filters['product'] ?? '' }}" placeholder="Nama / SKU..." onchange="this.form.submit()">
                             </th>
-                            <th>
-                                <input form="bom-filters" class="col-filter" type="search" name="version" value="{{ $filters['version'] ?? '' }}" placeholder="Versi..." onchange="this.form.submit()">
-                            </th>
-                            <th></th>
                             <th></th>
                             <th>
                                 <select form="bom-filters" class="col-filter" name="status" onchange="this.form.submit()">
@@ -127,8 +114,6 @@
                                     <button type="button" class="font-semibold hover:underline" @click="openView({{ Js::from($row) }})">{{ $bom->product?->name ?? '—' }}</button>
                                     <p class="mt-0.5 text-[12px] text-muted">{{ $bom->product?->sku ?? '—' }}</p>
                                 </td>
-                                <td>{{ $bom->version }}</td>
-                                <td class="font-semibold">{{ $row['yield_label'] }}</td>
                                 <td>{{ number_format($row['items_count']) }}</td>
                                 <td>
                                     <x-status :value="$bom->is_active ? 'green' : 'gray'">{{ $bom->is_active ? 'Aktif' : 'Nonaktif' }}</x-status>
@@ -148,7 +133,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="py-16 text-center text-sm text-slate-400">Tidak ada BOM yang cocok dengan filter kolom ini.</td>
+                                <td colspan="5" class="py-16 text-center text-sm text-slate-400">Tidak ada BOM yang cocok dengan filter kolom ini.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -165,33 +150,21 @@
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h3 class="text-lg font-semibold text-heading" x-text="viewing?.product_name || 'Detail BOM'"></h3>
-                            <p class="mt-1 text-[13px] text-muted" x-text="(viewing?.sku || '—') + ' · v' + (viewing?.version || '—') + ' · ' + (viewing?.status_label || '—')"></p>
+                            <p class="mt-1 text-[13px] text-muted" x-text="(viewing?.sku || '—') + ' · ' + (viewing?.status_label || '—')"></p>
                         </div>
                         <button type="button" class="modal-close" @click="viewOpen = false">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
                         </button>
                     </div>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div class="rounded-xl bg-[#fafafa] px-4 py-3">
-                            <p class="stat-kicker">Yield</p>
-                            <p class="mt-1 text-lg font-semibold" x-text="viewing?.yield_label || '—'"></p>
-                        </div>
-                        <div class="rounded-xl bg-[#fafafa] px-4 py-3">
-                            <p class="stat-kicker">Waste</p>
-                            <p class="mt-1 text-lg font-semibold" x-text="viewing?.waste_label || '—'"></p>
-                        </div>
-                        <div class="rounded-xl bg-[#fafafa] px-4 py-3">
-                            <p class="stat-kicker">Komponen</p>
+                    <div class="mt-5">
+                        <div class="max-w-[200px] rounded-xl bg-[#fafafa] px-4 py-3">
+                            <p class="stat-kicker">Item</p>
                             <p class="mt-1 text-lg font-semibold" x-text="viewing?.items_count ?? 0"></p>
                         </div>
                     </div>
 
-                    <dl class="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                        <div>
-                            <dt class="text-[12px] text-muted">Periode aktif</dt>
-                            <dd class="mt-0.5 font-medium" x-text="viewing?.period_label || '—'"></dd>
-                        </div>
+                    <dl class="mt-5 text-sm">
                         <div>
                             <dt class="text-[12px] text-muted">Catatan</dt>
                             <dd class="mt-0.5 font-medium" x-text="viewing?.notes_label || '—'"></dd>
@@ -202,10 +175,8 @@
                         <table class="list-table">
                             <thead>
                                 <tr>
-                                    <th>Komponen</th>
+                                    <th>Item</th>
                                     <th>Qty</th>
-                                    <th>Waste</th>
-                                    <th>Yield</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -216,13 +187,11 @@
                                             <p class="mt-0.5 text-[12px] text-muted"><span x-text="item.sku"></span> · <span x-text="item.unit || '—'"></span></p>
                                         </td>
                                         <td class="font-semibold" x-text="item.quantity_label"></td>
-                                        <td x-text="item.waste_label"></td>
-                                        <td x-text="item.yield_label"></td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
-                        <p class="px-4 py-10 text-center text-sm text-slate-400" x-show="! (viewing?.items || []).length">BOM ini belum memiliki komponen.</p>
+                        <p class="px-4 py-10 text-center text-sm text-slate-400" x-show="! (viewing?.items || []).length">BOM ini belum memiliki item.</p>
                     </div>
 
                     <div class="mt-5 overflow-hidden rounded-xl border border-line">
@@ -231,7 +200,7 @@
                             <thead>
                                 <tr>
                                     <th>Level</th>
-                                    <th>Komponen</th>
+                                    <th>Item</th>
                                     <th>Qty</th>
                                 </tr>
                             </thead>
@@ -247,7 +216,7 @@
                                 </template>
                             </tbody>
                         </table>
-                        <p class="px-4 py-10 text-center text-sm text-slate-400" x-show="! (viewing?.exploded || []).length">Tidak ada komponen rekursif.</p>
+                        <p class="px-4 py-10 text-center text-sm text-slate-400" x-show="! (viewing?.exploded || []).length">Tidak ada item di tahap berikutnya.</p>
                     </div>
                 </div>
                 <div class="crud-modal-footer">
@@ -281,7 +250,7 @@
                             </div>
 
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                                <div>
+                                <div class="sm:col-span-2">
                                     <label class="label">Produk jadi</label>
                                     <select name="product_id" class="input js-product-select" required x-model="form.product_id">
                                         <option value="">Pilih produk</option>
@@ -290,30 +259,6 @@
                                         @endforeach
                                     </select>
                                     @error('product_id')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <label class="label">Versi</label>
-                                    <input class="input" name="version" required maxlength="20" x-model="form.version">
-                                    @error('version')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <label class="label">Yield %</label>
-                                    <input class="input" type="number" step="0.01" min="1" max="200" name="yield_percentage" required x-model="form.yield_percentage">
-                                    @error('yield_percentage')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <label class="label">Waste %</label>
-                                    <input class="input" type="number" step="0.01" min="0" name="waste_percentage" x-model="form.waste_percentage">
-                                    @error('waste_percentage')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
-                                </div>
-                                <div>
-                                    <label class="label">Aktif dari</label>
-                                    <input class="input" type="date" name="active_from" x-model="form.active_from">
-                                </div>
-                                <div>
-                                    <label class="label">Aktif sampai</label>
-                                    <input class="input" type="date" name="active_until" x-model="form.active_until">
-                                    @error('active_until')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div class="sm:col-span-2">
                                     <label class="label">Catatan</label>
@@ -332,22 +277,22 @@
 
                             <div class="mt-6">
                                 <div class="mb-3 flex items-center justify-between">
-                                    <p class="text-sm font-medium">Komponen</p>
+                                    <p class="text-sm font-medium">Item</p>
                                     <button type="button" class="btn-import !px-3 !py-1.5 text-xs" @click="form.items.push(emptyItem())">Tambah item</button>
                                 </div>
                                 <div class="space-y-3">
                                     <template x-for="(item, index) in form.items" :key="index">
                                         <div class="grid gap-3 rounded-xl border border-line p-4 sm:grid-cols-12">
-                                            <div class="sm:col-span-4">
-                                                <label class="label">Komponen</label>
+                                            <div class="sm:col-span-6">
+                                                <label class="label">Item</label>
                                                 <select class="input js-product-select" :name="'items[' + index + '][component_id]'" x-model="item.component_id" required>
-                                                    <option value="">Pilih bahan</option>
+                                                    <option value="">Pilih item</option>
                                                     @foreach ($products as $product)
                                                         <option value="{{ $product->id }}">{{ $product->name }} ({{ $product->sku }})</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="sm:col-span-2">
+                                            <div class="sm:col-span-3">
                                                 <label class="label">Unit</label>
                                                 <select class="input" :name="'items[' + index + '][unit_id]'" x-model="item.unit_id">
                                                     <option value="">—</option>
@@ -359,14 +304,6 @@
                                             <div class="sm:col-span-2">
                                                 <label class="label">Qty</label>
                                                 <input class="input" type="number" step="0.0001" min="0.0001" :name="'items[' + index + '][quantity]'" x-model="item.quantity" required>
-                                            </div>
-                                            <div class="sm:col-span-2">
-                                                <label class="label">Waste %</label>
-                                                <input class="input" type="number" step="0.01" min="0" :name="'items[' + index + '][waste_percentage]'" x-model="item.waste_percentage">
-                                            </div>
-                                            <div class="sm:col-span-1">
-                                                <label class="label">Yield %</label>
-                                                <input class="input" type="number" step="0.01" min="1" :name="'items[' + index + '][yield_percentage]'" x-model="item.yield_percentage">
                                             </div>
                                             <div class="flex items-end sm:col-span-1">
                                                 <button type="button" class="btn-ghost w-full !px-3" @click="form.items.length > 1 && form.items.splice(index, 1)">×</button>
@@ -394,17 +331,10 @@
                 component_id: '',
                 unit_id: '',
                 quantity: 1,
-                waste_percentage: 0,
-                yield_percentage: 100,
             });
             const emptyForm = () => ({
                 id: null,
                 product_id: '',
-                version: '1.0',
-                yield_percentage: '100',
-                waste_percentage: '0',
-                active_from: '',
-                active_until: '',
                 notes: '',
                 is_active: true,
                 items: [emptyItem()],
@@ -415,8 +345,6 @@
                     component_id: String(item.component_id || ''),
                     unit_id: String(item.unit_id || ''),
                     quantity: item.quantity || 1,
-                    waste_percentage: item.waste_percentage ?? 0,
-                    yield_percentage: item.yield_percentage ?? 100,
                 }));
                 return items.length ? items : [emptyItem()];
             };
