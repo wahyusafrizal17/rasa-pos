@@ -79,6 +79,20 @@ class Product extends Model
         return $query->where('is_sellable', true)->where('is_active', true);
     }
 
+    public function scopeHasSku(Builder $query): Builder
+    {
+        $placeholder = $query->getConnection()->getDriverName() === 'sqlite'
+            ? "('Z' || zoho_item_id)"
+            : "CONCAT('Z', zoho_item_id)";
+
+        return $query->where('sku', '!=', '')
+            ->where('sku', '!=', '-')
+            ->where(function (Builder $query) use ($placeholder) {
+                $query->whereNull('zoho_item_id')
+                    ->orWhereRaw('sku != '.$placeholder);
+            });
+    }
+
     public function stockFor(?int $outletId): float
     {
         if (! $outletId) {
