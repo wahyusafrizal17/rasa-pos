@@ -34,7 +34,7 @@
         .row span:last-child { white-space: nowrap; }
         hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
         .total { font-size: 14px; font-weight: 700; }
-        .foot-logo { display: block; width: 46mm; height: auto; margin: 2mm auto 0; }
+        .head-logo { display: block; width: 46mm; height: auto; margin: 0 auto 3mm; }
 
         @media print {
             html, body { width: 80mm; }
@@ -59,6 +59,7 @@
             }
         })();
     </script>
+    <img class="head-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
     <h1>{{ $order->outlet?->name ?? config('app.name') }}</h1>
     <p class="center muted">{{ $order->order_number }}</p>
     <p class="center muted">{{ $order->created_at->format('d/m/Y H:i') }}</p>
@@ -93,6 +94,6 @@
         @endif
     @endforeach
     <hr>
-    <img class="foot-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
+    <p class="center">{{ setting('receipt_footer', 'Terima kasih telah berkunjung') }}</p>
 </body>
 </html>
