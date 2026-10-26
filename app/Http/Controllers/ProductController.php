@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Console\Commands\SyncZohoCatalog;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -44,8 +45,6 @@ class ProductController extends Controller
             'products' => $query->latest()->paginate(20)->withQueryString(),
             'filters' => $filters,
             'categories' => Category::query()->orderBy('name')->get(),
-            'units' => Unit::query()->orderBy('name')->get(),
-            'addonProducts' => Product::query()->where('is_addon', true)->orderBy('name')->get(),
             'stats' => [
                 'total' => Product::query()->count(),
                 'sellable' => Product::query()->where('is_sellable', true)->where('is_active', true)->count(),
@@ -53,6 +52,30 @@ class ProductController extends Controller
             ],
             'focusPayload' => $focusProduct?->toModalArray(),
         ]);
+    }
+
+    public function sync(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('products.manage'), 403);
+
+        $lock = Cache::lock(SyncZohoCatalog::LOCK, 45 * 60);
+        if (! $lock->get()) {
+            return back()->with('success', 'Sinkronisasi Zoho masih berjalan.');
+        }
+        $lock->release();
+
+        $php = PHP_BINARY;
+        if ($php === '' || str_contains(strtolower($php), 'fpm')) {
+            $php = 'php';
+        }
+        $command = escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' zoho:sync-catalog --no-interaction > /dev/null 2>&1 &';
+        if (app()->runningUnitTests()) {
+            Cache::put('zoho-catalog-sync.spawned', $command, 60);
+        } else {
+            exec($command);
+        }
+
+        return back()->with('success', 'Sinkronisasi Zoho dimulai. Katalog selesai dalam beberapa menit.');
     }
 
     public function create(): RedirectResponse

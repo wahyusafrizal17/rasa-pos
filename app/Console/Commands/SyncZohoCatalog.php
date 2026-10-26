@@ -4,9 +4,12 @@ namespace App\Console\Commands;
 
 use App\Services\ZohoCatalogSync;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class SyncZohoCatalog extends Command
 {
+    public const LOCK = 'zoho-catalog-sync';
+
     protected $signature = 'zoho:sync-catalog {--fresh : Hapus data tes lalu isi dari Zoho}';
 
     protected $description = 'Sync outlet, kategori, produk, dan stok dari Zoho Inventory';
@@ -27,13 +30,24 @@ class SyncZohoCatalog extends Command
             return self::FAILURE;
         }
 
-        if ($this->option('fresh') && $this->input->isInteractive() && ! $this->confirm('Hapus data operasional lokal (order, outlet tes, katalog) lalu isi dari Zoho?', true)) {
+        $lock = Cache::lock(self::LOCK, 45 * 60);
+        if (! $lock->get()) {
+            $this->logLine('Sync dilewati, masih berjalan.');
+
             return self::SUCCESS;
         }
 
-        $this->logLine('Mulai sync Zoho (~15 menit). Jangan Ctrl+C.');
-        $summary = $sync->run(fresh: (bool) $this->option('fresh'), onProgress: fn (string $line) => $this->logLine($line));
-        $this->logLine('Selesai. Outlets '.$summary['outlets'].' · products '.$summary['products'].' · stock rows '.$summary['stocks']);
+        try {
+            if ($this->option('fresh') && $this->input->isInteractive() && ! $this->confirm('Hapus data operasional lokal (order, outlet tes, katalog) lalu isi dari Zoho?', true)) {
+                return self::SUCCESS;
+            }
+
+            $this->logLine('Mulai sync Zoho (~15 menit). Jangan Ctrl+C.');
+            $summary = $sync->run(fresh: (bool) $this->option('fresh'), onProgress: fn (string $line) => $this->logLine($line));
+            $this->logLine('Selesai. Outlets '.$summary['outlets'].' · products '.$summary['products'].' · stock rows '.$summary['stocks']);
+        } finally {
+            $lock->release();
+        }
 
         return self::SUCCESS;
     }

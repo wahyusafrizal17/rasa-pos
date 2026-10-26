@@ -95,6 +95,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/tables/split', [TableController::class, 'split'])->name('tables.split');
     Route::post('/tables/reserve', [TableController::class, 'reserve'])->name('tables.reserve');
 
+    Route::post('products/sync', [ProductController::class, 'sync'])->name('products.sync');
     Route::resource('products', ProductController::class)->except('show');
     Route::resource('categories', CategoryController::class)->except('show');
     Route::get('/customers/template', [CustomerController::class, 'template'])->name('customers.template');
