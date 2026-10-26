@@ -27,8 +27,12 @@ class PosController extends Controller
         abort_unless($request->user()->hasPermission('pos.access'), 403);
 
         $outletId = current_outlet_id();
+        $categories = $this->posCategories();
+        $categoryIds = $categories->pluck('id');
 
-        $products = Product::query()->sellable()->where('is_addon', false)->with([
+        $products = Product::query()->sellable()->where('is_addon', false)
+            ->whereIn('category_id', $categoryIds)
+            ->with([
             'category',
             'unit',
             'variants',
@@ -39,18 +43,14 @@ class PosController extends Controller
         $lowStock = app(InventoryService::class)->lowStock($outletId);
 
         return view('pos.index', [
-            'categories' => Category::query()
-                ->where('is_active', true)
-                ->whereHas('products', fn ($q) => $q->sellable())
-                ->orderBy('sort_order')
-                ->get(),
+            'categories' => $categories,
             'products' => $products,
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
             'bundles' => Bundle::query()
                 ->where('is_active', true)
                 ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
                 ->get()
-                ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId))
+                ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId) && $categoryIds->contains($bundle->product?->category_id))
                 ->values(),
             'discounts' => $activeDiscounts = $discounts->activeForOutlet($outletId),
             'discountCatalog' => $activeDiscounts->map(fn ($discount) => [
@@ -86,6 +86,31 @@ class PosController extends Controller
                 'name' => (string) setting('transfer_account_name', ''),
             ],
         ]);
+    }
+
+    private function posCategories()
+    {
+        return Category::query()
+            ->where('is_active', true)
+            ->whereHas('products', fn ($q) => $q->sellable()->where('is_addon', false))
+            ->get()
+            ->filter(fn (Category $category) => $this->posCategoryRank($category->name) !== null)
+            ->sortBy(fn (Category $category) => $this->posCategoryRank($category->name))
+            ->values();
+    }
+
+    private function posCategoryRank(string $name): ?int
+    {
+        $name = strtolower(trim($name));
+
+        return match (true) {
+            $name === 'menu' => 0,
+            str_starts_with($name, 'drip') => 1,
+            $name === 'sku syrup', $name === 'syrup' => 2,
+            str_starts_with($name, 'powder') => 3,
+            str_starts_with($name, 'multibev') => 4,
+            default => null,
+        };
     }
 
     public function draft(Request $request, OrderService $orders): JsonResponse
