@@ -65,8 +65,6 @@ class PosController extends Controller
                 ->map(fn (Order $order) => $this->heldOrderPayload($order))
                 ->values(),
             'lowStock' => $lowStock,
-            'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])
-                ->union($addons->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])),
             'menuChoices' => OrderService::choiceCatalog(),
             'productChoices' => $products
                 ->filter(fn ($product) => $product->has_optional || $product->has_expresso)

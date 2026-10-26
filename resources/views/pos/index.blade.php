@@ -12,10 +12,19 @@
                 </div>
             @endif
             <div class="pos-toolbar">
+                @php
+                    $categoryCounts = $products->countBy('category_id')->all();
+                    foreach ($bundles as $bundle) {
+                        $bundleCategoryId = $bundle->product?->category_id;
+                        if ($bundleCategoryId) {
+                            $categoryCounts[$bundleCategoryId] = ($categoryCounts[$bundleCategoryId] ?? 0) + 1;
+                        }
+                    }
+                @endphp
                 <div class="pos-chips">
-                    <button type="button" class="pos-chip" :class="!category && 'pos-chip-active'" @click="category = null">Semua</button>
+                    <button type="button" class="pos-chip" :class="!category && 'pos-chip-active'" @click="category = null">Semua <span class="pos-chip-count">{{ array_sum($categoryCounts) }}</span></button>
                     @foreach ($categories as $category)
-                        <button type="button" class="pos-chip" :class="category == {{ $category->id }} && 'pos-chip-active'" @click="category = {{ $category->id }}">{{ $category->name }}</button>
+                        <button type="button" class="pos-chip" :class="category == {{ $category->id }} && 'pos-chip-active'" @click="category = {{ $category->id }}">{{ $category->name }} <span class="pos-chip-count">{{ $categoryCounts[$category->id] ?? 0 }}</span></button>
                     @endforeach
                 </div>
                 <div class="relative shrink-0">
@@ -35,9 +44,6 @@
                         x-show="(!category || category == {{ $product->category_id }}) && productMatch('{{ strtolower($product->name) }}')"
                         @click="addProduct({{ $product->id }}, null, null, false, null, {{ $outOfStock ? '0' : 'null' }})"
                     >
-                        <div class="menu-card-visual">
-                            <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="menu-card-photo" loading="lazy">
-                        </div>
                         <div class="menu-card-body">
                             <div class="menu-card-head">
                                 <h3 class="menu-card-name">{{ $product->name }}</h3>
@@ -72,9 +78,6 @@
                         $bundleOut = (bool) ($bundle->product?->is_stockable && $bundleStock <= 0);
                     @endphp
                     <article class="menu-card" @if ($bundleOut) style="opacity:.55;cursor:not-allowed" @endif x-show="!category || category == {{ $bundle->product?->category_id ?? 0 }}" @click="addProduct({{ $bundle->product_id ?? $bundle->items->first()?->product_id }}, null, {{ $bundle->id }}, false, null, {{ $bundleOut ? '0' : 'null' }})">
-                        <div class="menu-card-visual">
-                            <img src="{{ $bundle->product?->imageUrl() ?? asset('images/menu/placeholder.svg') }}" alt="{{ $bundle->name }}" class="menu-card-photo" loading="lazy">
-                        </div>
                         <div class="menu-card-body">
                             <div class="menu-card-head">
                                 <h3 class="menu-card-name">{{ $bundle->name }}</h3>
@@ -117,7 +120,6 @@
                 <template x-for="item in parentItems()" :key="item.id">
                     <div class="order-item">
                         <div class="flex items-start gap-2.5">
-                            <img :src="itemImage(item)" :alt="item.name" class="order-thumb">
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-start justify-between gap-2">
                                     <p class="min-w-0 text-sm font-semibold text-heading" x-text="itemBaseName(item)"></p>
@@ -393,8 +395,6 @@ function posApp() {
         ],
         heldOrders: @json($heldOrders),
         online: navigator.onLine,
-        images: @json($productImages),
-        placeholder: @json(asset('images/menu/placeholder.svg')),
         discountCatalog: @json($discountCatalog),
         transferAccount: @json($transferAccount),
         init() {
@@ -428,7 +428,6 @@ function posApp() {
             return this.order_type === 'pickup' ? 'pickup' : (this.order_type === 'online' ? 'online' : 'pos');
         },
         productMatch(name) { return !this.search || name.includes(this.search.toLowerCase()); },
-        itemImage(item) { return item.image_url || this.images[item.product_id] || this.placeholder; },
         itemBaseName(item) {
             return String(item.name || '').replace(/ \([^)]+\)$/, '');
         },
