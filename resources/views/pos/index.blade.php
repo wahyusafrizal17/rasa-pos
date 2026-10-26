@@ -270,7 +270,10 @@
         <div class="pay-modal flex flex-col">
             <div class="flex items-center justify-between px-5 py-3">
                 <p class="text-sm font-semibold text-heading">Struk</p>
-                <button type="button" class="btn-ghost !py-2" @click="receiptUrl = ''">Tutup</button>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-add !py-2" @click="printReceipt()">Cetak</button>
+                    <button type="button" class="btn-ghost !py-2" @click="receiptUrl = ''">Tutup</button>
+                </div>
             </div>
             <iframe class="w-full border-0 bg-white" style="height:75vh" :src="receiptUrl || 'about:blank'" title="Struk"></iframe>
         </div>
@@ -535,6 +538,11 @@ function posApp() {
             this.guest_name = '';
             this.tendered = 0;
             localStorage.removeItem('pos_offline_draft');
+        },
+        printReceipt() {
+            const frame = document.querySelector('iframe[title="Struk"]');
+            frame?.contentWindow?.focus();
+            frame?.contentWindow?.print();
         },
         async startQris() {
             this.notice = '';

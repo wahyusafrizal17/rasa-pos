@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Console\Commands\SyncZohoCatalog;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -83,7 +84,7 @@ class ProductController extends Controller
         return back()->with('success', 'Sinkronisasi Zoho dimulai. Katalog selesai dalam beberapa menit.');
     }
 
-    public function choices(Request $request, Product $product): RedirectResponse
+    public function choices(Request $request, Product $product): JsonResponse|RedirectResponse
     {
         abort_unless($request->user()->hasPermission('products.manage'), 403);
 
@@ -91,6 +92,10 @@ class ProductController extends Controller
             'has_optional' => $request->boolean('has_optional'),
             'has_expresso' => $request->boolean('has_expresso'),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
 
         return back()->with('success', 'Pilihan menu disimpan.');
     }

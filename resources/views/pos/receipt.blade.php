@@ -37,6 +37,7 @@
 
         @media print {
             html, body { width: 80mm; }
+            #qz-status { display: none; }
         }
     </style>
     <script>window.RasaQz = { printer: @json($qzPrinter ?? '') };</script>
@@ -53,8 +54,7 @@
                 status.textContent = 'Struk terkirim ke printer.';
                 setTimeout(function () { window.close(); }, 800);
             } catch (e) {
-                status.textContent = (e && e.message ? e.message : 'QZ Tray gagal.')
-                    + ' Jangan pakai dialog Chrome Print.';
+                status.hidden = true;
             }
         })();
     </script>

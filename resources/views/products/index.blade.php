@@ -126,17 +126,13 @@
                                 </td>
                                 <td>
                                     @can('products.manage')
-                                        <form method="POST" action="{{ route('products.choices', $product) }}" class="flex flex-col gap-1 text-[12px] text-heading">
-                                            @csrf
-                                            @method('PATCH')
+                                        <form action="{{ route('products.choices', $product) }}" class="flex flex-col gap-1 text-[12px] text-heading" @submit.prevent @change="saveChoice($event.target)">
                                             <label class="flex items-center gap-1.5 whitespace-nowrap">
-                                                <input type="hidden" name="has_optional" value="0">
-                                                <input type="checkbox" name="has_optional" value="1" class="rounded border-line text-brand" @checked($product->has_optional) onchange="this.form.submit()">
+                                                <input type="checkbox" name="has_optional" value="1" class="rounded border-line text-brand" @checked($product->has_optional)>
                                                 Optional
                                             </label>
                                             <label class="flex items-center gap-1.5 whitespace-nowrap">
-                                                <input type="hidden" name="has_expresso" value="0">
-                                                <input type="checkbox" name="has_expresso" value="1" class="rounded border-line text-brand" @checked($product->has_expresso) onchange="this.form.submit()">
+                                                <input type="checkbox" name="has_expresso" value="1" class="rounded border-line text-brand" @checked($product->has_expresso)>
                                                 Expresso
                                             </label>
                                         </form>
@@ -244,6 +240,32 @@
                 },
                 closeTop() {
                     this.viewOpen = false;
+                },
+                async saveChoice(input) {
+                    const form = input.form;
+                    if (!form) return;
+                    const previous = !input.checked;
+                    input.disabled = true;
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({
+                                has_optional: form.querySelector('[name="has_optional"]').checked,
+                                has_expresso: form.querySelector('[name="has_expresso"]').checked,
+                            }),
+                        });
+                        if (!response.ok) throw new Error();
+                    } catch (e) {
+                        input.checked = previous;
+                    } finally {
+                        input.disabled = false;
+                    }
                 },
             };
         }
