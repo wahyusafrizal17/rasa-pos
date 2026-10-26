@@ -20,6 +20,20 @@ class Category extends Model
         ];
     }
 
+    public static function posRank(string $name): ?int
+    {
+        $name = strtolower(trim($name));
+
+        return match (true) {
+            $name === 'menu' => 0,
+            str_starts_with($name, 'drip') => 1,
+            $name === 'sku syrup', $name === 'syrup' => 2,
+            str_starts_with($name, 'powder') => 3,
+            str_starts_with($name, 'multibev') => 4,
+            default => null,
+        };
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);

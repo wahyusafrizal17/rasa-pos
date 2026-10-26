@@ -118,8 +118,6 @@ class ZohoCatalogSync
             'price' => (float) ($item['rate'] ?? 0),
             'cost' => (float) ($item['purchase_rate'] ?? 0),
             'is_sellable' => $sold && $active,
-            'has_optional' => $this->customFlag($item, 'cf_optional'),
-            'has_expresso' => $this->customFlag($item, 'cf_expresso'),
             'is_stockable' => $stockable,
             'is_active' => $active,
             'reorder_level' => (float) ($item['reorder_level'] ?? 0),
@@ -202,23 +200,6 @@ class ZohoCatalogSync
                 'is_active' => true,
             ],
         );
-    }
-
-    protected function customFlag(array $item, string $key): bool
-    {
-        if (array_key_exists($key, $item)) {
-            return (bool) filter_var($item[$key], FILTER_VALIDATE_BOOLEAN);
-        }
-
-        foreach ($item['custom_fields'] ?? [] as $field) {
-            if (($field['api_name'] ?? '') !== $key) {
-                continue;
-            }
-
-            return (bool) filter_var($field['value'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        }
-
-        return false;
     }
 
     protected function itemCategory(array $item): string

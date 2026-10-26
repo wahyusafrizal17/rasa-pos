@@ -498,7 +498,23 @@
     }
 
     .order-item {
-        @apply rounded-2xl bg-[#faf7f3] p-3;
+        @apply rounded-2xl bg-[#faf7f3] px-2.5 py-2;
+    }
+
+    .order-thumb {
+        @apply h-11 w-11 shrink-0 rounded-lg bg-white object-cover;
+    }
+
+    .order-choice {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 999px;
+        background: #fff;
+        padding: 1px 8px;
+        font-size: 11px;
+        line-height: 18px;
+        white-space: nowrap;
     }
 
     .order-qty {
@@ -506,15 +522,15 @@
     }
 
     .order-qty button {
-        @apply flex h-10 w-10 items-center justify-center text-lg text-heading transition hover:bg-brand-soft;
+        @apply flex h-8 w-8 items-center justify-center text-base text-heading transition hover:bg-brand-soft;
     }
 
     .order-qty span {
-        @apply flex h-10 min-w-8 items-center justify-center text-sm font-semibold text-heading;
+        @apply flex h-8 min-w-6 items-center justify-center text-sm font-semibold text-heading;
     }
 
     .order-note {
-        @apply h-10 w-full rounded-full border border-[#efe8e1] bg-white px-3 text-xs text-heading outline-none placeholder:text-neutral-400 focus:border-brand;
+        @apply h-8 w-full rounded-full border border-[#efe8e1] bg-white px-3 text-xs text-heading outline-none placeholder:text-neutral-400 focus:border-brand;
     }
 
     .order-row {

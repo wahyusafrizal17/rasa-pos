@@ -12,6 +12,7 @@ use App\Enums\TableStatus;
 use App\Models\Bundle;
 use App\Models\DiningTable;
 use App\Models\Discount;
+use App\Models\MenuOption;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
@@ -25,19 +26,21 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
-    // ponytail: Zoho only sends the two checkboxes; labels and prices are the cashier sets. Move them onto the item if Zoho starts returning the options.
-    public const CHOICES = [
-        'optional' => [
-            'hot' => ['label' => 'HOT', 'price' => 0],
-            'ice' => ['label' => 'ICE', 'price' => 0],
-        ],
-        'expresso' => [
-            'none' => ['label' => 'None', 'price' => 0],
-            '7030' => ['label' => '70:30 Blend', 'price' => 5000],
-            '5050' => ['label' => '50:50 Blend', 'price' => 7000],
-            'trilogi' => ['label' => 'Trilogi', 'price' => 10000],
-        ],
-    ];
+    public static function choiceCatalog(): array
+    {
+        $grouped = MenuOption::query()->orderBy('sort_order')->orderBy('id')->get()->groupBy('group');
+        $catalog = ['optional' => [], 'expresso' => []];
+        foreach ($catalog as $group => $rows) {
+            foreach ($grouped->get($group, []) as $option) {
+                $catalog[$group][(string) $option->id] = [
+                    'label' => $option->name,
+                    'price' => (float) $option->price,
+                ];
+            }
+        }
+
+        return $catalog;
+    }
 
     public function __construct(
         protected NumberGenerator $numbers,
@@ -193,13 +196,14 @@ class OrderService
     {
         $labels = [];
         $price = 0.0;
+        $catalog = self::choiceCatalog();
 
         foreach (['optional' => 'has_optional', 'expresso' => 'has_expresso'] as $group => $flag) {
             if (! $product->{$flag}) {
                 continue;
             }
 
-            $option = self::CHOICES[$group][(string) ($modifiers[$group] ?? '')] ?? null;
+            $option = $catalog[$group][(string) ($modifiers[$group] ?? '')] ?? null;
             if ($option === null) {
                 throw ValidationException::withMessages([
                     $group => 'Pilih '.$group.'.',

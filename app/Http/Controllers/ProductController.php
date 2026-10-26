@@ -17,7 +17,12 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.view'), 403);
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
-        $query = Product::query()->with(['category', 'unit', 'variants', 'addons']);
+        $categories = Category::query()->get()
+            ->filter(fn (Category $category) => Category::posRank($category->name) !== null)
+            ->sortBy(fn (Category $category) => Category::posRank($category->name))
+            ->values();
+        $catalog = Product::query()->whereIn('category_id', $categories->pluck('id'));
+        $query = (clone $catalog)->with(['category', 'unit', 'variants', 'addons']);
 
         if (filled($filters['sku'] ?? null)) {
             $query->where('sku', 'like', '%'.$filters['sku'].'%');
@@ -44,11 +49,11 @@ class ProductController extends Controller
         return view('products.index', [
             'products' => $query->latest()->paginate(20)->withQueryString(),
             'filters' => $filters,
-            'categories' => Category::query()->orderBy('name')->get(),
+            'categories' => $categories,
             'stats' => [
-                'total' => Product::query()->count(),
-                'sellable' => Product::query()->where('is_sellable', true)->where('is_active', true)->count(),
-                'inactive' => Product::query()->where('is_active', false)->count(),
+                'total' => (clone $catalog)->count(),
+                'sellable' => (clone $catalog)->where('is_sellable', true)->where('is_active', true)->count(),
+                'inactive' => (clone $catalog)->where('is_active', false)->count(),
             ],
             'focusPayload' => $focusProduct?->toModalArray(),
         ]);
@@ -76,6 +81,18 @@ class ProductController extends Controller
         }
 
         return back()->with('success', 'Sinkronisasi Zoho dimulai. Katalog selesai dalam beberapa menit.');
+    }
+
+    public function choices(Request $request, Product $product): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('products.manage'), 403);
+
+        $product->update([
+            'has_optional' => $request->boolean('has_optional'),
+            'has_expresso' => $request->boolean('has_expresso'),
+        ]);
+
+        return back()->with('success', 'Pilihan menu disimpan.');
     }
 
     public function create(): RedirectResponse

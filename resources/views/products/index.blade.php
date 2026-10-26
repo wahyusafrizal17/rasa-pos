@@ -40,7 +40,7 @@
             <div class="card-header">
                 <div>
                     <h5 class="card-header-title">Daftar produk</h5>
-                    <p class="card-header-subtitle">Filter kolom memuat ulang otomatis saat nilai diubah.</p>
+                    <p class="card-header-subtitle">Centang Optional atau Expresso untuk item yang memakainya di kasir.</p>
                 </div>
                 <div class="card-header-actions">
                     @can('products.manage')
@@ -67,6 +67,7 @@
                             <th>Tipe</th>
                             <th>Harga</th>
                             <th>Status</th>
+                            <th>Pilihan</th>
                             <th class="col-actions"></th>
                         </tr>
                         <tr class="filter-row">
@@ -102,6 +103,7 @@
                                 </select>
                             </th>
                             <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -122,6 +124,26 @@
                                 <td>
                                     <x-status :value="$product->is_active ? 'green' : 'gray'">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</x-status>
                                 </td>
+                                <td>
+                                    @can('products.manage')
+                                        <form method="POST" action="{{ route('products.choices', $product) }}" class="flex flex-col gap-1 text-[12px] text-heading">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="flex items-center gap-1.5 whitespace-nowrap">
+                                                <input type="hidden" name="has_optional" value="0">
+                                                <input type="checkbox" name="has_optional" value="1" class="rounded border-line text-brand" @checked($product->has_optional) onchange="this.form.submit()">
+                                                Optional
+                                            </label>
+                                            <label class="flex items-center gap-1.5 whitespace-nowrap">
+                                                <input type="hidden" name="has_expresso" value="0">
+                                                <input type="checkbox" name="has_expresso" value="1" class="rounded border-line text-brand" @checked($product->has_expresso) onchange="this.form.submit()">
+                                                Expresso
+                                            </label>
+                                        </form>
+                                    @else
+                                        <span class="text-[12px] text-muted">{{ collect([$product->has_optional ? 'Optional' : null, $product->has_expresso ? 'Expresso' : null])->filter()->join(', ') ?: '—' }}</span>
+                                    @endcan
+                                </td>
                                 <td class="col-actions">
                                     <div class="flex items-center justify-end gap-1.5">
                                         <button type="button" class="table-action" title="Lihat" @click="openView({{ Js::from($row) }})">
@@ -132,7 +154,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="py-16 text-center text-sm text-slate-400">Tidak ada produk yang cocok dengan filter kolom ini.</td>
+                                <td colspan="9" class="py-16 text-center text-sm text-slate-400">Tidak ada produk yang cocok dengan filter kolom ini.</td>
                             </tr>
                         @endforelse
                     </tbody>

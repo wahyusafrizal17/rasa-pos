@@ -105,7 +105,7 @@
                     </select>
                 </div>
             </div>
-            <div class="flex-1 space-y-2.5 overflow-y-auto px-5 py-4">
+            <div class="flex-1 space-y-2 overflow-y-auto px-5 py-4">
                 <template x-if="!order || !parentItems().length">
                     <div class="flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-[#efe8e1] bg-[#faf7f3] px-4 text-center">
                         <p class="text-sm font-medium text-heading">Belum ada item</p>
@@ -114,20 +114,26 @@
                 </template>
                 <template x-for="item in parentItems()" :key="item.id">
                     <div class="order-item">
-                        <div class="flex items-start gap-3">
-                            <img :src="itemImage(item)" :alt="item.name" class="h-16 w-16 shrink-0 rounded-xl bg-white object-cover shadow-sm">
+                        <div class="flex items-start gap-2.5">
+                            <img :src="itemImage(item)" :alt="item.name" class="order-thumb">
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm font-semibold text-heading" x-text="item.name"></p>
-                                        <p class="mt-0.5 text-xs text-muted" x-text="formatMoney(item.unit_price)"></p>
-                                        <template x-for="addon in addonsOf(item)" :key="addon.id">
-                                            <p class="mt-1 text-[11px] text-muted" x-text="`+ ${addon.name} · ${formatMoney(addon.unit_price)}`"></p>
-                                        </template>
-                                    </div>
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="min-w-0 text-sm font-semibold text-heading" x-text="itemBaseName(item)"></p>
                                     <button class="shrink-0 text-[11px] font-medium text-brand hover:underline" @click="removeItem(item.id)">Hapus</button>
                                 </div>
-                                <div class="mt-3 flex items-center gap-2">
+                                <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <span class="text-xs font-medium text-heading" x-text="formatMoney(item.unit_price)"></span>
+                                    <template x-for="choice in itemChoices(item)" :key="choice.key">
+                                        <span class="order-choice">
+                                            <span class="text-muted" x-show="choice.group" x-text="choice.group"></span>
+                                            <span class="font-semibold text-heading" x-text="choice.label"></span>
+                                        </span>
+                                    </template>
+                                </div>
+                                <template x-for="addon in addonsOf(item)" :key="addon.id">
+                                    <p class="mt-1 text-[11px] text-muted" x-text="`+ ${addon.name} · ${formatMoney(addon.unit_price)}`"></p>
+                                </template>
+                                <div class="mt-2 flex items-center gap-2">
                                     <div class="order-qty">
                                         <button type="button" @click="changeQty(item, -1)">−</button>
                                         <span x-text="Number(item.quantity)"></span>
@@ -408,6 +414,25 @@ function posApp() {
         },
         productMatch(name) { return !this.search || name.includes(this.search.toLowerCase()); },
         itemImage(item) { return item.image_url || this.images[item.product_id] || this.placeholder; },
+        itemBaseName(item) {
+            return String(item.name || '').replace(/ \([^)]+\)$/, '');
+        },
+        itemChoices(item) {
+            const match = String(item.name || '').match(/ \(([^)]+)\)$/);
+            if (!match) return [];
+            const parts = match[1].split(', ').map((part) => part.trim()).filter(Boolean);
+            const used = new Set();
+            const rows = [];
+            [['Optional', this.menuChoices?.optional], ['Expresso', this.menuChoices?.expresso]].forEach(([group, options]) => {
+                const labels = new Set(Object.values(options || {}).map((option) => option.label));
+                const hit = parts.find((part) => labels.has(part));
+                if (!hit) return;
+                used.add(hit);
+                rows.push({ key: group, group, label: hit });
+            });
+            parts.filter((part) => !used.has(part)).forEach((part) => rows.unshift({ key: 'v-' + part, group: '', label: part }));
+            return rows;
+        },
         formatMoney(v) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v || 0); },
         selectedDiscount() {
             return (this.discountCatalog || []).find((d) => String(d.id) === String(this.discount_id)) || null;

@@ -67,7 +67,7 @@ class PosController extends Controller
             'lowStock' => $lowStock,
             'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])
                 ->union($addons->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])),
-            'menuChoices' => OrderService::CHOICES,
+            'menuChoices' => OrderService::choiceCatalog(),
             'productChoices' => $products
                 ->filter(fn ($product) => $product->has_optional || $product->has_expresso)
                 ->mapWithKeys(fn ($product) => [
@@ -105,23 +105,9 @@ class PosController extends Controller
             ->where('is_active', true)
             ->whereHas('products', fn ($q) => $q->sellable()->where('is_addon', false))
             ->get()
-            ->filter(fn (Category $category) => $this->posCategoryRank($category->name) !== null)
-            ->sortBy(fn (Category $category) => $this->posCategoryRank($category->name))
+            ->filter(fn (Category $category) => Category::posRank($category->name) !== null)
+            ->sortBy(fn (Category $category) => Category::posRank($category->name))
             ->values();
-    }
-
-    private function posCategoryRank(string $name): ?int
-    {
-        $name = strtolower(trim($name));
-
-        return match (true) {
-            $name === 'menu' => 0,
-            str_starts_with($name, 'drip') => 1,
-            $name === 'sku syrup', $name === 'syrup' => 2,
-            str_starts_with($name, 'powder') => 3,
-            str_starts_with($name, 'multibev') => 4,
-            default => null,
-        };
     }
 
     public function draft(Request $request, OrderService $orders): JsonResponse
@@ -156,8 +142,8 @@ class PosController extends Controller
             'addon_ids' => ['nullable', 'array'],
             'addon_ids.*' => ['integer', 'exists:products,id'],
             'modifiers' => ['nullable', 'array'],
-            'modifiers.optional' => ['nullable', 'string', 'in:hot,ice'],
-            'modifiers.expresso' => ['nullable', 'string', 'in:none,7030,5050,trilogi'],
+            'modifiers.optional' => ['nullable', 'integer'],
+            'modifiers.expresso' => ['nullable', 'integer'],
         ]);
 
         $orders->addItem($order, $data);

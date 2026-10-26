@@ -43,6 +43,8 @@
                         ]],
                         ['label' => 'Katalog', 'icon' => 'products', 'children' => [
                             ['label' => 'Products', 'route' => 'products.index', 'active' => 'products.*', 'perm' => 'products.view', 'icon' => 'products'],
+                            ['label' => 'Optional', 'route' => 'catalog.choices', 'params' => ['group' => 'optional'], 'route_param' => ['group' => 'optional'], 'perm' => 'products.view', 'icon' => 'tag'],
+                            ['label' => 'Expresso', 'route' => 'catalog.choices', 'params' => ['group' => 'expresso'], 'route_param' => ['group' => 'expresso'], 'perm' => 'products.view', 'icon' => 'glass'],
                             ['label' => 'Categories', 'route' => 'categories.index', 'active' => 'categories.*', 'perm' => 'products.view', 'icon' => 'folder'],
                             ['label' => 'Bundles', 'route' => 'marketing.bundles', 'perm' => 'marketing.view', 'icon' => 'gift'],
                         ]],
@@ -72,7 +74,26 @@
                         ]],
                     ];
                     $canSee = fn ($item) => empty($item['perm']) || auth()->user()->hasPermission($item['perm']);
-                    $navIsActive = fn (array $item) => request()->routeIs($item['active'] ?? $item['route'] ?? '');
+                    $navIsActive = function (array $item) {
+                        if (! request()->routeIs($item['active'] ?? $item['route'] ?? '')) {
+                            return false;
+                        }
+                        foreach ($item['query'] ?? [] as $key => $value) {
+                            if ((string) request($key) !== (string) $value) {
+                                return false;
+                            }
+                        }
+                        foreach ($item['route_param'] ?? [] as $key => $value) {
+                            if ((string) request()->route($key) !== (string) $value) {
+                                return false;
+                            }
+                        }
+                        if (! empty($item['query_absent']) && request()->filled($item['query_absent'])) {
+                            return false;
+                        }
+
+                        return true;
+                    };
                 @endphp
 
                 @foreach ($nav as $item)
@@ -97,7 +118,7 @@
                                 </button>
                                 <div class="space-y-0.5 px-2 pb-2 pl-3" x-show="open && !collapsed">
                                     @foreach ($children as $child)
-                                        <a href="{{ route($child['route']) }}" class="nav-subitem {{ $navIsActive($child) ? 'nav-subitem-active' : '' }}">
+                                        <a href="{{ route($child['route'], $child['params'] ?? []) }}" class="nav-subitem {{ $navIsActive($child) ? 'nav-subitem-active' : '' }}">
                                             @include('layouts.partials.icon', ['name' => $child['icon'] ?? 'clipboard', 'size' => 'h-4 w-4'])
                                             <span>{{ $child['label'] }}</span>
                                         </a>

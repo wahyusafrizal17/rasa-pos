@@ -18,6 +18,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\MenuOptionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProfileController;
@@ -95,7 +96,12 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/tables/split', [TableController::class, 'split'])->name('tables.split');
     Route::post('/tables/reserve', [TableController::class, 'reserve'])->name('tables.reserve');
 
+    Route::get('catalog/{group}', [MenuOptionController::class, 'index'])->name('catalog.choices');
+    Route::post('catalog/{group}', [MenuOptionController::class, 'store'])->name('catalog.choices.store');
+    Route::put('catalog/{group}/{option}', [MenuOptionController::class, 'update'])->name('catalog.choices.update');
+    Route::delete('catalog/{group}/{option}', [MenuOptionController::class, 'destroy'])->name('catalog.choices.destroy');
     Route::post('products/sync', [ProductController::class, 'sync'])->name('products.sync');
+    Route::patch('products/{product}/choices', [ProductController::class, 'choices'])->name('products.choices');
     Route::resource('products', ProductController::class)->except('show');
     Route::resource('categories', CategoryController::class)->except('show');
     Route::get('/customers/template', [CustomerController::class, 'template'])->name('customers.template');
