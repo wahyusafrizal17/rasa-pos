@@ -34,6 +34,7 @@
         .row span:last-child { white-space: nowrap; }
         hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
         .total { font-size: 14px; font-weight: 700; }
+        .foot-logo { display: block; width: 46mm; height: auto; margin: 2mm auto 0; }
 
         @media print {
             html, body { width: 80mm; }
@@ -92,6 +93,6 @@
         @endif
     @endforeach
     <hr>
-    <p class="center">{{ setting('receipt_footer', 'Terima kasih telah berkunjung') }}</p>
+    <img class="foot-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
 </body>
 </html>
