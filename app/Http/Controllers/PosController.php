@@ -27,10 +27,10 @@ class PosController extends Controller
         abort_unless($request->user()->hasPermission('pos.access'), 403);
 
         $outletId = current_outlet_id();
-        $categories = $this->posCategories();
+        $categories = $this->posCategories($outletId);
         $categoryIds = $categories->pluck('id');
 
-        $products = Product::query()->sellable()->hasSku()->where('is_addon', false)
+        $products = Product::query()->sellable()->hasSku()->atOutlet($outletId)->where('is_addon', false)
             ->whereIn('category_id', $categoryIds)
             ->with([
             'category',
@@ -48,7 +48,7 @@ class PosController extends Controller
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
             'bundles' => Bundle::query()
                 ->where('is_active', true)
-                ->whereHas('product', fn ($q) => $q->hasSku())
+                ->whereHas('product', fn ($q) => $q->hasSku()->atOutlet($outletId))
                 ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
                 ->get()
                 ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId) && $categoryIds->contains($bundle->product?->category_id))
@@ -98,11 +98,11 @@ class PosController extends Controller
         ]);
     }
 
-    private function posCategories()
+    private function posCategories(int $outletId)
     {
         return Category::query()
             ->where('is_active', true)
-            ->whereHas('products', fn ($q) => $q->sellable()->hasSku()->where('is_addon', false))
+            ->whereHas('products', fn ($q) => $q->sellable()->hasSku()->atOutlet($outletId)->where('is_addon', false))
             ->get()
             ->filter(fn (Category $category) => Category::posRank($category->name) !== null)
             ->sortBy(fn (Category $category) => Category::posRank($category->name))

@@ -93,6 +93,14 @@ class Product extends Model
             });
     }
 
+    public function scopeAtOutlet(Builder $query, int $outletId): Builder
+    {
+        return $query->where(function (Builder $query) use ($outletId) {
+            $query->where('is_stockable', false)
+                ->orWhereHas('inventories', fn (Builder $inventory) => $inventory->where('outlet_id', $outletId));
+        });
+    }
+
     public function stockFor(?int $outletId): float
     {
         if (! $outletId) {

@@ -65,6 +65,13 @@ class ZohoCatalogSyncTest extends TestCase
                         'is_primary_location' => false,
                         'address' => ['city' => 'Bekasi', 'street_address1' => ''],
                     ],
+                    [
+                        'location_id' => 'loc-medan',
+                        'location_name' => 'DC Medan',
+                        'is_location_active' => true,
+                        'is_primary_location' => false,
+                        'address' => ['city' => 'Medan', 'street_address1' => ''],
+                    ],
                 ],
             ], 200),
             'www.zohoapis.com/inventory/v1/items/item-1*' => Http::response([
@@ -87,8 +94,9 @@ class ZohoCatalogSyncTest extends TestCase
                         ['api_name' => 'cf_category', 'value' => 'Syrup'],
                     ],
                     'locations' => [
-                        ['location_id' => 'loc-ho', 'location_stock_on_hand' => 0],
-                        ['location_id' => 'loc-bekasi', 'location_stock_on_hand' => 12],
+                        ['location_id' => 'loc-ho', 'status' => 'active', 'location_stock_on_hand' => 0],
+                        ['location_id' => 'loc-bekasi', 'status' => 'active', 'location_stock_on_hand' => 12],
+                        ['location_id' => 'loc-medan', 'status' => 'inactive', 'location_stock_on_hand' => 9],
                     ],
                 ],
             ], 200),
@@ -130,6 +138,12 @@ class ZohoCatalogSyncTest extends TestCase
             ->where('outlet_id', $bekasi->id)
             ->where('product_id', $product->id)
             ->value('quantity'));
+        $medan = Outlet::query()->where('zoho_location_id', 'loc-medan')->first();
+        $this->assertNotNull($medan);
+        $this->assertFalse(Inventory::query()
+            ->where('outlet_id', $medan->id)
+            ->where('product_id', $product->id)
+            ->exists());
         $this->assertGreaterThan(0, $summary['products']);
     }
 }

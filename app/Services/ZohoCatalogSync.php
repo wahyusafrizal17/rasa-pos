@@ -169,14 +169,28 @@ class ZohoCatalogSync
 
     protected function syncStock(Product $product, $outlets, array $locations): int
     {
+        if ($locations === []) {
+            return 0; // ponytail: no location list means Zoho does not track this item per outlet
+        }
+
+        $activeIds = collect($locations)
+            ->filter(fn (array $row) => ($row['status'] ?? 'active') === 'active')
+            ->mapWithKeys(fn (array $row) => [(string) $row['location_id'] => $row]);
+
         $count = 0;
 
         foreach ($outlets as $locationId => $outlet) {
-            $row = collect($locations)->firstWhere('location_id', $locationId);
-            $qty = (float) ($row['location_stock_on_hand'] ?? 0);
+            $row = $activeIds->get((string) $locationId);
+            if ($row === null) {
+                Inventory::query()->where('outlet_id', $outlet->id)->where('product_id', $product->id)->delete();
+                $outlet->products()->detach($product->id);
+
+                continue;
+            }
+
             Inventory::query()->updateOrCreate(
                 ['outlet_id' => $outlet->id, 'product_id' => $product->id],
-                ['quantity' => $qty, 'reserved_quantity' => 0],
+                ['quantity' => (float) ($row['location_stock_on_hand'] ?? 0), 'reserved_quantity' => 0],
             );
             $outlet->products()->syncWithoutDetaching([
                 $product->id => ['price' => $product->price, 'is_available' => $product->is_sellable],
