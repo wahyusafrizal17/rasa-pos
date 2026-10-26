@@ -25,6 +25,20 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    // ponytail: Zoho only sends the two checkboxes; labels and prices are the cashier sets. Move them onto the item if Zoho starts returning the options.
+    public const CHOICES = [
+        'optional' => [
+            'hot' => ['label' => 'HOT', 'price' => 0],
+            'ice' => ['label' => 'ICE', 'price' => 0],
+        ],
+        'expresso' => [
+            'none' => ['label' => 'None', 'price' => 0],
+            '7030' => ['label' => '70:30 Blend', 'price' => 5000],
+            '5050' => ['label' => '50:50 Blend', 'price' => 7000],
+            'trilogi' => ['label' => 'Trilogi', 'price' => 10000],
+        ],
+    ];
+
     public function __construct(
         protected NumberGenerator $numbers,
         protected InventoryService $inventory,
@@ -76,9 +90,12 @@ class OrderService
                 : null;
 
             $qty = (float) ($payload['quantity'] ?? 1);
+            $choice = $bundle ? ['label' => '', 'price' => 0.0] : $this->menuChoice($product, $payload['modifiers'] ?? []);
             $price = $bundle
                 ? (float) $bundle->price
-                : (float) $product->price + (float) ($variant?->price_adjustment ?? 0);
+                : (float) $product->price + (float) ($variant?->price_adjustment ?? 0) + $choice['price'];
+            $parts = array_values(array_filter([$variant?->name, $choice['label'] !== '' ? $choice['label'] : null]));
+            $name = $bundle?->name ?? ($parts !== [] ? $product->name.' ('.implode(', ', $parts).')' : $product->name);
             $addonIds = $bundle
                 ? []
                 : array_values(array_unique(array_filter(array_map('intval', $payload['addon_ids'] ?? []))));
@@ -89,6 +106,7 @@ class OrderService
                 ->where('product_id', $product->id)
                 ->where('product_variant_id', $variant?->id)
                 ->where('bundle_id', $bundle?->id)
+                ->where('name', $name)
                 ->with('addons')
                 ->get()
                 ->first(function ($item) use ($addonIds) {
@@ -109,7 +127,7 @@ class OrderService
                 'product_id' => $product->id,
                 'product_variant_id' => $variant?->id,
                 'bundle_id' => $bundle?->id,
-                'name' => $variant ? "{$product->name} ({$variant->name})" : ($bundle?->name ?? $product->name),
+                'name' => $name,
                 'quantity' => $qty,
                 'unit_price' => $price,
                 'discount_amount' => 0,
@@ -169,6 +187,30 @@ class OrderService
         }
 
         return $this->recalculate($order->fresh(['items', 'discount']));
+    }
+
+    protected function menuChoice(Product $product, array $modifiers): array
+    {
+        $labels = [];
+        $price = 0.0;
+
+        foreach (['optional' => 'has_optional', 'expresso' => 'has_expresso'] as $group => $flag) {
+            if (! $product->{$flag}) {
+                continue;
+            }
+
+            $option = self::CHOICES[$group][(string) ($modifiers[$group] ?? '')] ?? null;
+            if ($option === null) {
+                throw ValidationException::withMessages([
+                    $group => 'Pilih '.$group.'.',
+                ]);
+            }
+
+            $labels[] = $option['label'];
+            $price += (float) $option['price'];
+        }
+
+        return ['label' => implode(', ', $labels), 'price' => $price];
     }
 
     protected function assertInStock(Order $order, Product $product, float $qty, ?int $exceptItemId = null): void

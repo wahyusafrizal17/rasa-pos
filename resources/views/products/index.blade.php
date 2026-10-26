@@ -12,8 +12,6 @@
             'category_id' => (string) old('category_id', data_get($focusPayload, 'category_id', '')),
             'unit_id' => (string) old('unit_id', data_get($focusPayload, 'unit_id', '')),
             'type' => old('type', data_get($focusPayload, 'type', 'finished')),
-            'bom_level' => old('bom_level', data_get($focusPayload, 'bom_level', 0)),
-            'description' => old('description', data_get($focusPayload, 'description', '')),
             'image' => old('image', data_get($focusPayload, 'image', '')),
             'image_url' => data_get($focusPayload, 'image_url', ''),
             'price' => old('price', data_get($focusPayload, 'price', 0)),
@@ -23,11 +21,7 @@
             'addon_ids' => array_map('strval', (array) old('addon_ids', data_get($focusPayload, 'addon_ids', []))),
             'is_stockable' => old('is_stockable', data_get($focusPayload, 'is_stockable', true) ? '1' : '0') !== '0',
             'is_active' => old('is_active', data_get($focusPayload, 'is_active', true) ? '1' : '0') !== '0',
-            'minimum_stock' => old('minimum_stock', data_get($focusPayload, 'minimum_stock', 0)),
             'reorder_level' => old('reorder_level', data_get($focusPayload, 'reorder_level', 0)),
-            'maximum_stock' => old('maximum_stock', data_get($focusPayload, 'maximum_stock', 0)),
-            'station' => old('station', data_get($focusPayload, 'station', '')),
-            'prep_minutes' => old('prep_minutes', data_get($focusPayload, 'prep_minutes', 0)),
             'variants' => old('variants', data_get($focusPayload, 'variants', [])),
             'id' => old('_product_id', data_get($focusPayload, 'id')),
             'mode' => old('_form_mode', 'create'),
@@ -225,18 +219,6 @@
                             <dt class="text-[12px] text-muted">HPP</dt>
                             <dd class="mt-0.5 font-medium" x-text="viewing?.cost_label || '—'"></dd>
                         </div>
-                        <div>
-                            <dt class="text-[12px] text-muted">Station</dt>
-                            <dd class="mt-0.5 font-medium" x-text="viewing?.station_label || '—'"></dd>
-                        </div>
-                        <div>
-                            <dt class="text-[12px] text-muted">Prep</dt>
-                            <dd class="mt-0.5 font-medium" x-text="(viewing?.prep_minutes || 0) + ' menit'"></dd>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <dt class="text-[12px] text-muted">Deskripsi</dt>
-                            <dd class="mt-0.5 font-medium" x-text="viewing?.description || '—'"></dd>
-                        </div>
                     </dl>
 
                     <div class="mt-5" x-show="viewing?.variants?.length">
@@ -283,16 +265,23 @@
                             </div>
 
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                                <p class="sm:col-span-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Identitas</p>
+                                <div class="sm:col-span-2">
+                                    <label class="label">Nama</label>
+                                    <input class="input" name="name" required maxlength="150" x-model="form.name" placeholder="Nama yang tampil di kasir">
+                                    @error('name')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
+                                </div>
                                 <div>
                                     <label class="label">SKU</label>
-                                    <input class="input" name="sku" required maxlength="50" x-model="form.sku">
+                                    <input class="input" name="sku" required maxlength="50" x-model="form.sku" placeholder="Kode unik">
                                     @error('sku')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>
-                                    <label class="label">Nama</label>
-                                    <input class="input" name="name" required maxlength="150" x-model="form.name">
-                                    @error('name')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
+                                    <label class="label">Tipe</label>
+                                    <select name="type" class="input" required x-model="form.type">
+                                        @foreach (\App\Enums\ProductType::cases() as $type)
+                                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="label">Kategori</label>
@@ -313,20 +302,8 @@
                                     </select>
                                     @error('unit_id')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
-                                <div>
-                                    <label class="label">Tipe</label>
-                                    <select name="type" class="input" required x-model="form.type">
-                                        @foreach (\App\Enums\ProductType::cases() as $type)
-                                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="label">Level BOM</label>
-                                    <input class="input" type="number" name="bom_level" min="0" max="6" x-model="form.bom_level">
-                                </div>
 
-                                <p class="sm:col-span-2 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Harga &amp; stok</p>
+                                <p class="stat-kicker sm:col-span-2 mt-2 border-t border-[#f0ebe6] pt-4">Harga &amp; stok</p>
                                 <div>
                                     <label class="label">Harga jual</label>
                                     <input class="input" type="number" step="0.01" min="0" name="price" required x-model="form.price">
@@ -336,68 +313,62 @@
                                     <label class="label">HPP</label>
                                     <input class="input" type="number" step="0.01" min="0" name="cost" x-model="form.cost">
                                 </div>
-                                <div>
-                                    <label class="label">Minimum stok</label>
-                                    <input class="input" type="number" step="0.001" min="0" name="minimum_stock" x-model="form.minimum_stock">
-                                </div>
-                                <div>
+                                <div class="sm:col-span-2">
                                     <label class="label">Reorder</label>
-                                    <input class="input" type="number" step="0.001" min="0" name="reorder_level" x-model="form.reorder_level">
+                                    <input class="input sm:max-w-[calc(50%-0.5rem)]" type="number" step="0.001" min="0" name="reorder_level" x-model="form.reorder_level">
+                                    <p class="mt-1.5 text-[12px] text-muted">Peringatan stok menipis muncul saat sisa stok turun sampai angka ini. Isi 0 kalau tidak dipakai.</p>
                                 </div>
-                                <div>
-                                    <label class="label">Maximum stok</label>
-                                    <input class="input" type="number" step="0.001" min="0" name="maximum_stock" x-model="form.maximum_stock">
+
+                                <p class="stat-kicker sm:col-span-2 mt-2 border-t border-[#f0ebe6] pt-4">Gambar</p>
+                                <div class="sm:col-span-2 flex items-center gap-3 rounded-xl border border-line bg-[#fafafa] p-3">
+                                    <img x-show="form.image_url" :src="form.image_url" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover" x-cloak>
+                                    <div x-show="!form.image_url" class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white text-[11px] font-medium text-muted">Foto</div>
+                                    <div class="min-w-0 flex-1 space-y-2">
+                                        <input class="input bg-white" type="file" name="image_file" accept="image/*" @change="onImage($event)">
+                                        <input class="input bg-white" name="image" x-model="form.image" placeholder="atau tempel URL gambar">
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="label">Stasiun</label>
-                                    <select name="station" class="input" x-model="form.station">
-                                        <option value="">—</option>
-                                        <option value="kitchen">Dapur</option>
-                                        <option value="bar">Bar</option>
-                                        <option value="cashier">Kasir</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="label">Prep (menit)</label>
-                                    <input class="input" type="number" min="0" name="prep_minutes" x-model="form.prep_minutes">
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label class="label">Deskripsi</label>
-                                    <textarea class="input min-h-20" name="description" x-model="form.description"></textarea>
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label class="label">Gambar menu</label>
-                                    <img x-show="form.image_url" :src="form.image_url" alt="" class="mb-3 h-20 w-28 rounded-lg object-cover" x-cloak>
-                                    <input class="input" type="file" name="image_file" accept="image/*" @change="onImage($event)">
-                                    <input class="input mt-2" name="image" x-model="form.image" placeholder="Atau tempel URL gambar">
-                                </div>
-                                <div class="sm:col-span-2 flex flex-wrap gap-5">
-                                    <label class="flex items-center gap-2.5 text-sm">
+
+                                <p class="stat-kicker sm:col-span-2 mt-2 border-t border-[#f0ebe6] pt-4">Kasir</p>
+                                <div class="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+                                    <label class="flex items-start gap-2.5 rounded-xl border border-line bg-[#fafafa] px-3 py-2.5 text-sm">
                                         <input type="hidden" name="is_sellable" :value="form.is_sellable ? 1 : 0">
-                                        <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_sellable">
-                                        Dapat dijual
+                                        <input type="checkbox" class="mt-0.5 h-4 w-4 rounded border-line" x-model="form.is_sellable">
+                                        <span>
+                                            <span class="block font-medium">Dapat dijual</span>
+                                            <span class="mt-0.5 block text-[12px] text-muted">Muncul di menu kasir</span>
+                                        </span>
                                     </label>
-                                    <label class="flex items-center gap-2.5 text-sm">
-                                        <input type="hidden" name="is_addon" :value="form.is_addon ? 1 : 0">
-                                        <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_addon">
-                                        Add-on
-                                    </label>
-                                    <label class="flex items-center gap-2.5 text-sm">
+                                    <label class="flex items-start gap-2.5 rounded-xl border border-line bg-[#fafafa] px-3 py-2.5 text-sm">
                                         <input type="hidden" name="is_stockable" :value="form.is_stockable ? 1 : 0">
-                                        <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_stockable">
-                                        Pantau stok
+                                        <input type="checkbox" class="mt-0.5 h-4 w-4 rounded border-line" x-model="form.is_stockable">
+                                        <span>
+                                            <span class="block font-medium">Pantau stok</span>
+                                            <span class="mt-0.5 block text-[12px] text-muted">Stok berkurang saat terjual</span>
+                                        </span>
                                     </label>
-                                    <label class="flex items-center gap-2.5 text-sm">
+                                    <label class="flex items-start gap-2.5 rounded-xl border border-line bg-[#fafafa] px-3 py-2.5 text-sm">
+                                        <input type="hidden" name="is_addon" :value="form.is_addon ? 1 : 0">
+                                        <input type="checkbox" class="mt-0.5 h-4 w-4 rounded border-line" x-model="form.is_addon">
+                                        <span>
+                                            <span class="block font-medium">Add-on</span>
+                                            <span class="mt-0.5 block text-[12px] text-muted">Pilihan tambahan untuk menu lain</span>
+                                        </span>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 rounded-xl border border-line bg-[#fafafa] px-3 py-2.5 text-sm">
                                         <input type="hidden" name="is_active" :value="form.is_active ? 1 : 0">
-                                        <input type="checkbox" class="h-4 w-4 rounded border-line" x-model="form.is_active">
-                                        Aktif
+                                        <input type="checkbox" class="mt-0.5 h-4 w-4 rounded border-line" x-model="form.is_active">
+                                        <span>
+                                            <span class="block font-medium">Aktif</span>
+                                            <span class="mt-0.5 block text-[12px] text-muted">Bisa dipilih. Matikan untuk menyembunyikan</span>
+                                        </span>
                                     </label>
                                 </div>
                                 <div class="sm:col-span-2" x-show="!form.is_addon" x-cloak>
                                     <label class="label">Add-on untuk menu ini</label>
-                                    <div class="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-[#fafafa] p-2">
+                                    <div class="max-h-40 space-y-0.5 overflow-y-auto rounded-xl border border-line bg-[#fafafa] p-2">
                                         @forelse ($addonProducts as $addon)
-                                            <label class="flex items-center justify-between gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-white">
+                                            <label class="flex items-center justify-between gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-white">
                                                 <span class="flex items-center gap-2.5">
                                                     <input type="checkbox" name="addon_ids[]" value="{{ $addon->id }}" class="rounded border-line text-brand focus:ring-brand/20" x-model="form.addon_ids">
                                                     {{ $addon->name }}
@@ -405,34 +376,36 @@
                                                 <span class="text-muted">{{ money($addon->price) }}</span>
                                             </label>
                                         @empty
-                                            <p class="px-2 py-3 text-[13px] text-muted">Tandai produk sebagai Add-on dulu, lalu pilih di sini.</p>
+                                            <p class="px-2 py-3 text-[13px] text-muted">Belum ada add-on. Centang Add-on pada produk yang ingin dijadikan pilihan tambahan.</p>
                                         @endforelse
                                     </div>
                                 </div>
 
-                                <p class="sm:col-span-2 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Varian</p>
-                                <div class="sm:col-span-2">
-                                    <div class="mb-2 flex items-center justify-end">
-                                        <button type="button" class="btn-ghost !px-3 !py-1.5 text-xs" @click="form.variants.push({ id: '', name: '', sku: '', price_adjustment: 0 })">Tambah varian</button>
+                                <div class="sm:col-span-2 mt-2 flex items-center justify-between gap-3 border-t border-[#f0ebe6] pt-4">
+                                    <div>
+                                        <p class="stat-kicker">Varian</p>
+                                        <p class="mt-1 text-[12px] text-muted" x-show="!form.variants.length">Opsional. Tanpa varian, produk tetap bisa dijual.</p>
                                     </div>
-                                    <div class="space-y-2">
-                                        <template x-for="(variant, index) in form.variants" :key="index">
-                                            <div class="grid grid-cols-12 items-end gap-2">
-                                                <input type="hidden" :name="`variants[${index}][id]`" x-model="variant.id">
-                                                <div class="col-span-4">
-                                                    <input class="input" :name="`variants[${index}][name]`" x-model="variant.name" placeholder="Nama">
-                                                </div>
-                                                <div class="col-span-3">
-                                                    <input class="input" :name="`variants[${index}][sku]`" x-model="variant.sku" placeholder="SKU">
-                                                </div>
-                                                <div class="col-span-3">
-                                                    <input class="input" type="number" step="0.01" :name="`variants[${index}][price_adjustment]`" x-model="variant.price_adjustment" placeholder="Adj. harga">
-                                                </div>
-                                                <button type="button" class="btn-ghost col-span-2 !px-2" @click="form.variants.splice(index, 1)">×</button>
+                                    <button type="button" class="btn-ghost !px-3 !py-1.5 text-xs" @click="form.variants.push({ id: '', name: '', sku: '', price_adjustment: 0 })">Tambah varian</button>
+                                </div>
+                                <div class="sm:col-span-2 space-y-2" x-show="form.variants.length" x-cloak>
+                                    <template x-for="(variant, index) in form.variants" :key="index">
+                                        <div class="grid grid-cols-12 items-center gap-2">
+                                            <input type="hidden" :name="`variants[${index}][id]`" x-model="variant.id">
+                                            <div class="col-span-4">
+                                                <input class="input" :name="`variants[${index}][name]`" x-model="variant.name" placeholder="Nama">
                                             </div>
-                                        </template>
-                                        <p class="text-[12px] text-muted" x-show="!form.variants.length">Opsional. Produk tanpa varian tetap bisa dijual.</p>
-                                    </div>
+                                            <div class="col-span-3">
+                                                <input class="input" :name="`variants[${index}][sku]`" x-model="variant.sku" placeholder="SKU">
+                                            </div>
+                                            <div class="col-span-4">
+                                                <input class="input" type="number" step="0.01" :name="`variants[${index}][price_adjustment]`" x-model="variant.price_adjustment" placeholder="Tambahan harga">
+                                            </div>
+                                            <button type="button" class="modal-close col-span-1" @click="form.variants.splice(index, 1)" title="Hapus varian">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -473,8 +446,6 @@
                 category_id: '',
                 unit_id: '',
                 type: 'finished',
-                bom_level: 0,
-                description: '',
                 image: '',
                 image_url: '',
                 price: 0,
@@ -484,11 +455,7 @@
                 addon_ids: [],
                 is_stockable: true,
                 is_active: true,
-                minimum_stock: 0,
                 reorder_level: 0,
-                maximum_stock: 0,
-                station: '',
-                prep_minutes: 0,
                 variants: [],
                 update_url: '',
                 delete_url: '',

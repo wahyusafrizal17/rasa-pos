@@ -67,6 +67,17 @@ class PosController extends Controller
             'lowStock' => $lowStock,
             'productImages' => $products->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])
                 ->union($addons->mapWithKeys(fn ($product) => [(string) $product->id => $product->imageUrl()])),
+            'menuChoices' => OrderService::CHOICES,
+            'productChoices' => $products
+                ->filter(fn ($product) => $product->has_optional || $product->has_expresso)
+                ->mapWithKeys(fn ($product) => [
+                    (string) $product->id => [
+                        'name' => $product->name,
+                        'price' => (float) $product->price,
+                        'optional' => (bool) $product->has_optional,
+                        'expresso' => (bool) $product->has_expresso,
+                    ],
+                ]),
             'productAddons' => $products->mapWithKeys(fn ($product) => [
                 (string) $product->id => $product->addons
                     ->filter(fn ($addon) => $addon->is_sellable && $addon->is_active)
@@ -144,6 +155,9 @@ class PosController extends Controller
             'notes' => ['nullable', 'string', 'max:255'],
             'addon_ids' => ['nullable', 'array'],
             'addon_ids.*' => ['integer', 'exists:products,id'],
+            'modifiers' => ['nullable', 'array'],
+            'modifiers.optional' => ['nullable', 'string', 'in:hot,ice'],
+            'modifiers.expresso' => ['nullable', 'string', 'in:none,7030,5050,trilogi'],
         ]);
 
         $orders->addItem($order, $data);

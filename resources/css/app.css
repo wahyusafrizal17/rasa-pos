@@ -123,7 +123,7 @@
     }
 
     .crud-modal-body {
-        @apply overflow-y-auto p-6;
+        @apply min-h-0 flex-1 overflow-y-auto p-6;
     }
 
     .crud-modal-footer {
@@ -467,6 +467,18 @@
         border-color: #f3d0d0;
         background: #fdecec;
         color: #b42318;
+    }
+
+    .menu-choice-badge {
+        flex-shrink: 0;
+        border-radius: 999px;
+        background: var(--color-brand-soft);
+        color: var(--color-brand);
+        padding: 1px 7px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 16px;
+        white-space: nowrap;
     }
 
     .menu-card-price {

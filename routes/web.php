@@ -122,6 +122,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/transfers/{transfer}/approve', [StockTransferController::class, 'approve'])->name('transfers.approve');
     Route::post('/transfers/{transfer}/ship', [StockTransferController::class, 'ship'])->name('transfers.ship');
     Route::post('/transfers/{transfer}/receive', [StockTransferController::class, 'receive'])->name('transfers.receive');
+    Route::post('/transfers/{transfer}/reject', [StockTransferController::class, 'reject'])->name('transfers.reject');
 
     Route::get('/production', [ProductionController::class, 'index'])->name('production.index');
     Route::get('/production/create', [ProductionController::class, 'create'])->name('production.create');

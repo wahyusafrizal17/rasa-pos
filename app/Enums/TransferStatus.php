@@ -20,8 +20,8 @@ enum TransferStatus: string
             self::Approved => 'Disetujui',
             self::Shipped => 'Dikirim',
             self::Received => 'Diterima',
-            self::Completed => 'Selesai',
-            self::Cancelled => 'Dibatalkan',
+            self::Completed => 'Diterima',
+            self::Cancelled => 'Ditolak',
         };
     }
 

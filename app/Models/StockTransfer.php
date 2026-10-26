@@ -106,10 +106,12 @@ class StockTransfer extends Model
             'received_label' => $this->received_at?->format('d/m/Y H:i') ?? '—',
             'items_count' => count($items),
             'items' => $items,
-            'request_url' => route('transfers.request', $this),
-            'approve_url' => route('transfers.approve', $this),
+            'can_receive' => $status === TransferStatus::Shipped && (int) $this->destination_outlet_id === (int) current_outlet_id(),
+            'can_dispatch' => in_array($status, [TransferStatus::Draft, TransferStatus::Requested, TransferStatus::Approved], true)
+                && (int) $this->source_outlet_id === (int) current_outlet_id(),
             'ship_url' => route('transfers.ship', $this),
             'receive_url' => route('transfers.receive', $this),
+            'reject_url' => route('transfers.reject', $this),
         ];
     }
 }

@@ -14,7 +14,7 @@ use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'sku', 'zoho_item_id', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
-    'price', 'cost', 'is_sellable', 'is_addon', 'is_stockable', 'is_active',
+    'price', 'cost', 'is_sellable', 'is_addon', 'has_optional', 'has_expresso', 'is_stockable', 'is_active',
     'minimum_stock', 'reorder_level', 'maximum_stock', 'station', 'prep_minutes',
 ])]
 class Product extends Model
@@ -29,6 +29,8 @@ class Product extends Model
             'cost' => 'decimal:2',
             'is_sellable' => 'boolean',
             'is_addon' => 'boolean',
+            'has_optional' => 'boolean',
+            'has_expresso' => 'boolean',
             'is_stockable' => 'boolean',
             'is_active' => 'boolean',
             'minimum_stock' => 'decimal:3',
@@ -123,16 +125,6 @@ class Product extends Model
         return $this->is_active ? 'Aktif' : 'Nonaktif';
     }
 
-    public function stationLabel(): string
-    {
-        return match ($this->station) {
-            'kitchen' => 'Dapur',
-            'bar' => 'Bar',
-            'cashier' => 'Kasir',
-            default => '—',
-        };
-    }
-
     public function toModalArray(): array
     {
         $this->loadMissing(['category', 'unit', 'variants', 'addons']);
@@ -147,8 +139,6 @@ class Product extends Model
             'unit_label' => $this->unit ? $this->unit->name.' ('.$this->unit->code.')' : '—',
             'type' => $this->type?->value ?? ProductType::Finished->value,
             'type_label' => $this->type?->label() ?? '—',
-            'bom_level' => (int) ($this->bom_level ?? 0),
-            'description' => $this->description ?? '',
             'image' => $this->image ?? '',
             'image_url' => $this->imageUrl(),
             'price' => (float) $this->price,
@@ -161,12 +151,7 @@ class Product extends Model
             'is_stockable' => (bool) $this->is_stockable,
             'is_active' => (bool) $this->is_active,
             'status_label' => $this->statusLabel(),
-            'minimum_stock' => (float) ($this->minimum_stock ?? 0),
             'reorder_level' => (float) ($this->reorder_level ?? 0),
-            'maximum_stock' => (float) ($this->maximum_stock ?? 0),
-            'station' => $this->station ?? '',
-            'station_label' => $this->stationLabel(),
-            'prep_minutes' => (int) ($this->prep_minutes ?? 0),
             'variants' => $this->variants->map(fn (ProductVariant $variant) => [
                 'id' => $variant->id,
                 'name' => $variant->name,

@@ -45,23 +45,26 @@ class StockTransferController extends Controller
                 $inner->where('source_outlet_id', $id)->orWhere('destination_outlet_id', $id);
             });
         });
+        $with = ['sourceOutlet', 'destinationOutlet', 'requester', 'approver', 'receiver', 'items.product.unit'];
 
         $focusId = $request->integer('transfer') ?: (int) old('_transfer_id');
         $focusTransfer = $focusId
-            ? (clone $base)->with(['sourceOutlet', 'destinationOutlet', 'requester', 'approver', 'receiver', 'items.product.unit'])->find($focusId)
+            ? (clone $base)->with($with)->find($focusId)
             : null;
+        $outlets = Outlet::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
         return view('transfers.index', [
             'transfers' => $query->latest()->paginate(20)->withQueryString(),
+            'incoming' => $outletId
+                ? (clone $base)->with($with)->where('destination_outlet_id', $outletId)->where('status', TransferStatus::Shipped)->latest()->get()
+                : collect(),
             'filters' => $filters,
-            'outlets' => Outlet::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'outlets' => $outlets,
+            'currentOutlet' => $outlets->firstWhere('id', $outletId),
             'products' => Product::query()->where('is_stockable', true)->orderBy('name')->get(['id', 'name', 'sku']),
             'stats' => [
-                'total' => (clone $base)->count(),
-                'open' => (clone $base)->whereNotIn('status', [
-                    TransferStatus::Completed->value,
-                    TransferStatus::Cancelled->value,
-                ])->count(),
+                'incoming' => $outletId ? (clone $base)->where('destination_outlet_id', $outletId)->where('status', TransferStatus::Shipped)->count() : 0,
+                'outgoing' => $outletId ? (clone $base)->where('source_outlet_id', $outletId)->where('status', TransferStatus::Shipped)->count() : 0,
                 'completed' => (clone $base)->where('status', TransferStatus::Completed)->count(),
             ],
             'focusPayload' => $focusTransfer?->toModalArray(),
@@ -96,11 +99,12 @@ class StockTransferController extends Controller
             'items.*.quantity.required' => 'Kuantitas wajib diisi.',
             'items.*.quantity.min' => 'Kuantitas minimal 0.001.',
         ]);
-        $transfer = $service->create($data);
+        $data['source_outlet_id'] = current_outlet_id() ?: $data['source_outlet_id'];
+        $transfer = $service->send($data);
 
         return redirect()
             ->route('transfers.index', ['modal' => 'view', 'transfer' => $transfer->id])
-            ->with('success', 'Transfer dibuat.');
+            ->with('success', 'Stok dikirim. Outlet tujuan bisa menerima atau menolak.');
     }
 
     public function show(StockTransfer $transfer): RedirectResponse
@@ -133,7 +137,7 @@ class StockTransferController extends Controller
     public function ship(StockTransfer $transfer, StockTransferService $service): RedirectResponse
     {
         abort_unless(auth()->user()->hasPermission('inventory.manage'), 403);
-        $service->ship($transfer);
+        $service->dispatch($transfer);
 
         return redirect()
             ->route('transfers.index', ['modal' => 'view', 'transfer' => $transfer->id])
@@ -143,6 +147,7 @@ class StockTransferController extends Controller
     public function receive(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('inventory.manage'), 403);
+        $this->assertDestination($transfer);
         $data = $request->validate([
             'received' => ['nullable', 'array'],
             'received.*' => ['numeric', 'min:0'],
@@ -155,5 +160,22 @@ class StockTransferController extends Controller
         return redirect()
             ->route('transfers.index', ['modal' => 'view', 'transfer' => $transfer->id])
             ->with('success', 'Transfer diterima. Stok tujuan bertambah.');
+    }
+
+    public function reject(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('inventory.manage'), 403);
+        $this->assertDestination($transfer);
+        $service->reject($transfer);
+
+        return redirect()
+            ->route('transfers.index', ['modal' => 'view', 'transfer' => $transfer->id])
+            ->with('success', 'Pengiriman ditolak. Stok kembali ke outlet sumber.');
+    }
+
+    protected function assertDestination(StockTransfer $transfer): void
+    {
+        $outletId = current_outlet_id();
+        abort_if($outletId && (int) $transfer->destination_outlet_id !== (int) $outletId, 403);
     }
 }

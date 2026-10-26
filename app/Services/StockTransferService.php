@@ -47,6 +47,29 @@ class StockTransferService
         });
     }
 
+    public function send(array $data): StockTransfer
+    {
+        return DB::transaction(function () use ($data) {
+            return $this->dispatch($this->create($data));
+        });
+    }
+
+    public function dispatch(StockTransfer $transfer): StockTransfer
+    {
+        return DB::transaction(function () use ($transfer) {
+            $this->assertStatus($transfer, [TransferStatus::Draft, TransferStatus::Requested, TransferStatus::Approved]);
+
+            if ($transfer->status !== TransferStatus::Approved) {
+                $transfer->update([
+                    'status' => TransferStatus::Approved,
+                    'approved_by' => Auth::id(),
+                ]);
+            }
+
+            return $this->ship($transfer->fresh());
+        });
+    }
+
     public function request(StockTransfer $transfer): StockTransfer
     {
         $this->assertStatus($transfer, [TransferStatus::Draft]);
@@ -124,6 +147,31 @@ class StockTransferService
             ]);
 
             $this->audit->log('received', 'transfers', $transfer);
+
+            return $transfer->fresh(['items.product']);
+        });
+    }
+
+    public function reject(StockTransfer $transfer): StockTransfer
+    {
+        return DB::transaction(function () use ($transfer) {
+            $this->assertStatus($transfer, [TransferStatus::Shipped]);
+            $transfer->load('items.product');
+
+            foreach ($transfer->items as $item) {
+                $this->inventory->increase(
+                    $transfer->source_outlet_id,
+                    $item->product_id,
+                    (float) $item->quantity,
+                    StockMovementType::Transfer,
+                    'Transfer ditolak '.$transfer->number,
+                    $transfer,
+                    $transfer->number,
+                );
+            }
+
+            $transfer->update(['status' => TransferStatus::Cancelled]);
+            $this->audit->log('rejected', 'transfers', $transfer);
 
             return $transfer->fresh(['items.product']);
         });

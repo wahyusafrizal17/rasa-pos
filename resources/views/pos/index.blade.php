@@ -46,6 +46,16 @@
                                 @endif
                             </div>
                             <p class="menu-card-price">{{ money($product->price) }}</p>
+                            @if ($product->has_optional || $product->has_expresso)
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @if ($product->has_optional)
+                                        <span class="menu-choice-badge">Optional</span>
+                                    @endif
+                                    @if ($product->has_expresso)
+                                        <span class="menu-choice-badge">Expresso</span>
+                                    @endif
+                                </div>
+                            @endif
                             @if ($product->variants->count())
                                 <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
                                     @foreach ($product->variants as $variant)
@@ -278,6 +288,38 @@
         </div>
     </div>
 
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="choiceOpen" x-cloak @click.self="cancelChoice()">
+        <div class="card w-full max-w-md p-6">
+            <h3 class="text-lg font-semibold" x-text="pendingChoice?.name"></h3>
+            <p class="mt-1 text-sm text-muted" x-text="formatMoney(pendingChoice?.price)"></p>
+            <div class="mt-5" x-show="pendingChoice?.optional">
+                <p class="text-sm font-semibold text-heading">Optional <span class="ml-1 text-xs font-normal text-muted">wajib, pilih satu</span></p>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    <template x-for="(option, key) in menuChoices.optional" :key="key">
+                        <button type="button" class="rounded-xl border px-3 py-3 text-sm font-semibold" :class="choiceOptional === key ? 'border-brand bg-brand-soft text-heading' : 'border-line text-heading'" @click="choiceOptional = key">
+                            <span x-text="option.label"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+            <div class="mt-5" x-show="pendingChoice?.expresso">
+                <p class="text-sm font-semibold text-heading">Expresso <span class="ml-1 text-xs font-normal text-muted">wajib, pilih satu</span></p>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    <template x-for="(option, key) in menuChoices.expresso" :key="key">
+                        <button type="button" class="rounded-xl border px-3 py-3 text-left text-sm font-semibold" :class="choiceExpresso === key ? 'border-brand bg-brand-soft text-heading' : 'border-line text-heading'" @click="choiceExpresso = key">
+                            <span class="block" x-text="option.label"></span>
+                            <span class="mt-0.5 block text-xs font-medium text-muted" x-show="option.price > 0" x-text="'+ ' + formatMoney(option.price)"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-2">
+                <button type="button" class="btn-ghost flex-1" @click="cancelChoice()">Batal</button>
+                <button type="button" class="btn-primary flex-1" @click="confirmChoice()" :disabled="!canConfirmChoice() || busy" x-text="choiceButtonLabel()"></button>
+            </div>
+        </div>
+    </div>
+
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="addonOpen" x-cloak @click.self="confirmAddons([])">
         <div class="card w-full max-w-md p-6">
             <h3 class="text-lg font-semibold">Tambahan</h3>
@@ -317,10 +359,12 @@
 function posApp() {
     return {
         order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
-        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, busy: false, busyCount: 0, notice: '',
+        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, choiceOpen: false, busy: false, busyCount: 0, notice: '',
         qrisUrl: '', qrisRef: '', qrisOpen: false, qrisTimer: null,
-        pendingAdd: null, selectedAddonIds: [],
+        pendingAdd: null, selectedAddonIds: [], pendingChoice: null, choiceOptional: '', choiceExpresso: '',
         productAddons: @json($productAddons),
+        productChoices: @json($productChoices),
+        menuChoices: @json($menuChoices),
         addons: [],
         paymentMethods: [
             { id: 'edc', label: 'EDC', hint: 'Mesin EDC' },
@@ -517,7 +561,7 @@ function posApp() {
             localStorage.removeItem('pos_offline_queue');
             for (const action of items) {
                 if (action.type === 'add') {
-                    await this.addProduct(action.product_id, action.variant_id, action.bundle_id, true, action.addon_ids || []);
+                    await this.addProduct(action.product_id, action.variant_id, action.bundle_id, true, action.addon_ids || [], null, action.modifiers || null);
                 }
             }
         },
@@ -572,14 +616,54 @@ function posApp() {
         addonsFor(productId) {
             return this.productAddons[productId] || this.productAddons[String(productId)] || [];
         },
-        async addProduct(productId, variantId, bundleId, fromQueue = false, addonIds = null, stock = null) {
+        choiceOf(productId) {
+            return this.productChoices[productId] || this.productChoices[String(productId)] || null;
+        },
+        canConfirmChoice() {
+            if (!this.pendingChoice) return false;
+            if (this.pendingChoice.optional && !this.choiceOptional) return false;
+            if (this.pendingChoice.expresso && !this.choiceExpresso) return false;
+            return true;
+        },
+        choiceButtonLabel() {
+            const parts = [];
+            if (this.pendingChoice?.optional) parts.push('Optional');
+            if (this.pendingChoice?.expresso) parts.push('Expresso');
+            return parts.length ? 'Pilih ' + parts.join(' & ') : 'Pilih';
+        },
+        cancelChoice() {
+            this.choiceOpen = false;
+            this.pendingAdd = null;
+            this.pendingChoice = null;
+        },
+        confirmChoice() {
+            if (!this.canConfirmChoice()) return;
+            const pending = this.pendingAdd;
+            const modifiers = {};
+            if (this.pendingChoice.optional) modifiers.optional = this.choiceOptional;
+            if (this.pendingChoice.expresso) modifiers.expresso = this.choiceExpresso;
+            this.choiceOpen = false;
+            this.pendingAdd = null;
+            this.pendingChoice = null;
+            if (!pending) return;
+            this.addProduct(pending.productId, pending.variantId, pending.bundleId, false, null, pending.stock, modifiers);
+        },
+        async addProduct(productId, variantId, bundleId, fromQueue = false, addonIds = null, stock = null, modifiers = null) {
             if (stock !== null && Number(stock) <= 0) {
                 this.notice = 'Stok habis.';
                 return;
             }
+            if (!fromQueue && !bundleId && modifiers === null && this.choiceOf(productId)) {
+                this.pendingAdd = { productId, variantId, bundleId, stock };
+                this.pendingChoice = this.choiceOf(productId);
+                this.choiceOptional = '';
+                this.choiceExpresso = '';
+                this.choiceOpen = true;
+                return;
+            }
             const extras = this.addonsFor(productId);
             if (!fromQueue && !bundleId && extras.length && addonIds === null) {
-                this.pendingAdd = { productId, variantId, bundleId };
+                this.pendingAdd = { productId, variantId, bundleId, stock, modifiers };
                 this.selectedAddonIds = [];
                 this.addons = extras;
                 this.addonOpen = true;
@@ -588,7 +672,8 @@ function posApp() {
             try {
                 await this.ensureOrder();
                 this.order = await this.request(`/pos/${this.order.id}/items`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                    product_id: productId, product_variant_id: variantId, bundle_id: bundleId, quantity: 1, addon_ids: addonIds || []
+                    product_id: productId, product_variant_id: variantId, bundle_id: bundleId, quantity: 1, addon_ids: addonIds || [],
+                    ...(modifiers ? { modifiers } : {}),
                 })});
                 this.persistDraft();
             } catch (e) {
@@ -596,7 +681,7 @@ function posApp() {
                     this.notice = e.message || 'Tidak bisa menambah item.';
                     return;
                 }
-                if (!fromQueue) this.queue({ type: 'add', product_id: productId, variant_id: variantId, bundle_id: bundleId, addon_ids: addonIds || [] });
+                if (!fromQueue) this.queue({ type: 'add', product_id: productId, variant_id: variantId, bundle_id: bundleId, addon_ids: addonIds || [], modifiers });
             }
         },
         confirmAddons(ids) {
@@ -604,7 +689,7 @@ function posApp() {
             this.addonOpen = false;
             this.pendingAdd = null;
             if (!pending) return;
-            this.addProduct(pending.productId, pending.variantId, pending.bundleId, false, (ids || []).map(Number));
+            this.addProduct(pending.productId, pending.variantId, pending.bundleId, false, (ids || []).map(Number), pending.stock, pending.modifiers || null);
         },
         async changeQty(item, delta) {
             const qty = Number(item.quantity) + delta;

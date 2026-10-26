@@ -29,19 +29,9 @@
         <div class="mb-5 grid gap-4 md:grid-cols-3">
             <div class="stat-card">
                 <div>
-                    <p class="stat-kicker">Total transfer</p>
-                    <p class="stat-value">{{ number_format($stats['total']) }}</p>
-                    <p class="stat-hint">Terkait outlet ini</p>
-                </div>
-                <span class="stat-icon bg-[#e8f1ff] text-[#3b82f6]">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/></svg>
-                </span>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <p class="stat-kicker">Proses</p>
-                    <p class="stat-value">{{ number_format($stats['open']) }}</p>
-                    <p class="stat-hint">Belum selesai</p>
+                    <p class="stat-kicker">Perlu diterima</p>
+                    <p class="stat-value">{{ number_format($stats['incoming']) }}</p>
+                    <p class="stat-hint">Dikirim ke outlet ini</p>
                 </div>
                 <span class="stat-icon bg-[#fff3e8] text-[#ff9f43]">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -49,9 +39,19 @@
             </div>
             <div class="stat-card">
                 <div>
-                    <p class="stat-kicker">Selesai</p>
+                    <p class="stat-kicker">Menunggu tujuan</p>
+                    <p class="stat-value">{{ number_format($stats['outgoing']) }}</p>
+                    <p class="stat-hint">Dikirim dari outlet ini</p>
+                </div>
+                <span class="stat-icon bg-[#e8f1ff] text-[#3b82f6]">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </span>
+            </div>
+            <div class="stat-card">
+                <div>
+                    <p class="stat-kicker">Diterima</p>
                     <p class="stat-value">{{ number_format($stats['completed']) }}</p>
-                    <p class="stat-hint">Sudah diterima</p>
+                    <p class="stat-hint">Stok tujuan sudah bertambah</p>
                 </div>
                 <span class="stat-icon bg-[#e8f8ee] text-[#1f9d57]">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -59,17 +59,63 @@
             </div>
         </div>
 
+        @if ($incoming->isNotEmpty())
+            <div class="mb-5">
+                <div class="mb-3 flex items-end justify-between gap-3">
+                    <div>
+                        <h5 class="card-header-title">Masuk untuk {{ $currentOutlet?->name }}</h5>
+                        <p class="card-header-subtitle">Terima supaya stok bertambah, atau tolak supaya stok kembali ke pengirim.</p>
+                    </div>
+                </div>
+                <div class="grid gap-3">
+                    @foreach ($incoming as $transfer)
+                        <article class="rounded-2xl border border-[#f0ebe6] bg-white p-4 shadow-[0_4px_18px_rgba(47,43,61,0.06)]">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-[13px] font-semibold text-heading">{{ $transfer->number }}</p>
+                                    <p class="mt-0.5 text-[13px] text-muted">Dari {{ $transfer->sourceOutlet?->name ?? '—' }} · {{ $transfer->transfer_date?->format('d/m/Y') }}</p>
+                                </div>
+                                @can('inventory.manage')
+                                    <div class="flex items-center gap-2">
+                                        <form method="POST" action="{{ route('transfers.reject', $transfer) }}" onsubmit="return confirm('Tolak pengiriman ini? Stok kembali ke outlet sumber.')">
+                                            @csrf
+                                            <button type="submit" class="btn-ghost !py-2">Tolak</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('transfers.receive', $transfer) }}">
+                                            @csrf
+                                            <button type="submit" class="btn-add !py-2">Terima</button>
+                                        </form>
+                                    </div>
+                                @endcan
+                            </div>
+                            <ul class="mt-3 divide-y divide-[#f0ebe6] overflow-hidden rounded-xl border border-[#f0ebe6]">
+                                @foreach ($transfer->items as $item)
+                                    <li class="flex items-center justify-between gap-3 bg-[#fafafa] px-3 py-2.5 text-sm">
+                                        <span>
+                                            <span class="font-medium text-heading">{{ $item->product?->name ?? '—' }}</span>
+                                            <span class="mt-0.5 block text-[12px] text-muted">{{ $item->product?->sku }}</span>
+                                        </span>
+                                        <span class="font-semibold text-heading">{{ qty_label($item->quantity, $item->product?->unit?->code ?? '') }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div class="card overflow-hidden">
             <div class="card-header">
                 <div>
-                    <h5 class="card-header-title">Daftar transfer</h5>
-                    <p class="card-header-subtitle">Filter kolom memuat ulang otomatis saat nilai diubah.</p>
+                    <h5 class="card-header-title">Riwayat</h5>
+                    <p class="card-header-subtitle">Pengiriman dari dan ke outlet ini.</p>
                 </div>
                 <div class="card-header-actions">
                     @can('inventory.manage')
                         <button type="button" class="btn-add" @click="openCreate()">
                             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
-                            Buat transfer
+                            Kirim stok
                         </button>
                     @endcan
                 </div>
@@ -114,8 +160,8 @@
                             <th>
                                 <select form="transfer-filters" class="col-filter" name="status" onchange="this.form.submit()">
                                     <option value="">Semua</option>
-                                    @foreach (\App\Enums\TransferStatus::cases() as $status)
-                                        <option value="{{ $status->value }}" @selected(($filters['status'] ?? '') === $status->value)>{{ $status->label() }}</option>
+                                    @foreach (['shipped' => 'Dikirim', 'completed' => 'Diterima', 'cancelled' => 'Ditolak'] as $status => $label)
+                                        <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </th>
@@ -167,12 +213,8 @@
                     <div class="crud-modal-body">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <h3 class="text-lg font-semibold text-heading" x-text="viewing?.number || 'Detail Transfer'"></h3>
-                                <p class="mt-1 text-[13px] text-muted">
-                                    <span x-text="viewing?.status_label || '—'"></span>
-                                    ·
-                                    <span x-text="viewing?.route_label || '—'"></span>
-                                </p>
+                                    <h3 class="text-lg font-semibold text-heading" x-text="viewing?.number || 'Detail Transfer'"></h3>
+                                    <p class="mt-1 text-[13px] text-muted" x-text="viewing?.route_label || '—'"></p>
                             </div>
                             <button type="button" class="modal-close" @click="viewOpen = false">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
@@ -194,31 +236,7 @@
                             </div>
                         </div>
 
-                        <dl class="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                            <div>
-                                <dt class="text-[12px] text-muted">Pengaju</dt>
-                                <dd class="mt-0.5 font-medium" x-text="viewing?.requester_name || '—'"></dd>
-                            </div>
-                            <div>
-                                <dt class="text-[12px] text-muted">Penyetuju</dt>
-                                <dd class="mt-0.5 font-medium" x-text="viewing?.approver_name || '—'"></dd>
-                            </div>
-                            <div>
-                                <dt class="text-[12px] text-muted">Dikirim</dt>
-                                <dd class="mt-0.5 font-medium" x-text="viewing?.shipped_label || '—'"></dd>
-                            </div>
-                            <div>
-                                <dt class="text-[12px] text-muted">Diterima</dt>
-                                <dd class="mt-0.5 font-medium">
-                                    <span x-text="viewing?.receiver_name && viewing.receiver_name !== '—' ? viewing.receiver_name + ' · ' : ''"></span>
-                                    <span x-text="viewing?.received_label || '—'"></span>
-                                </dd>
-                            </div>
-                            <div class="sm:col-span-2">
-                                <dt class="text-[12px] text-muted">Catatan</dt>
-                                <dd class="mt-0.5 font-medium" x-text="viewing?.notes || '—'"></dd>
-                            </div>
-                        </dl>
+                        <p class="mt-4 text-sm text-muted" x-show="viewing?.notes && viewing.notes !== '—'" x-text="viewing?.notes"></p>
 
                         @error('status')<p class="mt-3 text-sm text-red-600" x-show="serverViewError" x-cloak>{{ $message }}</p>@enderror
 
@@ -227,8 +245,7 @@
                                 <thead>
                                     <tr>
                                         <th>Produk</th>
-                                        <th>Qty dikirim</th>
-                                        <th>Qty diterima</th>
+                                        <th>Qty</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -239,14 +256,6 @@
                                                 <p class="mt-0.5 text-[12px] text-muted"><span x-text="item.sku"></span> · <span x-text="item.unit || '—'"></span></p>
                                             </td>
                                             <td class="font-semibold" x-text="item.quantity_label"></td>
-                                            <td>
-                                                <template x-if="viewing?.status === 'shipped'">
-                                                    <input class="input !w-28" type="number" step="0.001" min="0" :name="'received[' + item.id + ']'" x-model="item.received_input">
-                                                </template>
-                                                <template x-if="viewing?.status !== 'shipped'">
-                                                    <span x-text="viewing?.status === 'completed' ? item.received_label : '—'"></span>
-                                                </template>
-                                            </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -257,20 +266,12 @@
                 <div class="crud-modal-footer">
                     <button type="button" class="btn-ghost" @click="viewOpen = false">Tutup</button>
                     @can('inventory.manage')
-                        <form method="POST" :action="viewing?.request_url" x-show="viewing?.status === 'draft'" x-cloak>
+                        <button type="button" class="btn-add" x-show="viewing?.can_dispatch" x-cloak @click="confirmShip(viewing)">Kirim</button>
+                        <form method="POST" :action="viewing?.reject_url" x-show="viewing?.can_receive" x-cloak onsubmit="return confirm('Tolak pengiriman ini? Stok kembali ke outlet sumber.')">
                             @csrf
-                            <button class="btn-add" type="submit">Ajukan</button>
+                            <button class="btn-ghost" type="submit">Tolak</button>
                         </form>
-                    @endcan
-                    @can('inventory.approve')
-                        <form method="POST" :action="viewing?.approve_url" x-show="viewing?.status === 'requested'" x-cloak>
-                            @csrf
-                            <button class="btn-add" type="submit">Setujui</button>
-                        </form>
-                    @endcan
-                    @can('inventory.manage')
-                        <button type="button" class="btn-add" x-show="viewing?.status === 'approved'" x-cloak @click="confirmShip(viewing)">Kirim</button>
-                        <button form="receive-form" class="btn-add" type="submit" x-show="viewing?.status === 'shipped'" x-cloak>Terima</button>
+                        <button form="receive-form" class="btn-add" type="submit" x-show="viewing?.can_receive" x-cloak>Terima</button>
                     @endcan
                 </div>
             </div>
@@ -284,8 +285,8 @@
                         <div class="crud-modal-body">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-heading">Buat Transfer</h3>
-                                    <p class="mt-1 text-[13px] text-muted">Stok baru berkurang saat transfer dikirim, dan bertambah saat diterima.</p>
+                                    <h3 class="text-lg font-semibold text-heading">Kirim stok</h3>
+                                    <p class="mt-1 text-[13px] text-muted">Stok {{ $currentOutlet?->name ?? 'outlet ini' }} berkurang sekarang. Stok tujuan bertambah setelah mereka menekan Terima.</p>
                                 </div>
                                 <button type="button" class="modal-close" @click="formOpen = false">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
@@ -294,20 +295,16 @@
 
                             <div class="mt-5 grid gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label class="label">Outlet sumber</label>
-                                    <select name="source_outlet_id" class="input" required x-model="form.source_outlet_id">
-                                        <option value="">Pilih outlet</option>
-                                        @foreach ($outlets as $outlet)
-                                            <option value="{{ $outlet->id }}">{{ $outlet->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error('source_outlet_id')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
+                                    <label class="label">Dari</label>
+                                    <input type="hidden" name="source_outlet_id" value="{{ $currentOutletId }}">
+                                    <input class="input bg-[#fafafa]" value="{{ $currentOutlet?->name ?? 'Pilih outlet di atas' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="label">Outlet tujuan</label>
+                                    <label class="label">Ke</label>
                                     <select name="destination_outlet_id" class="input" required x-model="form.destination_outlet_id">
-                                        <option value="">Pilih outlet</option>
+                                        <option value="">Pilih outlet tujuan</option>
                                         @foreach ($outlets as $outlet)
+                                            @continue((string) $outlet->id === $currentOutletId)
                                             <option value="{{ $outlet->id }}">{{ $outlet->name }}</option>
                                         @endforeach
                                     </select>
@@ -327,14 +324,13 @@
 
                             <div class="mt-6">
                                 <div class="mb-3 flex items-center justify-between">
-                                    <p class="text-sm font-medium">Item</p>
-                                    <button type="button" class="btn-import !px-3 !py-1.5 text-xs" @click="form.items.push({ product_id: '', quantity: 1 })">Tambah item</button>
+                                    <p class="stat-kicker">Barang</p>
+                                    <button type="button" class="btn-ghost !px-3 !py-1.5 text-xs" @click="form.items.push({ product_id: '', quantity: 1 })">Tambah barang</button>
                                 </div>
-                                <div class="space-y-3">
+                                <div class="space-y-2">
                                     <template x-for="(item, index) in form.items" :key="index">
-                                        <div class="grid gap-3 rounded-xl border border-line p-4 sm:grid-cols-12">
-                                            <div class="sm:col-span-8">
-                                                <label class="label">Produk</label>
+                                        <div class="grid grid-cols-12 items-center gap-2">
+                                            <div class="col-span-7">
                                                 <select class="input js-product-select" :name="'items[' + index + '][product_id]'" x-model="item.product_id" required>
                                                     <option value="">Pilih produk</option>
                                                     @foreach ($products as $product)
@@ -342,13 +338,12 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="sm:col-span-3">
-                                                <label class="label">Qty</label>
-                                                <input class="input" type="number" step="0.001" min="0.001" :name="'items[' + index + '][quantity]'" x-model="item.quantity" required>
+                                            <div class="col-span-4">
+                                                <input class="input" type="number" step="0.001" min="0.001" :name="'items[' + index + '][quantity]'" x-model="item.quantity" placeholder="Qty" required>
                                             </div>
-                                            <div class="flex items-end sm:col-span-1">
-                                                <button type="button" class="btn-ghost w-full !px-3" @click="form.items.length > 1 && form.items.splice(index, 1)">×</button>
-                                            </div>
+                                            <button type="button" class="modal-close col-span-1" @click="form.items.length > 1 && form.items.splice(index, 1)" title="Hapus barang">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
+                                            </button>
                                         </div>
                                     </template>
                                 </div>
@@ -356,7 +351,7 @@
                         </div>
                         <div class="crud-modal-footer">
                             <button type="button" class="btn-ghost" @click="formOpen = false">Batal</button>
-                            <button class="btn-add" type="submit">Buat transfer</button>
+                            <button class="btn-add" type="submit">Kirim</button>
                         </div>
                     </form>
                 </div>
