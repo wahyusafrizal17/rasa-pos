@@ -34,7 +34,7 @@
         .row span:last-child { white-space: nowrap; }
         hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
         .total { font-size: 14px; font-weight: 700; }
-        .head-logo { display: block; width: 46mm; height: auto; margin: 0 auto 3mm; }
+        .head-logo { display: block; width: 34mm; height: auto; margin: 0 auto 3mm; }
 
         @media print {
             html, body { width: 80mm; }
