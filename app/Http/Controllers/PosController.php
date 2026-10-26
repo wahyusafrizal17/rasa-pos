@@ -113,12 +113,13 @@ class PosController extends Controller
     public function draft(Request $request, OrderService $orders): JsonResponse
     {
         $data = $request->validate([
-            'order_type' => ['required', 'in:dine_in,pickup,online'],
+            'order_type' => ['required', 'in:dine_in,take_away,pickup,online'],
             'channel' => ['nullable', 'in:pos,online,pickup'],
             'table_id' => ['nullable', 'exists:tables,id'],
             'customer_id' => ['nullable', 'exists:customers,id'],
             'guest_count' => ['nullable', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'guest_name' => ['nullable', 'string', 'max:80'],
         ]);
 
         $data['outlet_id'] = current_outlet_id();
@@ -129,6 +130,30 @@ class PosController extends Controller
         };
 
         return response()->json($orders->createDraft($data)->load(['items.product', 'table', 'customer']));
+    }
+
+    public function update(Request $request, Order $order): JsonResponse
+    {
+        abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+        abort_unless(in_array($order->status, [OrderStatus::Draft, OrderStatus::Held], true), 422);
+
+        $data = $request->validate([
+            'order_type' => ['nullable', 'in:dine_in,take_away,pickup,online'],
+            'guest_name' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        if (! empty($data['order_type'])) {
+            $order->order_type = $data['order_type'];
+            $order->channel = match ($data['order_type']) {
+                'pickup' => 'pickup',
+                'online' => 'online',
+                default => 'pos',
+            };
+        }
+        $order->guest_name = trim((string) ($data['guest_name'] ?? '')) ?: null;
+        $order->save();
+
+        return response()->json($order->fresh(['items.product', 'customer', 'table']));
     }
 
     public function addItem(Request $request, Order $order, OrderService $orders): JsonResponse
@@ -211,7 +236,8 @@ class PosController extends Controller
         abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
 
         $data = $request->validate([
-            'order_type' => ['nullable', 'in:dine_in,pickup,online'],
+            'order_type' => ['nullable', 'in:dine_in,take_away,pickup,online'],
+            'guest_name' => ['nullable', 'string', 'max:80'],
             'table_id' => ['nullable', 'exists:tables,id'],
         ]);
 
@@ -248,7 +274,8 @@ class PosController extends Controller
             'amount' => ['nullable', 'numeric', 'min:0'],
             'tendered' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],
-            'order_type' => ['nullable', 'in:dine_in,pickup,online'],
+            'order_type' => ['nullable', 'in:dine_in,take_away,pickup,online'],
+            'guest_name' => ['nullable', 'string', 'max:80'],
             'table_id' => ['nullable', 'exists:tables,id'],
         ]);
 
@@ -345,7 +372,7 @@ class PosController extends Controller
             'order_type' => $order->order_type?->value,
             'order_type_label' => $order->order_type?->label(),
             'table' => $order->table?->code,
-            'customer' => $order->customer?->name,
+            'customer' => $order->customer?->name ?: $order->guest_name,
             'items_count' => $order->items->count(),
             'held_at' => $order->held_at?->toIso8601String(),
             'status' => $order->status?->value,

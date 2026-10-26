@@ -13,6 +13,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\QrisWebhookController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\KasController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
@@ -56,6 +57,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::get('/held', [PosController::class, 'held'])->name('held');
         Route::post('/draft', [PosController::class, 'draft'])->name('draft');
+        Route::patch('/{order}', [PosController::class, 'update'])->name('update');
         Route::post('/{order}/items', [PosController::class, 'addItem'])->name('items.store');
         Route::put('/{order}/items/{item}', [PosController::class, 'updateItem'])->name('items.update');
         Route::delete('/{order}/items/{item}', [PosController::class, 'removeItem'])->name('items.destroy');
@@ -174,6 +176,15 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::get('/outlets', [OutletController::class, 'index'])->name('outlets.index');
     Route::post('/outlets', [OutletController::class, 'store'])->name('outlets.store');
     Route::put('/outlets/{outlet}', [OutletController::class, 'update'])->name('outlets.update');
+
+    Route::get('/kas', [KasController::class, 'index'])->name('kas.index');
+    Route::get('/kas/export', [KasController::class, 'export'])->name('kas.export');
+    Route::put('/kas/setting', [KasController::class, 'updateSetting'])->name('kas.setting');
+    Route::post('/kas', [KasController::class, 'store'])->name('kas.store');
+    Route::put('/kas/{transaksi}', [KasController::class, 'update'])->name('kas.update');
+    Route::delete('/kas/{transaksi}', [KasController::class, 'destroy'])->name('kas.destroy');
+    Route::get('/kas/{transaksi}/bukti', [KasController::class, 'bukti'])->name('kas.bukti');
+    Route::post('/kas/{transaksi}/bukti', [KasController::class, 'uploadBukti'])->name('kas.bukti.upload');
 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');

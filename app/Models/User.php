@@ -71,7 +71,7 @@ class User extends Authenticatable
 
     public function canSwitchOutlet(): bool
     {
-        return $this->isSuperAdmin() || $this->hasRole('admin');
+        return $this->isSuperAdmin();
     }
 
     public function hasPermission(string $permission): bool
@@ -94,7 +94,7 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->isSuperAdmin() || $this->hasRole('admin')) {
+        if ($this->isSuperAdmin()) {
             return true;
         }
 

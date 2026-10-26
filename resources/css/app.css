@@ -1353,4 +1353,260 @@
             padding: 40px 28px 32px;
         }
     }
+
+    .kas-summary {
+        display: grid;
+        grid-template-columns: 1.4fr 0.9fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .kas-balance {
+        display: flex;
+        min-height: 220px;
+        flex-direction: column;
+        border-radius: 20px;
+        background: linear-gradient(165deg, #7a1c19 0%, #4c100f 100%);
+        padding: 22px 24px 18px;
+        color: #fff;
+        box-shadow: 0 16px 40px rgba(80, 16, 15, 0.22);
+    }
+
+    .kas-name {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid transparent;
+        background: transparent;
+        padding: 0 0 4px;
+        color: #fff;
+        font-family: var(--font-serif);
+        font-size: 1.45rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .kas-name:hover,
+    .kas-name:focus {
+        border-bottom-color: rgba(255, 255, 255, 0.35);
+        outline: none;
+    }
+
+    .kas-kicker {
+        margin: 22px 0 0;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .kas-amount {
+        margin: 6px 0 0;
+        font-variant-numeric: tabular-nums;
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+    }
+
+    .kas-amount.is-low { color: #ffd7a8; }
+    .kas-amount.is-neg { color: #ffc7c3; }
+
+    .kas-warn {
+        align-self: flex-start;
+        margin: 14px 0 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+        padding: 6px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .kas-limit {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 13px;
+    }
+
+    .kas-limit input {
+        width: 128px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 7px 10px;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .kas-limit input:focus {
+        border-color: #fff;
+        outline: none;
+    }
+
+    .kas-side {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .kas-stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-radius: 16px;
+        background: #fff;
+        padding: 14px 16px;
+        box-shadow: 0 4px 18px rgba(47, 43, 61, 0.08);
+    }
+
+    .kas-stat span {
+        color: #737373;
+        font-size: 13px;
+    }
+
+    .kas-stat strong,
+    .kas-stat input {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+
+    .kas-stat input {
+        width: 140px;
+        border: 1px solid #e7e0da;
+        border-radius: 10px;
+        background: #faf7f4;
+        padding: 7px 10px;
+        text-align: right;
+    }
+
+    .kas-stat input:focus {
+        border-color: var(--color-brand);
+        outline: none;
+    }
+
+    .kas-in { color: #1f7a4d; }
+    .kas-out { color: #9a2b28; }
+
+    .kas-side .btn-add { margin-top: auto; }
+
+    .kas-entry .card-header { padding-bottom: 8px; }
+
+    .kas-toggle {
+        display: inline-grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        border-radius: 12px;
+        background: #f6f1ee;
+        padding: 4px;
+    }
+
+    .kas-toggle label {
+        border-radius: 9px;
+        padding: 8px 14px;
+        color: #737373;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .kas-toggle label.is-out { background: #fff; color: #9a2b28; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+    .kas-toggle label.is-in { background: #fff; color: #1f7a4d; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+
+    .kas-head,
+    .kas-line {
+        display: grid;
+        grid-template-columns: 1.3fr 1.2fr 0.9fr 36px;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .kas-head { margin-bottom: 8px; }
+    .kas-head .label { margin-bottom: 0; }
+    .kas-date { max-width: 220px; }
+
+    .kas-lines { display: flex; flex-direction: column; gap: 8px; }
+
+    .kas-x {
+        display: inline-flex;
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: #b9b0aa;
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .kas-x:hover:not(:disabled) { background: #f8eceb; color: #9a2b28; }
+    .kas-x:disabled { visibility: hidden; }
+
+    .kas-add {
+        margin-top: 10px;
+        border: 1px dashed #e0d6cf;
+        border-radius: 12px;
+        background: #faf7f4;
+        padding: 10px 12px;
+        color: var(--color-brand);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .kas-add:hover { background: #f3e6e4; }
+
+    .kas-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px dashed #e0d6cf;
+        border-radius: 12px;
+        background: #faf7f4;
+        padding: 12px 14px;
+        color: #737373;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .kas-file:hover { border-color: #c9b8b0; }
+
+    .kas-total {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.05rem;
+    }
+
+    .kas .list-table td,
+    .kas .list-table th { font-variant-numeric: tabular-nums; }
+
+    .kas-pill {
+        display: inline-block;
+        min-width: 88px;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .kas-pill.out { background: #f8eceb; color: #9a2b28; }
+    .kas-pill.in { background: #e7f6ee; color: #1f7a4d; }
+
+    @media (max-width: 900px) {
+        .kas-summary { grid-template-columns: 1fr; }
+        .kas-head { display: none; }
+        .kas-line { grid-template-columns: 1fr; }
+        .kas-x { justify-self: end; }
+        .kas-x:disabled { display: none; }
+    }
 }

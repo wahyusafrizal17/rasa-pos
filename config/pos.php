@@ -12,12 +12,8 @@ return [
 
     'roles' => [
         'super_admin' => 'Super Admin',
-        'admin' => 'Admin',
         'outlet_manager' => 'Outlet Manager',
         'cashier' => 'Cashier',
-        'captain' => 'Captain Order',
-        'kitchen' => 'Kitchen Checker',
-        'bar' => 'Bar Checker',
     ],
 
     'permissions' => [
@@ -52,19 +48,11 @@ return [
         'outlets.manage',
         'settings.manage',
         'audit.view',
+        'finance.manage',
     ],
 
     'role_permissions' => [
         'super_admin' => ['*'],
-        'admin' => [
-            'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout', 'orders.check', 'orders.cancel',
-            'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
-            'marketing.view', 'marketing.manage',
-            'products.view', 'products.manage', 'inventory.view', 'inventory.manage', 'inventory.approve',
-            'production.view', 'production.manage', 'printers.view', 'printers.manage',
-            'reports.view', 'reports.export', 'users.view', 'users.manage',
-            'outlets.view', 'outlets.manage', 'settings.manage', 'audit.view',
-        ],
         'outlet_manager' => [
             'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout', 'orders.check', 'orders.cancel',
             'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
@@ -72,20 +60,11 @@ return [
             'inventory.view', 'inventory.manage', 'inventory.approve',
             'production.view', 'production.manage', 'printers.view',
             'reports.view', 'reports.export',
+            'finance.manage',
         ],
         'cashier' => [
             'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout',
             'tables.view', 'customers.view', 'customers.manage',
-        ],
-        'captain' => [
-            'dashboard.view', 'pos.access', 'orders.view', 'orders.manage', 'orders.checkout',
-            'tables.view', 'tables.manage', 'customers.view', 'customers.manage',
-        ],
-        'kitchen' => [
-            'dashboard.view', 'orders.view', 'orders.check', 'production.view', 'production.manage',
-        ],
-        'bar' => [
-            'dashboard.view', 'orders.view', 'orders.check',
         ],
     ],
 ];

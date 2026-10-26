@@ -67,6 +67,7 @@ class OrderService
                 'tax_rate' => tax_rate(),
                 'guest_count' => $data['guest_count'] ?? 1,
                 'notes' => $data['notes'] ?? null,
+                'guest_name' => $this->guestName($data),
             ]);
 
             $this->recordHistory($order, null, OrderStatus::Draft->value, 'Order dibuat');
@@ -319,6 +320,10 @@ class OrderService
         if (! empty($data['order_type'])) {
             $order->order_type = $data['order_type'];
             $order->channel = $this->channelFromType($data['order_type']);
+        }
+
+        if (array_key_exists('guest_name', $data)) {
+            $order->guest_name = $this->guestName($data);
         }
 
         if (! empty($data['table_id'])) {
@@ -590,6 +595,13 @@ class OrderService
         }
 
         return $order->fresh(['items.product', 'customer', 'table']);
+    }
+
+    protected function guestName(array $data): ?string
+    {
+        $name = trim((string) ($data['guest_name'] ?? ''));
+
+        return $name === '' ? null : $name;
     }
 
     protected function channelFromType(mixed $type): OrderChannel

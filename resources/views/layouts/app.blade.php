@@ -66,6 +66,7 @@
                             ['label' => 'Categories', 'route' => 'reports.categories', 'perm' => 'reports.view', 'icon' => 'folder'],
                             ['label' => 'Promo', 'route' => 'reports.promo', 'perm' => 'reports.view', 'icon' => 'megaphone'],
                         ]],
+                        ['label' => 'Keuangan', 'route' => 'kas.index', 'active' => 'kas.*', 'perm' => 'finance.manage', 'icon' => 'wallet'],
                         ['label' => 'Pengaturan', 'icon' => 'settings', 'children' => [
                             ['label' => 'General', 'route' => 'settings.index', 'perm' => 'settings.manage', 'icon' => 'settings'],
                             ['label' => 'Outlets', 'route' => 'outlets.index', 'active' => 'outlets.*', 'perm' => 'outlets.view', 'icon' => 'building'],

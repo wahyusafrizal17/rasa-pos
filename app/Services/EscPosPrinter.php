@@ -43,6 +43,9 @@ class EscPosPrinter
         if ($order->table?->code) {
             $type .= ' · '.$order->table->code;
         }
+        if ($order->guest_name) {
+            $type .= ' · '.$order->guest_name;
+        }
         $out .= $this->line($type);
         $out .= $this->line('Kasir: '.($order->user?->name ?? '-'));
         $out .= $this->rule();
@@ -105,6 +108,9 @@ class EscPosPrinter
         if ($order->table?->code) {
             $type .= ' · '.$order->table->code;
         }
+        if ($order->guest_name) {
+            $type .= ' · '.$order->guest_name;
+        }
 
         return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
             .'html,body{margin:0;padding:0;width:72mm;font:12px/1.35 monospace;color:#000;background:#fff}'
@@ -157,6 +163,9 @@ class EscPosPrinter
         $out .= $this->line($order->order_number);
         if ($order->table?->code) {
             $out .= $this->line('Meja '.$order->table->code);
+        }
+        if ($order->guest_name) {
+            $out .= $this->line($order->guest_name);
         }
         $out .= $this->rule();
         $out .= $this->align(0);

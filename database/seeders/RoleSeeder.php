@@ -48,5 +48,7 @@ class RoleSeeder extends Seeder
                 Permission::query()->whereIn('name', $names)->pluck('id')
             );
         }
+
+        Role::query()->whereNotIn('name', array_keys($roles))->delete();
     }
 }

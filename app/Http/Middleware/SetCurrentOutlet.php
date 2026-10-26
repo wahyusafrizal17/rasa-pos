@@ -27,7 +27,7 @@ class SetCurrentOutlet
             $outlet = $user->defaultOutlet()
                 ?? Outlet::query()->where('is_active', true)->first();
             session(['current_outlet_id' => $outlet?->id]);
-        } elseif (! $user->canAccessOutlet($current) && ! $user->isSuperAdmin() && ! $user->hasRole('admin')) {
+        } elseif (! $user->canAccessOutlet($current)) {
             session(['current_outlet_id' => $user->defaultOutlet()?->id]);
         }
 

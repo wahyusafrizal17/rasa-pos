@@ -92,11 +92,13 @@
         <aside class="order-panel">
             <div class="mx-5 space-y-2 border-b border-[#f0ebe6] py-4">
                 <div class="flex items-center gap-2">
-                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="order_type">
-                        <option value="dine_in">Dine-in</option>
+                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="order_type" @change="if (order_type !== 'dine_in') table_id = ''; if (order_type !== 'take_away') guest_name = ''; saveGuest()">
+                        <option value="dine_in">Dine In</option>
+                        <option value="take_away">Take Away</option>
                         <option value="pickup">Pickup</option>
                         <option value="online">Online</option>
                     </select>
+                    <input x-show="order_type === 'take_away'" x-cloak x-model="guest_name" @change="saveGuest()" class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" placeholder="Nama" maxlength="80">
                     <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="table_id" x-show="order_type === 'dine_in'" x-cloak>
                         <option value="">Pilih meja</option>
                         @foreach ($tables as $table)
@@ -264,6 +266,16 @@
         </div>
     </div>
 
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" x-show="receiptUrl" x-cloak @keydown.escape.window="receiptUrl = ''" @click.self="receiptUrl = ''">
+        <div class="pay-modal flex flex-col">
+            <div class="flex items-center justify-between px-5 py-3">
+                <p class="text-sm font-semibold text-heading">Struk</p>
+                <button type="button" class="btn-ghost !py-2" @click="receiptUrl = ''">Tutup</button>
+            </div>
+            <iframe class="w-full border-0 bg-white" style="height:75vh" :src="receiptUrl || 'about:blank'" title="Struk"></iframe>
+        </div>
+    </div>
+
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="openHeld" x-cloak>
         <div class="card w-full max-w-lg p-6">
             <div class="flex items-start justify-between gap-3">
@@ -364,8 +376,8 @@
 <script>
 function posApp() {
     return {
-        order: null, search: '', category: null, order_type: 'dine_in', table_id: '',
-        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, choiceOpen: false, busy: false, busyCount: 0, notice: '',
+        order: null, search: '', category: null, order_type: 'dine_in', table_id: '', guest_name: '',
+        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, choiceOpen: false, busy: false, busyCount: 0, notice: '', receiptUrl: '',
         qrisUrl: '', qrisRef: '', qrisOpen: false, qrisTimer: null,
         pendingAdd: null, selectedAddonIds: [], pendingChoice: null, choiceOptional: '', choiceExpresso: '',
         productAddons: @json($productAddons),
@@ -515,29 +527,21 @@ function posApp() {
             this.qrisOpen = false;
             this.qrisUrl = '';
             this.qrisRef = '';
-            if (!data.order) return;
-            this.busyCount += 1;
-            this.busy = true;
-            try {
-                const qzOk = window.RasaQz?.printReceipt
-                    ? await window.RasaQz.printReceipt(data)
-                    : false;
-                this.notice = qzOk
-                    ? 'Pembayaran berhasil, struk dicetak.'
-                    : 'Pembayaran berhasil. QZ Tray belum cetak — jalankan QZ Tray. Jangan print dari Chrome.';
-                this.order = null;
-                this.tendered = 0;
-                localStorage.removeItem('pos_offline_draft');
-            } finally {
-                this.busyCount = Math.max(0, this.busyCount - 1);
-                this.busy = this.busyCount > 0;
-            }
+            const orderId = data.order?.id;
+            if (!orderId) return;
+            this.receiptUrl = `/pos/${orderId}/receipt`;
+            this.notice = 'Pembayaran berhasil.';
+            this.order = null;
+            this.guest_name = '';
+            this.tendered = 0;
+            localStorage.removeItem('pos_offline_draft');
         },
         async startQris() {
             this.notice = '';
             try {
+                await this.saveGuest();
                 const data = await this.request(`/pos/${this.order.id}/qris`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                    order_type: this.order_type, table_id: this.table_id || null,
+                    order_type: this.order_type, table_id: this.table_id || null, guest_name: this.order_type === 'take_away' ? this.guest_name : '',
                 })});
                 this.qrisUrl = data.qr_url;
                 this.qrisRef = data.reference_no || data.faspay_reference_no || '';
@@ -558,7 +562,7 @@ function posApp() {
         },
         persistDraft() {
             const payload = {
-                order_type: this.order_type, table_id: this.table_id,
+                order_type: this.order_type, table_id: this.table_id, guest_name: this.guest_name,
                 items: (this.order?.items || []).map((item) => ({
                     product_id: item.product_id, product_variant_id: item.product_variant_id, bundle_id: item.bundle_id,
                     quantity: item.quantity, notes: item.notes,
@@ -573,6 +577,7 @@ function posApp() {
                 const draft = JSON.parse(raw);
                 this.order_type = draft.order_type || this.order_type;
                 this.table_id = draft.table_id || '';
+                this.guest_name = draft.guest_name || '';
             } catch (e) {}
         },
         queue(action) {
@@ -589,6 +594,13 @@ function posApp() {
                     await this.addProduct(action.product_id, action.variant_id, action.bundle_id, true, action.addon_ids || [], null, action.modifiers || null);
                 }
             }
+        },
+        async saveGuest() {
+            if (!this.order) return;
+            this.order = await this.request(`/pos/${this.order.id}`, { method: 'PATCH', headers: await this.csrf(), body: JSON.stringify({
+                order_type: this.order_type,
+                guest_name: this.order_type === 'take_away' ? this.guest_name : '',
+            })});
         },
         async csrf() { return { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' }; },
         appUrl(url) {
@@ -625,7 +637,7 @@ function posApp() {
         async ensureOrder() {
             if (this.order) return this.order;
             this.order = await this.request('{{ route('pos.draft', absolute: false) }}', { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
-                order_type: this.order_type, table_id: this.table_id || null, channel: this.channel()
+                order_type: this.order_type, table_id: this.table_id || null, guest_name: this.order_type === 'take_away' ? this.guest_name : '', channel: this.channel()
             })});
             return this.order;
         },
@@ -750,6 +762,7 @@ function posApp() {
             const held = await this.request(`/pos/${this.order.id}/hold`, { method: 'POST', headers: await this.csrf() });
             this.heldOrders = [held, ...this.heldOrders.filter((item) => item.id !== held.id)];
             this.order = null;
+            this.guest_name = '';
             this.discount_id = '';
             localStorage.removeItem('pos_offline_draft');
         },
@@ -760,6 +773,7 @@ function posApp() {
             this.order = await this.request(`/pos/${id}/recall`, { headers: await this.csrf() });
             this.table_id = this.order.table_id || '';
             this.order_type = this.order.order_type || this.order_type;
+            this.guest_name = this.order.guest_name || '';
             this.discount_id = this.order.discount_id || '';
             this.heldOrders = this.heldOrders.filter((item) => item.id !== id);
             this.openHeld = false;
@@ -781,10 +795,11 @@ function posApp() {
             }
             this.notice = '';
             try {
+                await this.saveGuest();
                 const paid = this.method === 'cash' ? this.tenderedAmount() : this.grandTotal();
                 const data = await this.request(`/pos/${this.order.id}/checkout`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
                     method: this.method, amount: this.grandTotal(), tendered: paid,
-                    order_type: this.order_type, table_id: this.table_id || null,
+                    order_type: this.order_type, table_id: this.table_id || null, guest_name: this.order_type === 'take_away' ? this.guest_name : '',
                 })});
                 await this.finishPaid(data);
             } catch (e) {

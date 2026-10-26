@@ -12,27 +12,16 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = Hash::make('password');
-
-        foreach ([
-            ['name' => 'Wahyu', 'email' => 'admin@example.com', 'role' => 'super_admin'],
-            ['name' => 'Rina Manager', 'email' => 'manager@example.com', 'role' => 'outlet_manager'],
-            ['name' => 'Dina Cashier', 'email' => 'cashier@example.com', 'role' => 'cashier'],
-            ['name' => 'Budi Kitchen', 'email' => 'kitchen@example.com', 'role' => 'kitchen'],
-            ['name' => 'Andi Captain', 'email' => 'captain@example.com', 'role' => 'captain'],
-            ['name' => 'Sari Bar', 'email' => 'bar@example.com', 'role' => 'bar'],
-        ] as $def) {
-            $user = User::query()->updateOrCreate(
-                ['email' => $def['email']],
-                [
-                    'name' => $def['name'],
-                    'password' => $password,
-                    'is_active' => true,
-                    'email_verified_at' => now(),
-                ],
-            );
-            $user->roles()->sync([Role::query()->where('name', $def['role'])->firstOrFail()->id]);
-        }
+        $user = User::query()->updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Wahyu',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ],
+        );
+        $user->roles()->sync([Role::query()->where('name', 'super_admin')->firstOrFail()->id]);
 
         foreach ([
             'tax_rate' => '11',
