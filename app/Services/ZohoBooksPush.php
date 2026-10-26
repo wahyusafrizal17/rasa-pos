@@ -51,7 +51,7 @@ class ZohoBooksPush
             throw new RuntimeException('Order '.$order->order_number.' has no Zoho items');
         }
 
-        $payload = [
+        $payload = $this->withDiscount($order, [
             'customer_id' => config('zoho.customer_id'),
             'date' => $order->created_at?->toDateString() ?? now()->toDateString(),
             'reference_number' => $order->order_number,
@@ -59,7 +59,7 @@ class ZohoBooksPush
                 ['api_name' => 'cf_source', 'value' => config('zoho.cf_source', 'POS')],
             ],
             'line_items' => $lines,
-        ];
+        ]);
 
         if ($order->outlet?->zoho_location_id) {
             $payload['location_id'] = $order->outlet->zoho_location_id;
@@ -88,12 +88,12 @@ class ZohoBooksPush
             throw new RuntimeException('Zoho SO '.$order->zoho_salesorder_id.' has no line items');
         }
 
-        $invoice = $this->zoho->post('/books/v3/invoices', [
+        $invoice = $this->zoho->post('/books/v3/invoices', $this->withDiscount($order, [
             'customer_id' => config('zoho.customer_id'),
             'reference_number' => $order->order_number,
             'date' => now()->toDateString(),
             'line_items' => $lines,
-        ])['invoice'] ?? [];
+        ]))['invoice'] ?? [];
 
         $order->update(['zoho_invoice_id' => (string) ($invoice['invoice_id'] ?? '')]);
         $this->zoho->post('/books/v3/invoices/'.$order->zoho_invoice_id.'/status/sent');
@@ -118,6 +118,20 @@ class ZohoBooksPush
         ])['payment'] ?? [];
 
         $order->update(['zoho_payment_id' => (string) ($payment['payment_id'] ?? '')]);
+    }
+
+    protected function withDiscount(Order $order, array $payload): array
+    {
+        $discount = round((float) $order->discount_amount, 2);
+        if ($discount <= 0) {
+            return $payload;
+        }
+
+        $payload['discount'] = $discount;
+        $payload['discount_type'] = 'entity_level';
+        $payload['is_discount_before_tax'] = true;
+
+        return $payload;
     }
 
     protected function lineItems(Order $order): array
