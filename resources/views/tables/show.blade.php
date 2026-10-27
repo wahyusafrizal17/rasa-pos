@@ -32,7 +32,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <a href="{{ route('orders.show', $order) }}" class="font-medium hover:underline">{{ $order->order_number }}</a>
-                            <p class="text-xs text-slate-400">{{ $order->created_at?->format('d/m/Y H:i') }}</p>
+                            <p class="text-xs text-slate-400">{{ wib($order->created_at) }}</p>
                         </div>
                         <x-status :value="$order->status->color()">{{ $order->status->label() }}</x-status>
                     </div>

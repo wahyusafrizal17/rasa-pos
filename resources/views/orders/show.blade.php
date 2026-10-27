@@ -13,7 +13,7 @@
                 <div class="card-header">
                     <div>
                         <h5 class="card-header-title">Informasi order</h5>
-                        <p class="card-header-subtitle">{{ $order->outlet?->name }} · {{ $order->created_at?->format('d/m/Y H:i') }}</p>
+                        <p class="card-header-subtitle">{{ $order->outlet?->name }} · {{ wib($order->created_at) }}</p>
                     </div>
                     <div class="card-header-actions">
                         <x-status :value="$order->status->color()">{{ $order->status->label() }}</x-status>
@@ -142,7 +142,7 @@
                             <div>
                                 <p class="font-semibold">{{ $payment->method?->label() ?? $payment->method }}</p>
                                 <p class="text-xs text-muted">
-                                    {{ $payment->created_at?->format('d/m/Y H:i') }}
+                                    {{ wib($payment->created_at) }}
                                     @if ($payment->reference) · Ref {{ $payment->reference }} @endif
                                 </p>
                             </div>

@@ -88,7 +88,7 @@
                             @php $row = $log->toModalArray(); @endphp
                             <tr>
                                 <td class="col-no">{{ $logs->firstItem() + $loop->index }}</td>
-                                <td class="text-[13px] text-muted">{{ $log->created_at?->format('d/m/Y H:i') }}</td>
+                                <td class="text-[13px] text-muted">{{ wib($log->created_at) }}</td>
                                 <td>{{ $log->user?->name ?? 'Sistem' }}</td>
                                 <td><span class="badge-soft">{{ $log->module }}</span></td>
                                 <td>

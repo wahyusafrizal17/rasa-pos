@@ -148,7 +148,7 @@
                                     —
                                 @endif
                             </td>
-                            <td>{{ $order->created_at?->format('d/m/Y H:i') }}</td>
+                            <td>{{ wib($order->created_at) }}</td>
                             @unless ($exporting ?? false)
                                 <td class="col-actions">
                                     <div class="flex items-center justify-end gap-1.5">

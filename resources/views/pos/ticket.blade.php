@@ -379,7 +379,7 @@
             <dl class="meta">
                 <div>
                     <dt>Tanggal</dt>
-                    <dd>{{ $order->created_at?->format('d M Y · H:i') }}</dd>
+                    <dd>{{ wib($order->created_at, 'd M Y · H:i') }}</dd>
                 </div>
                 <div>
                     <dt>Server</dt>

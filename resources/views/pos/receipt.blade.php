@@ -65,7 +65,7 @@
     <img class="head-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
     <h1>{{ $order->outlet?->name ?? config('app.name') }}</h1>
     <p class="center muted">{{ $order->order_number }}</p>
-    <p class="center muted">{{ $order->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}</p>
+    <p class="center muted">{{ wib($order->created_at) }}</p>
     <p class="center muted">{{ $order->order_type->label() }}@if($order->table) · {{ $order->table->code }}@endif</p>
     <p class="center muted">Kasir: {{ $order->user?->name }}</p>
     <hr>

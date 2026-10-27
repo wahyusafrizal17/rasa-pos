@@ -20,7 +20,7 @@
             <div>
                 <p class="stat-kicker">Hari ini</p>
                 <p class="stat-value">{{ number_format($stats['today']) }}</p>
-                <p class="stat-hint">{{ now()->format('d/m/Y') }}</p>
+                <p class="stat-hint">{{ wib(now(), 'd/m/Y') }}</p>
             </div>
             <span class="stat-icon bg-[#e8f8ee] text-[#1f9d57]">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -129,7 +129,7 @@
                             <td>
                                 <a href="{{ route('orders.show', $order) }}" class="font-semibold hover:underline">{{ $order->order_number }}</a>
                             </td>
-                            <td class="text-muted">{{ $order->created_at?->format('d/m/Y H:i') }}</td>
+                            <td class="text-muted">{{ wib($order->created_at) }}</td>
                             <td>{{ $order->outlet?->name ?? '—' }}</td>
                             <td>{{ $order->customer?->name ?? 'Walk-in' }}</td>
                             <td>{{ $order->table?->code ?? '—' }}</td>

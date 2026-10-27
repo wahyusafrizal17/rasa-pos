@@ -38,7 +38,7 @@ class EscPosPrinter
             $out .= $this->bold(false);
         }
         $out .= $this->line($order->order_number);
-        $out .= $this->line($order->created_at?->timezone('Asia/Jakarta')->format('d/m/Y H:i') ?? '');
+        $out .= $this->line(wib($order->created_at));
         $type = $order->order_type?->label() ?? '';
         if ($order->table?->code) {
             $type .= ' · '.$order->table->code;
@@ -120,7 +120,7 @@ class EscPosPrinter
             .'<div class="c b">'.$this->e($order->outlet?->name ?: (string) config('app.name')).'</div>'
             .($copy ? '<div class="c b">'.$this->e($copy).'</div>' : '')
             .'<div class="c">'.$this->e($order->order_number).'</div>'
-            .'<div class="c">'.$this->e($order->created_at?->timezone('Asia/Jakarta')->format('d/m/Y H:i') ?? '').'</div>'
+            .'<div class="c">'.$this->e(wib($order->created_at)).'</div>'
             .'<div class="c">'.$this->e($type).'</div>'
             .'<div class="c">Kasir: '.$this->e($order->user?->name ?? '-').'</div>'
             .'<hr class="hr">'

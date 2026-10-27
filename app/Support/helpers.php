@@ -2,11 +2,39 @@
 
 use App\Models\Outlet;
 use App\Models\Setting;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 function money(float|int|string|null $amount): string
 {
     return 'Rp '.number_format((float) ($amount ?? 0), 0, ',', '.');
+}
+
+/** Tampilkan waktu tersimpan UTC sebagai WIB. */
+function wib(\DateTimeInterface|string|null $value, string $format = 'd/m/Y H:i'): string
+{
+    if ($value === null || $value === '') {
+        return '';
+    }
+
+    $wall = $value instanceof \DateTimeInterface
+        ? $value->format('Y-m-d H:i:s')
+        : (string) $value;
+
+    return Carbon::parse($wall, 'UTC')->timezone('Asia/Jakarta')->format($format);
+}
+
+/** Awal & akhir hari WIB sebagai UTC (untuk filter whereBetween). */
+function wib_day_bounds(\DateTimeInterface|string|null $day = null): array
+{
+    $local = $day
+        ? Carbon::parse($day, 'Asia/Jakarta')->timezone('Asia/Jakarta')
+        : Carbon::now('Asia/Jakarta');
+
+    return [
+        $local->copy()->startOfDay()->utc(),
+        $local->copy()->endOfDay()->utc(),
+    ];
 }
 
 function money_decimal(float|int|string|null $amount): string

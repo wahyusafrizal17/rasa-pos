@@ -20,7 +20,11 @@ class OrderController extends Controller
         $orders = Order::query()
             ->with(['outlet', 'customer', 'table', 'user'])
             ->when($request->order_number, fn ($q, $s) => $q->where('order_number', 'like', "%{$s}%"))
-            ->when($request->date, fn ($q, $d) => $q->whereDate('created_at', $d))
+            ->when($request->date, function ($q, $d) {
+                [$from, $to] = wib_day_bounds($d);
+
+                return $q->whereBetween('created_at', [$from, $to]);
+            })
             ->when($request->outlet_id, fn ($q, $id) => $q->where('outlet_id', $id))
             ->when($request->customer, fn ($q, $s) => $q->whereHas('customer', fn ($c) => $c->where('name', 'like', "%{$s}%")))
             ->when($request->table, fn ($q, $s) => $q->whereHas('table', fn ($t) => $t->where('code', 'like', "%{$s}%")))
@@ -32,6 +36,8 @@ class OrderController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        [$todayFrom, $todayTo] = wib_day_bounds();
+
         return view('orders.index', [
             'orders' => $orders,
             'outlets' => Outlet::query()->orderBy('name')->get(),
@@ -41,7 +47,7 @@ class OrderController extends Controller
             ]),
             'stats' => [
                 'total' => Order::query()->count(),
-                'today' => Order::query()->whereDate('created_at', today())->count(),
+                'today' => Order::query()->whereBetween('created_at', [$todayFrom, $todayTo])->count(),
                 'kitchen' => Order::query()->whereIn('status', [
                     OrderStatus::New->value,
                     OrderStatus::Processing->value,
