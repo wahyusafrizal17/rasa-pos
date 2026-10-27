@@ -22,11 +22,17 @@ use Illuminate\View\View;
 
 class PosController extends Controller
 {
-    public function index(Request $request, DiscountService $discounts): View
+    public function index(Request $request, DiscountService $discounts): View|RedirectResponse
     {
         abort_unless($request->user()->hasPermission('pos.access'), 403);
 
         $outletId = current_outlet_id();
+        if (! $outletId) {
+            return redirect()
+                ->route('products.index')
+                ->with('error', 'Belum ada outlet. Jalankan Sinkronisasi Zoho di halaman Products dulu.');
+        }
+
         $categories = $this->posCategories($outletId);
         $categoryIds = $categories->pluck('id');
 
