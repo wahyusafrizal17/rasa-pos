@@ -6,9 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>POS · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script>window.RasaQz = { printer: @json($qzPrinter ?? setting('qz_printer', '')) };</script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
-    @include('layouts.partials.qz-print')
+    <script>window.RasaPrint = { printer: @json($qzPrinter ?? setting('qz_printer', '')) };</script>
+    @include('layouts.partials.bt-print')
 </head>
 <body class="h-full overflow-hidden bg-white text-ink">
     <div class="flex h-full flex-col overflow-hidden">

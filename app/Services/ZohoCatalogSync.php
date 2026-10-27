@@ -35,15 +35,22 @@ class ZohoCatalogSync
         $onProgress && $onProgress('Items '.$total);
         $products = 0;
         $stocks = 0;
+        $seen = [];
 
         foreach ($items as $row) {
-            try {
-                $detail = array_merge($row, $this->zoho->get('/inventory/v1/items/'.$row['item_id'])['item'] ?? []);
-            } catch (\RuntimeException) {
+            $itemId = (string) ($row['item_id'] ?? '');
+            if ($itemId === '') {
                 continue;
             }
 
+            try {
+                $detail = array_merge($row, $this->zoho->get('/inventory/v1/items/'.$itemId)['item'] ?? []);
+            } catch (\RuntimeException) {
+                $detail = $row; // ponytail: list row still updates price/status; keep old stock if locations missing
+            }
+
             $product = $this->syncProduct($detail);
+            $seen[] = $itemId;
             $products++;
             $stocks += $this->syncStock($product, $outlets, $detail['locations'] ?? []);
             if ($onProgress && $products % 25 === 0) {
@@ -51,9 +58,18 @@ class ZohoCatalogSync
             }
         }
 
+        $removed = 0;
+        if ($seen !== []) {
+            $removed = Product::query()
+                ->whereNotNull('zoho_item_id')
+                ->whereNotIn('zoho_item_id', $seen)
+                ->update(['is_active' => false, 'is_sellable' => false]);
+        }
+
         return [
             'outlets' => $outlets->count(),
             'products' => $products,
+            'removed' => $removed,
             'stocks' => $stocks,
         ];
     }
@@ -126,10 +142,13 @@ class ZohoCatalogSync
             $data['image'] = $image;
         }
 
-        return Product::query()->updateOrCreate(
-            ['zoho_item_id' => $itemId],
-            $data,
-        );
+        $product = Product::withTrashed()->firstOrNew(['zoho_item_id' => $itemId]);
+        if ($product->trashed()) {
+            $product->restore();
+        }
+        $product->fill($data)->save();
+
+        return $product;
     }
 
     protected function syncImage(string $itemId, array $item, ?string $existing): ?string

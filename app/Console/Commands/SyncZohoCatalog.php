@@ -14,6 +14,24 @@ class SyncZohoCatalog extends Command
 
     protected $description = 'Sync outlet, kategori, produk, dan stok dari Zoho Inventory';
 
+    public static function acquireLock(int $seconds = 45 * 60): ?\Illuminate\Contracts\Cache\Lock
+    {
+        $lock = Cache::lock(self::LOCK, $seconds);
+        if ($lock->get()) {
+            return $lock;
+        }
+
+        // ponytail: steal only when log is quiet 10m; live sync writes every ~40s
+        $log = storage_path('logs/zoho-sync.log');
+        if (is_file($log) && filemtime($log) >= time() - 600) {
+            return null;
+        }
+
+        $lock->forceRelease();
+
+        return $lock->get() ? $lock : null;
+    }
+
     public function handle(ZohoCatalogSync $sync): int
     {
         set_time_limit(0);
@@ -30,8 +48,8 @@ class SyncZohoCatalog extends Command
             return self::FAILURE;
         }
 
-        $lock = Cache::lock(self::LOCK, 45 * 60);
-        if (! $lock->get()) {
+        $lock = self::acquireLock();
+        if (! $lock) {
             $this->logLine('Sync dilewati, masih berjalan.');
 
             return self::SUCCESS;
@@ -44,7 +62,7 @@ class SyncZohoCatalog extends Command
 
             $this->logLine('Mulai sync Zoho (~15 menit). Jangan Ctrl+C.');
             $summary = $sync->run(fresh: (bool) $this->option('fresh'), onProgress: fn (string $line) => $this->logLine($line));
-            $this->logLine('Selesai. Outlets '.$summary['outlets'].' · products '.$summary['products'].' · stock rows '.$summary['stocks']);
+            $this->logLine('Selesai. Outlets '.$summary['outlets'].' · products '.$summary['products'].' · removed '.$summary['removed'].' · stock rows '.$summary['stocks']);
         } finally {
             $lock->release();
         }

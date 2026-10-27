@@ -538,8 +538,19 @@ function posApp() {
             this.tendered = 0;
             localStorage.removeItem('pos_offline_draft');
         },
-        printReceipt() {
+        async printReceipt() {
             const frame = document.querySelector('iframe[title="Struk"]');
+            const escpos = frame?.contentWindow?.__receiptEscpos;
+            try {
+                if (escpos && window.RasaPrint?.printRaw) {
+                    await window.RasaPrint.printRaw('', escpos, true);
+                    this.notice = 'Struk terkirim ke printer Bluetooth.';
+                    return;
+                }
+            } catch (e) {
+                this.notice = e?.message || 'Gagal cetak Bluetooth.';
+                return;
+            }
             frame?.contentWindow?.focus();
             frame?.contentWindow?.print();
         },

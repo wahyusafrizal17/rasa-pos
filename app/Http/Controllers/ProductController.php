@@ -64,8 +64,8 @@ class ProductController extends Controller
     {
         abort_unless($request->user()->hasPermission('products.manage'), 403);
 
-        $lock = Cache::lock(SyncZohoCatalog::LOCK, 45 * 60);
-        if (! $lock->get()) {
+        $lock = SyncZohoCatalog::acquireLock();
+        if (! $lock) {
             return back()->with('success', 'Sinkronisasi Zoho masih berjalan.');
         }
         $lock->release();
@@ -74,7 +74,8 @@ class ProductController extends Controller
         if ($php === '' || str_contains(strtolower($php), 'fpm')) {
             $php = 'php';
         }
-        $command = escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' zoho:sync-catalog --no-interaction > /dev/null 2>&1 &';
+        $log = storage_path('logs/zoho-sync.log');
+        $command = 'nohup '.escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' zoho:sync-catalog --no-interaction >> '.escapeshellarg($log).' 2>&1 &';
         if (app()->runningUnitTests()) {
             Cache::put('zoho-catalog-sync.spawned', $command, 60);
         } else {

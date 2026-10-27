@@ -79,9 +79,9 @@
                 <h6 class="mb-4 text-sm font-semibold text-heading">Printer</h6>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="sm:col-span-2">
-                        <label class="label">Nama printer QZ Tray</label>
-                        <input class="input" type="text" name="qz_printer" maxlength="120" value="{{ $settings['qz_printer'] }}" placeholder="GEZHI micro-printer">
-                        <p class="mt-1 text-[12px] text-muted">Harus sama persis dengan nama di Windows, contoh GEZHI micro-printer. Di driver printer set Paper Size ke 80mm / Roll Paper, jangan Letter/A4.</p>
+                        <label class="label">Printer Bluetooth (raw)</label>
+                        <input class="input" type="text" name="qz_printer" maxlength="120" value="{{ $settings['qz_printer'] }}" placeholder="EPPOS / GEZHI">
+                        <p class="mt-1 text-[12px] text-muted">Pair printer Bluetooth di sistem dulu. Cetak struk mengirim ESC/POS mentah lewat port serial Bluetooth (Chrome). Tidak memakai QZ Tray.</p>
                         @error('qz_printer')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>

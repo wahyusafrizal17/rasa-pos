@@ -228,7 +228,7 @@
                                 <div class="sm:col-span-2">
                                     <label class="label">Nama</label>
                                     <input class="input" name="name" required maxlength="80" x-model="form.name" placeholder="GEZHI micro-printer">
-                                    <p class="mt-1 text-[12px] text-muted">Samakan dengan nama printer di sistem (QZ Tray).</p>
+                                    <p class="mt-1 text-[12px] text-muted">Untuk printer LAN dapur/bar (IP). Struk kasir memakai Bluetooth raw di POS.</p>
                                     @error('name')<p class="mt-1 text-sm text-red-600" x-show="serverFormError" x-cloak>{{ $message }}</p>@enderror
                                 </div>
                                 <div>

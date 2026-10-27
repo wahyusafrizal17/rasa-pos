@@ -38,31 +38,34 @@
 
         @media print {
             html, body { width: 80mm; }
-            #qz-status { display: none; }
+            #bt-status { display: none; }
         }
     </style>
-    <script>window.RasaQz = { printer: @json($qzPrinter ?? '') };</script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.5/qz-tray.js"></script>
-    @include('layouts.partials.qz-print')
+    <script>window.RasaPrint = { printer: @json($qzPrinter ?? '') };</script>
+    @include('layouts.partials.bt-print')
 </head>
 <body>
-    <p id="qz-status" class="center muted">Mencetak via QZ Tray…</p>
+    <p id="bt-status" class="center muted">Menyiapkan cetak Bluetooth…</p>
     <script>
+        window.__receiptEscpos = @json($receiptEscpos ?? '');
         (async function () {
-            var status = document.getElementById('qz-status');
+            var status = document.getElementById('bt-status');
+            if (!window.__receiptEscpos) {
+                status.textContent = 'Struk siap. Ketuk Cetak.';
+                return;
+            }
             try {
-                await window.RasaQz.printRaw(@json($qzPrinter ?? ''), @json($receiptEscpos ?? ''));
+                await window.RasaPrint.printRaw(@json($qzPrinter ?? ''), window.__receiptEscpos);
                 status.textContent = 'Struk terkirim ke printer.';
-                setTimeout(function () { window.close(); }, 800);
             } catch (e) {
-                status.hidden = true;
+                status.textContent = 'Ketuk Cetak untuk kirim ke printer Bluetooth.';
             }
         })();
     </script>
     <img class="head-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
     <h1>{{ $order->outlet?->name ?? config('app.name') }}</h1>
     <p class="center muted">{{ $order->order_number }}</p>
-    <p class="center muted">{{ $order->created_at->format('d/m/Y H:i') }}</p>
+    <p class="center muted">{{ $order->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }}</p>
     <p class="center muted">{{ $order->order_type->label() }}@if($order->table) · {{ $order->table->code }}@endif</p>
     <p class="center muted">Kasir: {{ $order->user?->name }}</p>
     <hr>
