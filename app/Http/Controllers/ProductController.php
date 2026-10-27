@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -82,7 +83,7 @@ class ProductController extends Controller
     {
         $php = $this->phpCliBinary();
         $artisan = base_path('artisan');
-        $log = storage_path('logs/zoho-sync.log');
+        $log = $this->writableZohoSyncLog();
         // setsid + stdin null: biar proses tidak mati ikut request PHP-FPM
         $command = sprintf(
             'cd %s && setsid %s %s zoho:sync-catalog --no-interaction --trigger=web >> %s 2>&1 < /dev/null & echo $!',
@@ -106,10 +107,22 @@ class ProductController extends Controller
         exec($command, $output);
         $pid = (int) trim((string) ($output[0] ?? '0'));
         if ($pid > 0) {
-            file_put_contents($log, now()->toDateTimeString().' Web button spawn pid='.$pid.PHP_EOL, FILE_APPEND);
+            Log::info('Zoho catalog sync spawned from web button', ['pid' => $pid, 'log' => $log]);
         }
 
         return $pid;
+    }
+
+    protected function writableZohoSyncLog(): string
+    {
+        $preferred = storage_path('logs/zoho-sync.log');
+        $dir = dirname($preferred);
+        if (is_dir($dir) && is_writable($dir) && (! is_file($preferred) || is_writable($preferred))) {
+            return $preferred;
+        }
+
+        // ponytail: CLI often owns zoho-sync.log; fall back so www-data does not 500
+        return storage_path('logs/laravel.log');
     }
 
     protected function phpCliBinary(): string

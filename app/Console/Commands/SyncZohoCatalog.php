@@ -89,11 +89,14 @@ class SyncZohoCatalog extends Command
 
     protected function logLine(string $line): void
     {
-        file_put_contents(
-            storage_path('logs/zoho-sync.log'),
-            now()->toDateTimeString().' '.$line.PHP_EOL,
-            FILE_APPEND,
-        );
+        $path = storage_path('logs/zoho-sync.log');
+        try {
+            if ((! is_file($path) && is_writable(dirname($path))) || (is_file($path) && is_writable($path))) {
+                file_put_contents($path, now()->toDateTimeString().' '.$line.PHP_EOL, FILE_APPEND);
+            }
+        } catch (\Throwable) {
+            // ignore permission issues on shared hosts
+        }
         $this->line($line);
     }
 }
