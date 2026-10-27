@@ -64,25 +64,68 @@ class ProductController extends Controller
     {
         abort_unless($request->user()->hasPermission('products.manage'), 403);
 
-        $lock = SyncZohoCatalog::acquireLock();
-        if (! $lock) {
+        $probe = Cache::lock(SyncZohoCatalog::LOCK, 1);
+        if (! $probe->get()) {
             return back()->with('success', 'Sinkronisasi Zoho masih berjalan.');
         }
-        $lock->release();
+        $probe->release();
 
-        $php = PHP_BINARY;
-        if ($php === '' || str_contains(strtolower($php), 'fpm')) {
-            $php = 'php';
+        $pid = $this->spawnCatalogSync();
+        if ($pid < 1) {
+            return back()->with('error', 'Gagal menjalankan sinkronisasi. Jalankan di server: php artisan zoho:sync-catalog --no-interaction');
         }
+
+        return back()->with('success', 'Sinkronisasi Zoho dimulai (pid '.$pid.'). Katalog selesai dalam beberapa menit.');
+    }
+
+    protected function spawnCatalogSync(): int
+    {
+        $php = $this->phpCliBinary();
+        $artisan = base_path('artisan');
         $log = storage_path('logs/zoho-sync.log');
-        $command = 'nohup '.escapeshellarg($php).' '.escapeshellarg(base_path('artisan')).' zoho:sync-catalog --no-interaction >> '.escapeshellarg($log).' 2>&1 &';
+        // setsid + stdin null: biar proses tidak mati ikut request PHP-FPM
+        $command = sprintf(
+            'cd %s && setsid %s %s zoho:sync-catalog --no-interaction >> %s 2>&1 < /dev/null & echo $!',
+            escapeshellarg(base_path()),
+            escapeshellarg($php),
+            escapeshellarg($artisan),
+            escapeshellarg($log),
+        );
+
         if (app()->runningUnitTests()) {
             Cache::put('zoho-catalog-sync.spawned', $command, 60);
-        } else {
-            exec($command);
+
+            return 1;
         }
 
-        return back()->with('success', 'Sinkronisasi Zoho dimulai. Katalog selesai dalam beberapa menit.');
+        if (! function_exists('exec')) {
+            return 0;
+        }
+
+        $output = [];
+        exec($command, $output);
+        $pid = (int) trim((string) ($output[0] ?? '0'));
+        if ($pid > 0) {
+            file_put_contents($log, now()->toDateTimeString().' Web button spawn pid='.$pid.PHP_EOL, FILE_APPEND);
+        }
+
+        return $pid;
+    }
+
+    protected function phpCliBinary(): string
+    {
+        $binary = PHP_BINARY;
+        if ($binary !== '' && ! str_contains(strtolower($binary), 'fpm') && is_executable($binary)) {
+            return $binary;
+        }
+
+        foreach (['/usr/bin/php', '/usr/local/bin/php'] as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return 'php';
     }
 
     public function choices(Request $request, Product $product): JsonResponse|RedirectResponse
