@@ -30,6 +30,7 @@ use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\TableController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WasteController;
+use App\Http\Controllers\ZohoSyncLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -105,6 +106,8 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('products/sync', [ProductController::class, 'sync'])->name('products.sync');
     Route::patch('products/{product}/choices', [ProductController::class, 'choices'])->name('products.choices');
     Route::resource('products', ProductController::class)->except('show');
+    Route::get('/sync-logs', [ZohoSyncLogController::class, 'index'])->name('sync-logs.index');
+    Route::get('/sync-logs/{syncLog}', [ZohoSyncLogController::class, 'show'])->name('sync-logs.show');
     Route::resource('categories', CategoryController::class)->except('show');
     Route::get('/customers/template', [CustomerController::class, 'template'])->name('customers.template');
     Route::post('/customers/import', [CustomerController::class, 'import'])->name('customers.import');

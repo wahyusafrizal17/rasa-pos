@@ -47,6 +47,7 @@
                             ['label' => 'Expresso', 'route' => 'catalog.choices', 'params' => ['group' => 'expresso'], 'route_param' => ['group' => 'expresso'], 'perm' => 'products.view', 'icon' => 'glass'],
                             ['label' => 'Categories', 'route' => 'categories.index', 'active' => 'categories.*', 'perm' => 'products.view', 'icon' => 'folder'],
                             ['label' => 'Bundles', 'route' => 'marketing.bundles', 'perm' => 'marketing.view', 'icon' => 'gift'],
+                            ['label' => 'Log Sinkronisasi', 'route' => 'sync-logs.index', 'active' => 'sync-logs.*', 'perm' => 'products.view', 'icon' => 'document'],
                         ]],
                         ['label' => 'Inventori', 'icon' => 'inventory', 'children' => [
                             ['label' => 'Stock', 'route' => 'inventory.index', 'perm' => 'inventory.view', 'icon' => 'inventory'],

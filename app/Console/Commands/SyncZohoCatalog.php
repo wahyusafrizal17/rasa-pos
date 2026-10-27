@@ -10,7 +10,7 @@ class SyncZohoCatalog extends Command
 {
     public const LOCK = 'zoho-catalog-sync';
 
-    protected $signature = 'zoho:sync-catalog {--fresh : Hapus data tes lalu isi dari Zoho}';
+    protected $signature = 'zoho:sync-catalog {--fresh : Hapus data tes lalu isi dari Zoho} {--trigger=cli : Sumber sync: cli|web|schedule}';
 
     protected $description = 'Sync outlet, kategori, produk, dan stok dari Zoho Inventory';
 
@@ -61,8 +61,25 @@ class SyncZohoCatalog extends Command
             }
 
             $this->logLine('Mulai sync Zoho (~15 menit). Jangan Ctrl+C.');
-            $summary = $sync->run(fresh: (bool) $this->option('fresh'), onProgress: fn (string $line) => $this->logLine($line));
-            $this->logLine('Selesai. Outlets '.$summary['outlets'].' · products '.$summary['products'].' · removed '.$summary['removed'].' · stock rows '.$summary['stocks']);
+            try {
+                $summary = $sync->run(
+                    fresh: (bool) $this->option('fresh'),
+                    onProgress: fn (string $line) => $this->logLine($line),
+                    trigger: (string) $this->option('trigger'),
+                );
+                $this->logLine(
+                    'Selesai. Outlets '.$summary['outlets']
+                    .' · products '.$summary['products']
+                    .' · +'.$summary['created']
+                    .' · ubah '.$summary['updated']
+                    .' · hapus '.$summary['removed']
+                    .' · stock rows '.$summary['stocks']
+                );
+            } catch (\Throwable $e) {
+                $this->logLine('Gagal: '.$e->getMessage());
+
+                return self::FAILURE;
+            }
         } finally {
             $lock->release();
         }

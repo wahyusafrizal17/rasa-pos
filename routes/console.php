@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('zoho:sync-catalog --no-interaction')
+Schedule::command('zoho:sync-catalog --no-interaction --trigger=schedule')
     ->timezone('Asia/Jakarta')
     ->twiceDaily(0, 12)
     ->withoutOverlapping(45)

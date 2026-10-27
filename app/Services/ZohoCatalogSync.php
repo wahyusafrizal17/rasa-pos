@@ -10,6 +10,7 @@ use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\ZohoSyncRun;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -19,59 +20,118 @@ class ZohoCatalogSync
 {
     public function __construct(protected ZohoClient $zoho) {}
 
-    public function run(bool $fresh = false, ?callable $onProgress = null): array
+    public function run(bool $fresh = false, ?callable $onProgress = null, string $trigger = 'cli'): array
     {
-        if ($fresh) {
-            $this->wipeOperationalData();
-        }
+        $run = ZohoSyncRun::query()->create([
+            'status' => 'running',
+            'trigger' => $trigger,
+            'started_at' => now(),
+        ]);
 
-        $locations = $this->zoho->paginate('/inventory/v1/locations', 'locations');
-        $outlets = $this->syncOutlets($locations);
-        $this->attachUsers($outlets);
-        $onProgress && $onProgress('Outlets '.$outlets->count());
-
-        $items = $this->zoho->paginate('/inventory/v1/items', 'items');
-        $total = count($items);
-        $onProgress && $onProgress('Items '.$total);
-        $products = 0;
-        $stocks = 0;
-        $seen = [];
-
-        foreach ($items as $row) {
-            $itemId = (string) ($row['item_id'] ?? '');
-            if ($itemId === '') {
-                continue;
+        try {
+            if ($fresh) {
+                $this->wipeOperationalData();
             }
 
-            try {
-                $detail = array_merge($row, $this->zoho->get('/inventory/v1/items/'.$itemId)['item'] ?? []);
-            } catch (\RuntimeException) {
-                $detail = $row; // ponytail: list row still updates price/status; keep old stock if locations missing
+            $locations = $this->zoho->paginate('/inventory/v1/locations', 'locations');
+            $outlets = $this->syncOutlets($locations);
+            $this->attachUsers($outlets);
+            $onProgress && $onProgress('Outlets '.$outlets->count());
+
+            $items = $this->zoho->paginate('/inventory/v1/items', 'items');
+            $total = count($items);
+            $onProgress && $onProgress('Items '.$total);
+            $products = 0;
+            $stocks = 0;
+            $seen = [];
+            $created = [];
+            $updated = [];
+
+            foreach ($items as $row) {
+                $itemId = (string) ($row['item_id'] ?? '');
+                if ($itemId === '') {
+                    continue;
+                }
+
+                try {
+                    $detail = array_merge($row, $this->zoho->get('/inventory/v1/items/'.$itemId)['item'] ?? []);
+                } catch (\RuntimeException) {
+                    $detail = $row; // ponytail: list row still updates price/status; keep old stock if locations missing
+                }
+
+                [$product, $change] = $this->syncProduct($detail);
+                if ($change['action'] === 'created') {
+                    $created[] = $change;
+                } elseif ($change['action'] === 'updated') {
+                    $updated[] = $change;
+                }
+                $seen[] = $itemId;
+                $products++;
+                $stocks += $this->syncStock($product, $outlets, $detail['locations'] ?? []);
+                if ($onProgress && $products % 25 === 0) {
+                    $onProgress($products.'/'.$total);
+                }
             }
 
-            $product = $this->syncProduct($detail);
-            $seen[] = $itemId;
-            $products++;
-            $stocks += $this->syncStock($product, $outlets, $detail['locations'] ?? []);
-            if ($onProgress && $products % 25 === 0) {
-                $onProgress($products.'/'.$total);
+            $removedRows = [];
+            if ($seen !== []) {
+                $gone = Product::query()
+                    ->whereNotNull('zoho_item_id')
+                    ->whereNotIn('zoho_item_id', $seen)
+                    ->where(function ($q) {
+                        $q->where('is_active', true)->orWhere('is_sellable', true);
+                    })
+                    ->get(['sku', 'name', 'zoho_item_id']);
+
+                $removedRows = $gone->map(fn (Product $product) => [
+                    'sku' => $product->sku,
+                    'name' => $product->name,
+                    'zoho_item_id' => $product->zoho_item_id,
+                ])->all();
+
+                if ($gone->isNotEmpty()) {
+                    Product::query()
+                        ->whereIn('zoho_item_id', $gone->pluck('zoho_item_id'))
+                        ->update(['is_active' => false, 'is_sellable' => false]);
+                }
             }
-        }
 
-        $removed = 0;
-        if ($seen !== []) {
-            $removed = Product::query()
-                ->whereNotNull('zoho_item_id')
-                ->whereNotIn('zoho_item_id', $seen)
-                ->update(['is_active' => false, 'is_sellable' => false]);
-        }
+            $summary = [
+                'outlets' => $outlets->count(),
+                'products' => $products,
+                'created' => count($created),
+                'updated' => count($updated),
+                'removed' => count($removedRows),
+                'stocks' => $stocks,
+                'run_id' => $run->id,
+            ];
 
-        return [
-            'outlets' => $outlets->count(),
-            'products' => $products,
-            'removed' => $removed,
-            'stocks' => $stocks,
-        ];
+            $run->update([
+                'status' => 'success',
+                'finished_at' => now(),
+                'outlets' => $summary['outlets'],
+                'products' => $summary['products'],
+                'created_count' => $summary['created'],
+                'updated_count' => $summary['updated'],
+                'removed_count' => $summary['removed'],
+                'stocks' => $summary['stocks'],
+                'details' => [
+                    'created' => $created,
+                    'updated' => $updated,
+                    'removed' => $removedRows,
+                ],
+            ]);
+
+            return $summary;
+        } catch (\Throwable $e) {
+            $run->update([
+                'status' => 'failed',
+                'finished_at' => now(),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     protected function syncOutlets(array $locations)
@@ -103,7 +163,10 @@ class ZohoCatalogSync
         return $outlets;
     }
 
-    protected function syncProduct(array $item): Product
+    /**
+     * @return array{0: Product, 1: array{action: string, sku: string, name: string, changes?: array<string, array{0: mixed, 1: mixed}>}}
+     */
+    protected function syncProduct(array $item): array
     {
         $itemId = (string) $item['item_id'];
         $sku = trim((string) ($item['sku'] ?? ''));
@@ -143,12 +206,45 @@ class ZohoCatalogSync
         }
 
         $product = Product::withTrashed()->firstOrNew(['zoho_item_id' => $itemId]);
+        $isNew = ! $product->exists;
+        $before = $isNew ? null : $product->only(['sku', 'name', 'price', 'cost', 'is_sellable', 'is_active', 'category_id']);
+
         if ($product->trashed()) {
             $product->restore();
         }
         $product->fill($data)->save();
 
-        return $product;
+        if ($isNew) {
+            return [$product, [
+                'action' => 'created',
+                'sku' => $product->sku,
+                'name' => $product->name,
+            ]];
+        }
+
+        $changes = [];
+        foreach (['sku', 'name', 'price', 'cost', 'is_sellable', 'is_active', 'category_id'] as $field) {
+            $old = $before[$field] ?? null;
+            $new = $product->{$field};
+            if ($field === 'price' || $field === 'cost') {
+                $old = round((float) $old, 2);
+                $new = round((float) $new, 2);
+            }
+            if ($old != $new) {
+                $changes[$field] = [$old, $new];
+            }
+        }
+
+        if ($changes === []) {
+            return [$product, ['action' => 'unchanged', 'sku' => $product->sku, 'name' => $product->name]];
+        }
+
+        return [$product, [
+            'action' => 'updated',
+            'sku' => $product->sku,
+            'name' => $product->name,
+            'changes' => $changes,
+        ]];
     }
 
     protected function syncImage(string $itemId, array $item, ?string $existing): ?string
@@ -316,9 +412,9 @@ class ZohoCatalogSync
             DB::table('settings')->whereNotNull('outlet_id')->delete();
         }
 
+        // ponytail: keep orders + outlets/products they reference; sync updateOrCreate handles catalog
         foreach ([
-            'payments', 'order_status_histories', 'order_items', 'orders',
-            'table_sessions', 'table_reservations', 'tables',
+            'table_sessions', 'table_reservations',
             'inventory_movements', 'inventories',
             'production_order_items', 'production_batches', 'production_orders',
             'bom_items', 'boms',
@@ -327,11 +423,8 @@ class ZohoCatalogSync
             'wastes',
             'bundle_items', 'bundle_outlet', 'bundles',
             'discount_items', 'discount_outlet', 'discounts',
-            'customers',
-            'product_addon', 'product_variants', 'outlet_product', 'products',
-            'categories',
+            'product_addon', 'product_variants', 'outlet_product',
             'printer_routes', 'printers',
-            'outlet_users', 'outlets',
         ] as $table) {
             if (Schema::hasTable($table)) {
                 DB::table($table)->delete();

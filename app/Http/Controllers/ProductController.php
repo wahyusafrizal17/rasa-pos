@@ -85,7 +85,7 @@ class ProductController extends Controller
         $log = storage_path('logs/zoho-sync.log');
         // setsid + stdin null: biar proses tidak mati ikut request PHP-FPM
         $command = sprintf(
-            'cd %s && setsid %s %s zoho:sync-catalog --no-interaction >> %s 2>&1 < /dev/null & echo $!',
+            'cd %s && setsid %s %s zoho:sync-catalog --no-interaction --trigger=web >> %s 2>&1 < /dev/null & echo $!',
             escapeshellarg(base_path()),
             escapeshellarg($php),
             escapeshellarg($artisan),
