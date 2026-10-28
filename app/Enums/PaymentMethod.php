@@ -8,6 +8,7 @@ enum PaymentMethod: string
     case Edc = 'edc';
     case Qris = 'qris';
     case Transfer = 'transfer';
+    case Compliment = 'compliment';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum PaymentMethod: string
             self::Edc => 'EDC',
             self::Qris => 'QRIS',
             self::Transfer => 'Transfer',
+            self::Compliment => 'Compliment',
         };
     }
 }

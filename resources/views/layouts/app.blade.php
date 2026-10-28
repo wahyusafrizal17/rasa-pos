@@ -35,6 +35,7 @@
                         ['label' => 'Operasional', 'icon' => 'pos', 'children' => [
                             ['label' => 'POS', 'route' => 'pos.index', 'active' => 'pos.*', 'perm' => 'pos.access', 'icon' => 'pos'],
                             ['label' => 'Sales Orders', 'route' => 'orders.index', 'active' => 'orders.*', 'perm' => 'orders.view', 'icon' => 'orders'],
+                            ['label' => 'Shift', 'route' => 'shifts.index', 'active' => 'shifts.*', 'perm' => 'orders.view', 'icon' => 'clipboard'],
                             ['label' => 'Tables', 'route' => 'tables.index', 'active' => 'tables.*', 'perm' => 'tables.view', 'icon' => 'tables'],
                         ]],
                         ['label' => 'Marketing', 'icon' => 'customers', 'children' => [

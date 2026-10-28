@@ -93,6 +93,12 @@ class OrderService
                 ? Bundle::query()->find($payload['bundle_id'])
                 : null;
 
+            if (! $bundle && ! ($product->is_sellable && $product->is_active)) {
+                throw ValidationException::withMessages([
+                    'product_id' => $product->name.' belum bisa dijual. Aktifkan penjualan item ini di Zoho lalu sinkronkan.',
+                ]);
+            }
+
             $qty = (float) ($payload['quantity'] ?? 1);
             $choice = $bundle ? ['label' => '', 'price' => 0.0] : $this->menuChoice($product, $payload['modifiers'] ?? []);
             $price = $bundle
@@ -271,7 +277,9 @@ class OrderService
         $subtotal = (float) $order->items->sum(fn ($item) => (float) $item->unit_price * (float) $item->quantity);
         $discount = (float) $order->discount_amount;
 
-        if ($order->discount_id && $order->discount) {
+        if ($order->is_compliment) {
+            $discount = $subtotal;
+        } elseif ($order->discount_id && $order->discount) {
             $discount = $this->discounts->calculate(
                 $order->discount,
                 $subtotal,
@@ -379,6 +387,18 @@ class OrderService
 
             if ($order->items->isEmpty()) {
                 throw ValidationException::withMessages(['items' => 'Tidak bisa checkout order kosong.']);
+            }
+
+            if (($payment['method'] ?? null) === PaymentMethod::Compliment->value) {
+                $order->update([
+                    'is_compliment' => true,
+                    'discount_id' => null,
+                    'compliment_guest' => $payment['compliment_guest'] ?? null,
+                    'compliment_reason' => $payment['compliment_reason'] ?? null,
+                ]);
+                $payment['amount'] = 0;
+                $payment['tendered'] = 0;
+                $payment['reference'] = $payment['compliment_guest'] ?? null;
             }
 
             $this->recalculate($order);

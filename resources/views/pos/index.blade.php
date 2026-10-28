@@ -37,12 +37,17 @@
                     @php
                         $stockQty = (float) ($product->inventories->first()?->quantity ?? 0);
                         $outOfStock = $product->is_stockable && $stockQty <= 0;
+                        $notSellable = ! $product->is_sellable;
                     @endphp
                     <article
                         class="menu-card"
-                        @if ($outOfStock) style="opacity:.55;cursor:not-allowed" @endif
+                        @if ($outOfStock || $notSellable) style="opacity:.55;cursor:not-allowed" @endif
                         x-show="(!category || category == {{ $product->category_id }}) && productMatch('{{ strtolower($product->name) }}')"
-                        @click="addProduct({{ $product->id }}, null, null, false, null, {{ $outOfStock ? '0' : 'null' }})"
+                        @if ($notSellable)
+                            @click="notice = 'Produk ini belum bisa dijual. Aktifkan penjualannya di Zoho lalu sinkronkan.'"
+                        @else
+                            @click="addProduct({{ $product->id }}, null, null, false, null, {{ $outOfStock ? '0' : 'null' }})"
+                        @endif
                     >
                         <div class="menu-card-body">
                             <div class="menu-card-head">
@@ -52,6 +57,9 @@
                                 @endif
                             </div>
                             <p class="menu-card-price">{{ money($product->price) }}</p>
+                            @if ($notSellable)
+                                <span class="menu-stock-badge is-out mt-1 inline-block">Belum bisa dijual</span>
+                            @endif
                             @if ($product->has_optional || $product->has_expresso)
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     @if ($product->has_optional)
@@ -62,7 +70,7 @@
                                     @endif
                                 </div>
                             @endif
-                            @if ($product->variants->count())
+                            @if ($product->variants->count() && ! $notSellable)
                                 <div class="mt-1.5 flex flex-wrap gap-1" @click.stop>
                                     @foreach ($product->variants as $variant)
                                         <button type="button" class="rounded-full bg-[#f6f1eb] px-2.5 py-1 text-[11px] font-medium text-heading" @click="addProduct({{ $product->id }}, {{ $variant->id }}, null, false, null, {{ $outOfStock ? '0' : 'null' }})">{{ $variant->name }}</button>
@@ -201,15 +209,18 @@
                         <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">Pembayaran</p>
                         <p class="mt-0.5 truncate text-[13px] text-white/70" x-text="order?.order_number || 'Draft'"></p>
                     </div>
-                    <p class="shrink-0 text-[20px] font-semibold leading-none tracking-tight text-white" x-text="formatMoney(grandTotal())"></p>
+                    <p class="shrink-0 text-[20px] font-semibold leading-none tracking-tight text-white" x-text="formatMoney(method === 'compliment' ? 0 : grandTotal())"></p>
                 </div>
-                <p class="mt-2 text-[12px] text-white/50" x-show="Number(order?.discount_amount || 0) > 0">
+                <p class="mt-2 text-[12px] text-white/50" x-show="method === 'compliment'" x-cloak>
+                    Compliment · nilai menu <span x-text="formatMoney(grandTotal())"></span> tetap tercatat
+                </p>
+                <p class="mt-2 text-[12px] text-white/50" x-show="method !== 'compliment' && Number(order?.discount_amount || 0) > 0">
                     Diskon <span x-text="discountLine()"></span>
                 </p>
             </div>
             <div class="px-6 py-5">
                 <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Metode bayar</p>
-                <div class="mt-2.5 grid grid-cols-2 gap-2">
+                <div class="mt-2.5 grid grid-cols-3 gap-2">
                     <template x-for="m in paymentMethods" :key="m.id">
                         <button type="button" class="pay-method" :class="method === m.id ? 'pay-method-active' : ''" @click="setMethod(m.id)">
                             <span class="block text-[13px] font-semibold" x-text="m.label"></span>
@@ -219,6 +230,11 @@
                 </div>
 
                 <p class="mt-4 text-xs text-muted" x-show="method === 'edc'">Nominal akan dicatat sesuai total order.</p>
+                <div class="mt-4 space-y-2" x-show="method === 'compliment'" x-cloak>
+                    <input class="input" placeholder="Nama tamu (wajib)" maxlength="80" x-model="compliment_guest">
+                    <input class="input" placeholder="Alasan compliment (wajib), mis. Tamu VIP dari owner" maxlength="160" x-model="compliment_reason">
+                    <p class="text-xs text-muted">Item tetap tercatat dan stok terpotong, total ditagih Rp 0.</p>
+                </div>
                 <p class="mt-3 text-xs font-medium text-brand" x-show="notice" x-text="notice"></p>
 
                 <div class="mt-6 grid grid-cols-2 gap-2">
@@ -392,7 +408,9 @@ function posApp() {
         paymentMethods: [
             { id: 'edc', label: 'EDC', hint: 'Mesin EDC' },
             { id: 'qris', label: 'QRIS', hint: 'Scan QR' },
+            { id: 'compliment', label: 'Compliment', hint: 'Gratis, tetap dicatat' },
         ],
+        compliment_guest: '', compliment_reason: '',
         heldOrders: @json($heldOrders),
         online: navigator.onLine,
         discountCatalog: @json($discountCatalog),
@@ -491,6 +509,7 @@ function posApp() {
             return !!this.order?.items?.length && !this.busy && !this.needsTable();
         },
         canCompletePay() {
+            if (this.method === 'compliment' && (!this.compliment_guest.trim() || !this.compliment_reason.trim())) return false;
             return this.canPay();
         },
         openPay() {
@@ -501,6 +520,8 @@ function posApp() {
             this.notice = '';
             this.method = 'edc';
             this.tendered = this.grandTotal();
+            this.compliment_guest = this.guest_name || '';
+            this.compliment_reason = '';
             this.payOpen = true;
         },
         setMethod(id) {
@@ -810,7 +831,9 @@ function posApp() {
         },
         async checkout() {
             if (!this.canCompletePay()) {
-                this.notice = this.cashShort() ? 'Uang diterima masih kurang dari total.' : 'Tidak bisa menyelesaikan pembayaran.';
+                this.notice = this.method === 'compliment'
+                    ? 'Isi nama tamu dan alasan compliment.'
+                    : (this.cashShort() ? 'Uang diterima masih kurang dari total.' : 'Tidak bisa menyelesaikan pembayaran.');
                 return;
             }
             if (this.method === 'qris') {
@@ -824,6 +847,7 @@ function posApp() {
                 const data = await this.request(`/pos/${this.order.id}/checkout`, { method: 'POST', headers: await this.csrf(), body: JSON.stringify({
                     method: this.method, amount: this.grandTotal(), tendered: paid,
                     order_type: this.order_type, table_id: this.table_id || null, guest_name: this.guestPayload(),
+                    ...(this.method === 'compliment' ? { compliment_guest: this.compliment_guest.trim(), compliment_reason: this.compliment_reason.trim() } : {}),
                 })});
                 await this.finishPaid(data);
             } catch (e) {

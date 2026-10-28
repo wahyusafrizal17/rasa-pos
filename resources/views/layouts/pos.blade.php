@@ -16,6 +16,11 @@
                 <img src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa POS" class="h-12 w-auto max-w-[160px] object-contain">
             </div>
             <div class="flex items-center gap-2">
+                @isset($shift)
+                    <a href="{{ route('shifts.show', $shift) }}" class="rounded-full bg-brand-soft px-3 py-2 text-xs font-semibold text-brand transition hover:opacity-80" title="Laporan & tutup shift">
+                        {{ $shift->label }} · sejak {{ wib($shift->opened_at, 'H:i') }} · Tutup shift
+                    </a>
+                @endisset
                 @if (auth()->user()->canSwitchOutlet())
                     <form method="GET" action="{{ url()->current() }}">
                         @foreach (request()->except('switch_outlet') as $k => $v)

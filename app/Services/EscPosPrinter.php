@@ -76,6 +76,15 @@ class EscPosPrinter
             }
         }
 
+        if ($order->is_compliment) {
+            $out .= $this->rule();
+            $out .= $this->bold(true);
+            $out .= $this->line('COMPLIMENT');
+            $out .= $this->bold(false);
+            $out .= $this->line('Tamu: '.($order->compliment_guest ?? '-'));
+            $out .= $this->line('Ket: '.($order->compliment_reason ?? '-'));
+        }
+
         $out .= $this->rule();
         $out .= $this->align(1);
         $out .= $this->line((string) setting('receipt_footer', 'Terima kasih'));
@@ -102,6 +111,11 @@ class EscPosPrinter
             if ((float) $payment->change_amount > 0) {
                 $pays .= $this->htmlRow('Kembalian', money($payment->change_amount));
             }
+        }
+        if ($order->is_compliment) {
+            $pays .= '<hr class="hr"><div class="b">COMPLIMENT</div>'
+                .'<div>Tamu: '.$this->e($order->compliment_guest ?? '-').'</div>'
+                .'<div>Ket: '.$this->e($order->compliment_reason ?? '-').'</div>';
         }
 
         $type = $order->order_type?->label() ?? '';
@@ -140,7 +154,7 @@ class EscPosPrinter
     public function receiptHeightMm(Order $order): int
     {
         $order->loadMissing(['items', 'payments']);
-        $lines = 10 + $order->items->count() + $order->payments->count();
+        $lines = 10 + $order->items->count() + $order->payments->count() + ($order->is_compliment ? 3 : 0);
 
         return min(180, max(60, 28 + ($lines * 6)));
     }

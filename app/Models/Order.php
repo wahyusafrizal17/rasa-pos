@@ -18,7 +18,8 @@ use App\Models\Concerns\AppliesFillableAttribute;
     'outlet_id', 'user_id', 'customer_id', 'table_id', 'discount_id',
     'channel', 'order_type', 'status', 'payment_status', 'subtotal', 'discount_amount',
     'tax_amount', 'tax_rate', 'service_charge',
-    'grand_total', 'guest_count', 'notes', 'guest_name', 'estimated_ready_at', 'held_at',
+    'grand_total', 'guest_count', 'notes', 'guest_name', 'is_compliment', 'compliment_guest', 'compliment_reason',
+    'estimated_ready_at', 'held_at',
     'completed_at', 'cancelled_at', 'cancel_reason',
     'kitchen_printed_at', 'bar_printed_at',
 ])]
@@ -39,6 +40,7 @@ class Order extends Model
             'tax_rate' => 'decimal:2',
             'service_charge' => 'decimal:2',
             'grand_total' => 'decimal:2',
+            'is_compliment' => 'boolean',
             'estimated_ready_at' => 'datetime',
             'held_at' => 'datetime',
             'completed_at' => 'datetime',

@@ -20,6 +20,14 @@ class Category extends Model
         ];
     }
 
+    public static function catalog()
+    {
+        return static::query()->get()
+            ->filter(fn (Category $category) => static::posRank($category->name) !== null)
+            ->sortBy(fn (Category $category) => static::posRank($category->name))
+            ->values();
+    }
+
     public static function posRank(string $name): ?int
     {
         $name = strtolower(trim($name));
@@ -30,6 +38,7 @@ class Category extends Model
             $name === 'sku syrup', $name === 'syrup' => 2,
             str_starts_with($name, 'powder') => 3,
             str_starts_with($name, 'multibev') => 4,
+            str_starts_with($name, 'locton') => 5,
             default => null,
         };
     }

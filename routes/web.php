@@ -25,6 +25,7 @@ use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\TableController;
@@ -75,7 +76,14 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
         Route::get('/{order}/ticket/{station}', [PosController::class, 'ticket'])->name('ticket');
     });
 
-    Route::post('/order-items/{item}/status', [CheckerController::class, 'updateItem'])->name('order-items.status');
+    Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts.index');
+    Route::post('/shifts', [ShiftController::class, 'store'])->name('shifts.store');
+    Route::get('/shifts/schedule', [ShiftController::class, 'schedule'])->name('shifts.schedule');
+    Route::put('/shifts/schedule', [ShiftController::class, 'saveSchedule'])->name('shifts.schedule.update');
+    Route::get('/shifts/{shift}', [ShiftController::class, 'show'])->name('shifts.show');
+    Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
+
+    Route::post('/order-items/{item}/status',[CheckerController::class, 'updateItem'])->name('order-items.status');
     Route::get('/print-jobs', [CheckerController::class, 'pendingJobs'])->name('print-jobs.index');
     Route::post('/print-jobs/{order}', [CheckerController::class, 'ackJob'])->name('print-jobs.ack');
     Route::get('/alerts/low-stock', [AlertController::class, 'lowStock'])->name('alerts.low-stock');

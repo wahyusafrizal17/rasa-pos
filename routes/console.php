@@ -8,6 +8,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('shifts:rotate')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
 Schedule::command('zoho:sync-catalog --no-interaction --trigger=schedule')
     ->timezone('Asia/Jakarta')
     ->twiceDaily(0, 12)

@@ -19,10 +19,7 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.view'), 403);
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
-        $categories = Category::query()->get()
-            ->filter(fn (Category $category) => Category::posRank($category->name) !== null)
-            ->sortBy(fn (Category $category) => Category::posRank($category->name))
-            ->values();
+        $categories = Category::catalog();
         $catalog = Product::query()->whereIn('category_id', $categories->pluck('id'));
         $query = (clone $catalog)->with(['category', 'unit', 'variants', 'addons']);
 

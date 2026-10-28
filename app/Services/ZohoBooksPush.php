@@ -31,6 +31,11 @@ class ZohoBooksPush
             $this->createInvoice($order);
         }
 
+        // compliment: invoice diskon 100%, tidak ada uang masuk
+        if ($order->is_compliment) {
+            return;
+        }
+
         if (! $order->zoho_payment_id) {
             $this->createPayment($order);
         }
@@ -41,6 +46,7 @@ class ZohoBooksPush
         Order::query()
             ->where('payment_status', PaymentStatus::Paid)
             ->whereNull('zoho_payment_id')
+            ->where(fn ($q) => $q->where('is_compliment', false)->orWhereNull('zoho_invoice_id'))
             ->each(fn (Order $order) => $this->push($order));
     }
 
@@ -159,7 +165,7 @@ class ZohoBooksPush
             PaymentMethod::Cash => 'Cash',
             PaymentMethod::Edc => 'creditcard',
             PaymentMethod::Transfer => 'banktransfer',
-            PaymentMethod::Qris => 'others',
+            PaymentMethod::Qris, PaymentMethod::Compliment => 'others',
         };
     }
 }

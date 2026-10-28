@@ -8,16 +8,19 @@ use App\Models\Category;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Shift;
 use App\Services\DiscountService;
 use App\Services\EscPosPrinter;
 use App\Services\InventoryService;
 use App\Services\OrderService;
 use App\Services\QrisService;
+use App\Services\ShiftService;
 use App\Services\PrinterRoutingService;
 use App\Services\TableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PosController extends Controller
@@ -33,10 +36,20 @@ class PosController extends Controller
                 ->with('error', 'Belum ada outlet. Jalankan Sinkronisasi Zoho di halaman Products dulu.');
         }
 
-        $categories = $this->posCategories($outletId);
+        $shifts = app(ShiftService::class);
+        $shift = $shifts->rotate($outletId);
+        if (! $shift) {
+            return view('pos.shift-open', [
+                'labels' => $shifts->labels($outletId),
+                'defaultLabel' => $shifts->currentLabel($outletId),
+                'lastShift' => Shift::query()->where('outlet_id', $outletId)->with('closer')->latest('opened_at')->first(),
+            ]);
+        }
+
+        $categories = Category::catalog();
         $categoryIds = $categories->pluck('id');
 
-        $products = Product::query()->sellable()->hasSku()->atOutlet($outletId)->where('is_addon', false)
+        $products = Product::query()->where('is_active', true)->hasSku()->atOutlet($outletId)->where('is_addon', false)
             ->whereIn('category_id', $categoryIds)
             ->with([
             'category',
@@ -49,6 +62,7 @@ class PosController extends Controller
         $lowStock = app(InventoryService::class)->lowStock($outletId);
 
         return view('pos.index', [
+            'shift' => $shift->load('opener'),
             'categories' => $categories,
             'products' => $products,
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
@@ -104,19 +118,17 @@ class PosController extends Controller
         ]);
     }
 
-    private function posCategories(int $outletId)
+    private function assertShiftOpen(?int $outletId): void
     {
-        return Category::query()
-            ->where('is_active', true)
-            ->whereHas('products', fn ($q) => $q->sellable()->hasSku()->atOutlet($outletId)->where('is_addon', false))
-            ->get()
-            ->filter(fn (Category $category) => Category::posRank($category->name) !== null)
-            ->sortBy(fn (Category $category) => Category::posRank($category->name))
-            ->values();
+        if (! $outletId || ! app(ShiftService::class)->rotate($outletId)) {
+            throw ValidationException::withMessages(['shift' => 'Shift belum dibuka. Buka shift dulu di halaman POS.']);
+        }
     }
 
     public function draft(Request $request, OrderService $orders): JsonResponse
     {
+        $this->assertShiftOpen(current_outlet_id());
+
         $data = $request->validate([
             'order_type' => ['required', 'in:dine_in,take_away,pickup,online'],
             'channel' => ['nullable', 'in:pos,online,pickup'],
@@ -273,15 +285,21 @@ class PosController extends Controller
     public function checkout(Request $request, Order $order, OrderService $orders, PrinterRoutingService $printers): JsonResponse
     {
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
+        $this->assertShiftOpen((int) $order->outlet_id);
 
         $data = $request->validate([
-            'method' => ['required', 'in:cash,edc,transfer'],
+            'method' => ['required', 'in:cash,edc,transfer,compliment'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'tendered' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:100'],
+            'compliment_guest' => ['required_if:method,compliment', 'nullable', 'string', 'max:80'],
+            'compliment_reason' => ['required_if:method,compliment', 'nullable', 'string', 'max:160'],
             'order_type' => ['nullable', 'in:dine_in,take_away,pickup,online'],
             'guest_name' => ['nullable', 'string', 'max:80'],
             'table_id' => ['nullable', 'exists:tables,id'],
+        ], [
+            'compliment_guest.required_if' => 'Nama tamu compliment wajib diisi.',
+            'compliment_reason.required_if' => 'Alasan compliment wajib diisi.',
         ]);
 
         $completed = $orders->checkout($order, $data)->load(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
@@ -293,6 +311,7 @@ class PosController extends Controller
     {
         abort_unless($request->user()->hasPermission('orders.checkout'), 403);
         abort_unless((int) $order->outlet_id === (int) current_outlet_id(), 403);
+        $this->assertShiftOpen((int) $order->outlet_id);
 
         return response()->json($qris->startQris($order->load(['customer', 'items'])));
     }
