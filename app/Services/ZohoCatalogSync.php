@@ -95,6 +95,8 @@ class ZohoCatalogSync
                         ->update(['is_active' => false, 'is_sellable' => false]);
                 }
             }
+            $removedCategories = $seen !== [] ? $this->pruneEmptyCategories() : [];
+            $onProgress && $removedCategories && $onProgress('Kategori kosong dihapus: '.implode(', ', $removedCategories));
 
             $summary = [
                 'outlets' => $outlets->count(),
@@ -119,6 +121,7 @@ class ZohoCatalogSync
                     'created' => $created,
                     'updated' => $updated,
                     'removed' => $removedRows,
+                    'removed_categories' => $removedCategories,
                 ],
             ]);
 
@@ -321,7 +324,7 @@ class ZohoCatalogSync
         $name = trim($name) ?: 'Uncategorized';
         $slug = Str::slug($name) ?: 'uncategorized';
 
-        return Category::query()->updateOrCreate(
+        $category = Category::withTrashed()->updateOrCreate(
             ['slug' => $slug],
             [
                 'name' => $name,
@@ -329,6 +332,20 @@ class ZohoCatalogSync
                 'is_active' => true,
             ],
         );
+        if ($category->trashed()) {
+            $category->restore();
+        }
+
+        return $category;
+    }
+
+    /** Kategori tanpa item tersisa (item pindah/hapus di Zoho) dibuang supaya daftar kategori tidak menumpuk. */
+    protected function pruneEmptyCategories(): array
+    {
+        $empty = Category::query()->whereDoesntHave('products')->get(['id', 'name']);
+        $empty->each->delete();
+
+        return $empty->pluck('name')->all();
     }
 
     protected function itemCategory(array $item): string
