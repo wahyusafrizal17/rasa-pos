@@ -10,12 +10,13 @@ class EscPosPrinter
 
     public function receipts(Order $order): string
     {
-        return $this->receipt($order, 'CUSTOMER').$this->receipt($order, 'KARYAWAN');
+        return $this->receipt($order, 'CUSTOMER').$this->receipt($order, 'BAR');
     }
 
+    /** Dua lembar terpisah: satu untuk customer, satu diserahkan ke bar. */
     public function receiptsHtml(Order $order): string
     {
-        return $this->receiptHtml($order, 'CUSTOMER').$this->receiptHtml($order, 'KARYAWAN');
+        return $this->renderReceipts($order, ['CUSTOMER', 'BAR']);
     }
 
     public function receiptsHeightMm(Order $order): int
@@ -95,60 +96,15 @@ class EscPosPrinter
 
     public function receiptHtml(Order $order, ?string $copy = null): string
     {
+        return $this->renderReceipts($order, [$copy]);
+    }
+
+    /** Tampilan sama dengan halaman /pos/{order}/receipt (logo, ukuran 80mm). */
+    protected function renderReceipts(Order $order, array $copies): string
+    {
         $order->loadMissing(['items', 'payments', 'outlet', 'customer', 'table', 'user']);
 
-        $rows = '';
-        foreach ($order->items as $item) {
-            $rows .= $this->htmlRow($this->qty((float) $item->quantity).' x '.$item->name, money($item->total));
-            if ($item->notes) {
-                $rows .= '<div class="n">'.$this->e($item->notes).'</div>';
-            }
-        }
-
-        $pays = '';
-        foreach ($order->payments as $payment) {
-            $pays .= $this->htmlRow($payment->method?->label() ?? 'Bayar', money($payment->amount));
-            if ((float) $payment->change_amount > 0) {
-                $pays .= $this->htmlRow('Kembalian', money($payment->change_amount));
-            }
-        }
-        if ($order->is_compliment) {
-            $pays .= '<hr class="hr"><div class="b">COMPLIMENT</div>'
-                .'<div>Tamu: '.$this->e($order->compliment_guest ?? '-').'</div>'
-                .'<div>Ket: '.$this->e($order->compliment_reason ?? '-').'</div>';
-        }
-
-        $type = $order->order_type?->label() ?? '';
-        if ($order->table?->code) {
-            $type .= ' · '.$order->table->code;
-        }
-        if ($order->guest_name) {
-            $type .= ' · '.$order->guest_name;
-        }
-
-        return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-            .'html,body{margin:0;padding:0;width:72mm;font:12px/1.35 monospace;color:#000;background:#fff}'
-            .'.c{text-align:center}.b{font-weight:700}.r{display:flex;justify-content:space-between;gap:6px}'
-            .'.n{margin:0 0 2px 8px}.hr{border:0;border-top:1px dashed #000;margin:6px 0}'
-            .'</style></head><body>'
-            .'<div class="c b">'.$this->e($order->outlet?->name ?: (string) config('app.name')).'</div>'
-            .($copy ? '<div class="c b">'.$this->e($copy).'</div>' : '')
-            .'<div class="c">'.$this->e($order->order_number).'</div>'
-            .'<div class="c">'.$this->e(wib($order->created_at)).'</div>'
-            .'<div class="c">'.$this->e($type).'</div>'
-            .'<div class="c">Kasir: '.$this->e($order->user?->name ?? '-').'</div>'
-            .'<hr class="hr">'
-            .$rows
-            .'<hr class="hr">'
-            .$this->htmlRow('Subtotal', money($order->subtotal))
-            .$this->htmlRow('Diskon', money($order->discount_amount))
-            .$this->htmlRow('Pajak', money($order->tax_amount))
-            .((float) $order->service_charge > 0 ? $this->htmlRow('Service', money($order->service_charge)) : '')
-            .'<div class="b">'.$this->htmlRow('Total', money($order->grand_total)).'</div>'
-            .$pays
-            .'<hr class="hr">'
-            .'<div class="c">'.$this->e((string) setting('receipt_footer', 'Terima kasih')).'</div>'
-            .'</body></html>';
+        return view('pos.receipt-print', ['order' => $order, 'copies' => $copies])->render();
     }
 
     public function receiptHeightMm(Order $order): int

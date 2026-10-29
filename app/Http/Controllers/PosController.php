@@ -60,19 +60,24 @@ class PosController extends Controller
         ])->orderBy('name')->get();
         $addons = Product::query()->sellable()->where('is_addon', true)->orderBy('name')->get();
         $lowStock = app(InventoryService::class)->lowStock($outletId);
+        $bundles = Bundle::query()
+            ->where('is_active', true)
+            ->whereHas('product', fn ($q) => $q->hasSku()->atOutlet($outletId))
+            ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
+            ->get()
+            ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId) && $categoryIds->contains($bundle->product?->category_id))
+            ->values();
+
+        // tab kategori tanpa produk/bundle di outlet ini tidak ditampilkan
+        $filledIds = $products->pluck('category_id')->merge($bundles->map(fn (Bundle $bundle) => $bundle->product?->category_id))->unique();
+        $categories = $categories->filter(fn (Category $category) => $filledIds->contains($category->id))->values();
 
         return view('pos.index', [
             'shift' => $shift->load('opener'),
             'categories' => $categories,
             'products' => $products,
             'tables' => DiningTable::query()->where('outlet_id', $outletId)->where('is_active', true)->orderBy('code')->get(),
-            'bundles' => Bundle::query()
-                ->where('is_active', true)
-                ->whereHas('product', fn ($q) => $q->hasSku()->atOutlet($outletId))
-                ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
-                ->get()
-                ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId) && $categoryIds->contains($bundle->product?->category_id))
-                ->values(),
+            'bundles' => $bundles,
             'discounts' => $activeDiscounts = $discounts->activeForOutlet($outletId),
             'discountCatalog' => $activeDiscounts->map(fn ($discount) => [
                 'id' => $discount->id,

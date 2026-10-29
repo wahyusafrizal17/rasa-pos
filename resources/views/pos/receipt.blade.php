@@ -5,42 +5,13 @@
     <meta name="viewport" content="width=80mm">
     <title>Receipt {{ $order->order_number }}</title>
     <style>
-        /* EPPOS Plus 80MM: paper 80mm, printable ~72mm */
-        @page { size: 80mm auto; margin: 0; }
+        @include('pos.partials.receipt-styles')
 
-        * { box-sizing: border-box; }
-
-        html, body {
-            width: 80mm;
-            margin: 0;
-            padding: 0;
-            background: #fff;
-            color: #000;
-            font-family: ui-monospace, "Courier New", Courier, monospace;
-            font-size: 12px;
-            line-height: 1.35;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        body { padding: 3mm 4mm 6mm; }
-
-        h1 { font-size: 15px; margin: 0 0 4px; text-align: center; }
-        p { margin: 0 0 2px; }
-        .center { text-align: center; }
-        .muted { color: #000; }
-        .row { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
-        .row span:first-child { flex: 1; word-break: break-word; }
-        .row span:last-child { white-space: nowrap; }
-        hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
-        .total { font-size: 14px; font-weight: 700; }
-        .head-logo { display: block; width: 34mm; height: auto; margin: 0 auto 3mm; }
-
+        #bt-status { padding-top: 3mm; }
         .toolbar { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
         .toolbar button { font: inherit; padding: 6px 14px; border: 1px solid #000; border-radius: 6px; background: #fff; color: #000; }
 
         @media print {
-            html, body { width: 80mm; }
             #bt-status, .toolbar { display: none; }
         }
     </style>
@@ -84,47 +55,6 @@
             }
         })();
     </script>
-    <img class="head-logo" src="{{ asset('images/logo/rasa-logo.png') }}" alt="Rasa Group">
-    <h1>{{ $order->outlet?->name ?? config('app.name') }}</h1>
-    <p class="center muted">{{ $order->order_number }}</p>
-    <p class="center muted">{{ wib($order->created_at) }}</p>
-    <p class="center muted">{{ $order->order_type->label() }}@if($order->table) · {{ $order->table->code }}@endif</p>
-    <p class="center muted">Kasir: {{ $order->user?->name }}</p>
-    <hr>
-    @foreach ($order->items as $item)
-        @php
-            $qty = (float) $item->quantity;
-            $qtyLabel = fmod($qty, 1.0) === 0.0
-                ? (string) (int) $qty
-                : rtrim(rtrim(number_format($qty, 3, ',', '.'), '0'), ',');
-        @endphp
-        <div class="row">
-            <span>{{ $qtyLabel }} × {{ $item->name }}</span>
-            <span>{{ money($item->total) }}</span>
-        </div>
-        @if ($item->notes)<p class="muted">  {{ $item->notes }}</p>@endif
-    @endforeach
-    <hr>
-    <div class="row"><span>Subtotal</span><span>{{ money($order->subtotal) }}</span></div>
-    <div class="row"><span>Diskon</span><span>{{ money($order->discount_amount) }}</span></div>
-    <div class="row"><span>Pajak</span><span>{{ money($order->tax_amount) }}</span></div>
-    @if ((float) $order->service_charge > 0)
-        <div class="row"><span>Service</span><span>{{ money($order->service_charge) }}</span></div>
-    @endif
-    <div class="row total"><span>Total</span><span>{{ money($order->grand_total) }}</span></div>
-    @foreach ($order->payments as $payment)
-        <div class="row"><span>{{ $payment->method->label() }}</span><span>{{ money($payment->amount) }}</span></div>
-        @if ($payment->change_amount > 0)
-            <div class="row"><span>Kembalian</span><span>{{ money($payment->change_amount) }}</span></div>
-        @endif
-    @endforeach
-    @if ($order->is_compliment)
-        <hr>
-        <p class="total">COMPLIMENT</p>
-        <p>Tamu: {{ $order->compliment_guest ?? '-' }}</p>
-        <p>Ket: {{ $order->compliment_reason ?? '-' }}</p>
-    @endif
-    <hr>
-    <p class="center">{{ setting('receipt_footer', 'Terima kasih telah berkunjung') }}</p>
+    @include('pos.partials.receipt-sheet', ['order' => $order, 'copy' => null])
 </body>
 </html>

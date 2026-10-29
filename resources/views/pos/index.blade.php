@@ -188,7 +188,10 @@
                     <span class="text-sm font-medium text-white/70">Total</span>
                     <span class="text-[22px] font-semibold tracking-tight" x-text="formatMoney(order?.grand_total || 0)"></span>
                 </div>
-                <p class="text-xs font-medium text-brand" x-show="notice" x-text="notice" x-cloak></p>
+                <div class="flex items-center justify-between gap-2" x-show="notice || lastReceipt" x-cloak>
+                    <p class="text-xs font-medium text-brand" x-text="notice"></p>
+                    <button type="button" class="shrink-0 text-xs font-semibold text-heading underline underline-offset-2" x-show="lastReceipt" @click="printReceipt(true)" title="Pilih printer Bluetooth atau cetak lewat dialog">Cetak ulang struk</button>
+                </div>
                 <p class="text-[11px] text-muted" x-show="needsTable()" x-cloak>Pilih meja dulu untuk dine-in sebelum bayar.</p>
                 <div class="grid grid-cols-[1fr_1.6fr] gap-2">
                     <div class="relative">
@@ -284,18 +287,8 @@
         </div>
     </div>
 
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" x-show="receiptUrl" x-cloak @keydown.escape.window="receiptUrl = ''" @click.self="receiptUrl = ''">
-        <div class="pay-modal flex flex-col">
-            <div class="flex items-center justify-between px-5 py-3">
-                <p class="text-sm font-semibold text-heading">Struk</p>
-                <div class="flex items-center gap-2">
-                    <button type="button" class="btn-add !py-2" @click="printReceipt()">Cetak</button>
-                    <button type="button" class="btn-ghost !py-2" @click="receiptUrl = ''">Tutup</button>
-                </div>
-            </div>
-            <iframe class="w-full border-0 bg-white" style="height:75vh" :src="receiptUrl || 'about:blank'" title="Struk"></iframe>
-        </div>
-    </div>
+    {{-- struk dicetak langsung setelah bayar; iframe ini hanya dipakai bila printer Bluetooth tidak tersedia --}}
+    <iframe x-ref="receiptFrame" title="Struk" aria-hidden="true" tabindex="-1" style="position:fixed;width:0;height:0;border:0;left:-9999px"></iframe>
 
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="openHeld" x-cloak>
         <div class="card w-full max-w-lg p-6">
@@ -398,7 +391,7 @@
 function posApp() {
     return {
         order: null, search: '', category: null, order_type: 'dine_in', table_id: '', guest_name: '',
-        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, choiceOpen: false, busy: false, busyCount: 0, notice: '', receiptUrl: '',
+        discount_id: '', method: 'edc', tendered: 0, payOpen: false, openHeld: false, addonOpen: false, choiceOpen: false, busy: false, busyCount: 0, notice: '', lastReceipt: null,
         qrisUrl: '', qrisRef: '', qrisOpen: false, qrisTimer: null,
         pendingAdd: null, selectedAddonIds: [], pendingChoice: null, choiceOptional: '', choiceExpresso: '',
         productAddons: @json($productAddons),
@@ -558,28 +551,37 @@ function posApp() {
             this.qrisRef = '';
             const orderId = data.order?.id;
             if (!orderId) return;
-            this.receiptUrl = `/pos/${orderId}/receipt`;
-            this.notice = 'Pembayaran berhasil.';
+            this.lastReceipt = { number: data.order?.order_number || '', escpos: data.receipt_escpos || '', html: data.receipt_html || '' };
+            this.notice = 'Pembayaran berhasil. Mencetak struk…';
             this.order = null;
             this.guest_name = '';
             this.tendered = 0;
             localStorage.removeItem('pos_offline_draft');
+            await this.printReceipt(false);
         },
-        async printReceipt() {
-            const frame = document.querySelector('iframe[title="Struk"]');
-            const escpos = frame?.contentWindow?.__receiptEscpos;
-            try {
-                if (escpos && window.RasaPrint?.printRaw) {
-                    await window.RasaPrint.printRaw('', escpos, true);
-                    this.notice = 'Struk terkirim ke printer Bluetooth.';
+        // Bluetooth dulu (printer yang sudah pernah diizinkan); kalau tidak bisa, cetak lewat dialog print browser.
+        async printReceipt(pickPrinter = false) {
+            const receipt = this.lastReceipt;
+            if (!receipt) return;
+            if (receipt.escpos && window.RasaPrint?.printRaw) {
+                try {
+                    await window.RasaPrint.printRaw('', receipt.escpos, pickPrinter);
+                    this.notice = `Struk ${receipt.number} terkirim ke printer.`;
                     return;
-                }
-            } catch (e) {
-                this.notice = e?.message || 'Gagal cetak Bluetooth.';
+                } catch (e) {}
+            }
+            if (!receipt.html) {
+                this.notice = 'Struk tidak tersedia untuk dicetak.';
                 return;
             }
-            frame?.contentWindow?.focus();
-            frame?.contentWindow?.print();
+            const frame = this.$refs.receiptFrame;
+            frame.onload = () => {
+                frame.onload = null;
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            };
+            frame.srcdoc = receipt.html;
+            this.notice = `Pembayaran berhasil. Struk ${receipt.number} dikirim ke dialog print.`;
         },
         async startQris() {
             this.notice = '';

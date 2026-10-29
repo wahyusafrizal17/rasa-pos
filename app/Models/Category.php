@@ -39,6 +39,7 @@ class Category extends Model
             str_starts_with($name, 'powder') => 3,
             str_starts_with($name, 'multibev') => 4,
             str_starts_with($name, 'locton') => 5,
+            $name === 'kaos' => 6,
             default => null,
         };
     }
