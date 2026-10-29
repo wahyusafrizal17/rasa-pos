@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Models\Customer;
 use App\Models\Order;
 use RuntimeException;
 
@@ -21,7 +22,11 @@ class ZohoBooksPush
             return;
         }
 
-        $order->loadMissing(['items.product', 'outlet', 'payments']);
+        $order->loadMissing(['items.product', 'outlet', 'payments', 'customer']);
+
+        if (! $order->zoho_contact_id) {
+            $this->resolveContact($order);
+        }
 
         if (! $order->zoho_salesorder_id) {
             $this->createSalesOrder($order);
@@ -50,6 +55,63 @@ class ZohoBooksPush
             ->each(fn (Order $order) => $this->push($order));
     }
 
+    /**
+     * Kontak Zoho sesuai nama customer di POS: pakai yang sudah ada (nama sama), kalau belum ada dibuat.
+     * Order tanpa nama tetap ke kontak default ZOHO_CUSTOMER_ID.
+     */
+    protected function resolveContact(Order $order): void
+    {
+        $customer = $order->customer;
+        $name = trim((string) ($customer?->name ?: $order->guest_name));
+
+        $contactId = $customer?->zoho_contact_id;
+        if (! $contactId && $name !== '') {
+            $contactId = $this->findContact($name) ?? $this->createContact($name, $customer);
+            $customer?->update(['zoho_contact_id' => $contactId]);
+        }
+
+        $order->update(['zoho_contact_id' => $contactId ?: (string) config('zoho.customer_id')]);
+    }
+
+    protected function findContact(string $name): ?string
+    {
+        $contacts = $this->zoho->get('/books/v3/contacts', [
+            'contact_name' => $name,
+            'contact_type' => 'customer',
+        ])['contacts'] ?? [];
+
+        foreach ($contacts as $contact) {
+            if (mb_strtolower(trim((string) ($contact['contact_name'] ?? ''))) === mb_strtolower($name)) {
+                return (string) $contact['contact_id'];
+            }
+        }
+
+        return null;
+    }
+
+    protected function createContact(string $name, ?Customer $customer): string
+    {
+        $payload = array_filter([
+            'contact_name' => $name,
+            'contact_type' => 'customer',
+            'customer_sub_type' => 'individual',
+            'phone' => $customer?->phone,
+            'email' => $customer?->email,
+        ], fn ($value) => filled($value));
+
+        $contactId = (string) ($this->zoho->post('/books/v3/contacts', $payload)['contact']['contact_id'] ?? '');
+        if ($contactId === '') {
+            throw new RuntimeException('Zoho contact for "'.$name.'" was not created');
+        }
+
+        return $contactId;
+    }
+
+    protected function customerId(Order $order): string
+    {
+        return (string) ($order->zoho_contact_id ?: config('zoho.customer_id'));
+    }
+
     protected function createSalesOrder(Order $order): void
     {
         $lines = $this->lineItems($order);
@@ -58,7 +120,7 @@ class ZohoBooksPush
         }
 
         $payload = $this->withDiscount($order, [
-            'customer_id' => config('zoho.customer_id'),
+            'customer_id' => $this->customerId($order),
             'date' => $order->created_at?->toDateString() ?? now()->toDateString(),
             'reference_number' => $order->order_number,
             'custom_fields' => [
@@ -95,7 +157,7 @@ class ZohoBooksPush
         }
 
         $invoice = $this->zoho->post('/books/v3/invoices', $this->withDiscount($order, [
-            'customer_id' => config('zoho.customer_id'),
+            'customer_id' => $this->customerId($order),
             'reference_number' => $order->order_number,
             'date' => now()->toDateString(),
             'line_items' => $lines,
@@ -111,7 +173,7 @@ class ZohoBooksPush
         $amount = (float) $order->grand_total;
 
         $payment = $this->zoho->post('/books/v3/customerpayments', [
-            'customer_id' => config('zoho.customer_id'),
+            'customer_id' => $this->customerId($order),
             'payment_mode' => $this->paymentMode($method),
             'account_id' => (string) config('zoho.payment_account_id'),
             'amount' => $amount,

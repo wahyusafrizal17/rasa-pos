@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'code', 'name', 'phone', 'email', 'birthday', 'gender', 'address',
+    'code', 'zoho_contact_id', 'name', 'phone', 'email', 'birthday', 'gender', 'address',
     'total_transaction', 'last_transaction_at', 'is_active',
 ])]
 class Customer extends Model

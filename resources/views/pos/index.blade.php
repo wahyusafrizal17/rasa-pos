@@ -103,13 +103,13 @@
         <aside class="order-panel">
             <div class="mx-5 space-y-2 border-b border-[#f0ebe6] py-4">
                 <div class="flex items-center gap-2">
-                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="order_type" @change="if (order_type !== 'dine_in') table_id = ''; if (!usesGuest()) guest_name = ''; saveGuest()">
+                    <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="order_type" @change="if (order_type !== 'dine_in') table_id = ''; saveGuest()">
                         <option value="dine_in">Dine In</option>
                         <option value="take_away">Take Away</option>
                         <option value="pickup">Pickup</option>
                         <option value="online">Online</option>
                     </select>
-                    <input x-show="usesGuest()" x-cloak x-model="guest_name" @change="saveGuest()" class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" placeholder="Nama customer" maxlength="80">
+                    <input x-model="guest_name" @change="saveGuest()" class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" placeholder="Nama customer" maxlength="80">
                     <select class="input !min-w-0 !flex-1 !rounded-full !border-[#efe8e1] !bg-[#faf7f3] !py-2 !text-xs" x-model="table_id" x-show="order_type === 'dine_in'" x-cloak>
                         <option value="">Pilih meja</option>
                         @foreach ($tables as $table)
@@ -438,11 +438,9 @@ function posApp() {
         channel() {
             return this.order_type === 'pickup' ? 'pickup' : (this.order_type === 'online' ? 'online' : 'pos');
         },
-        usesGuest() {
-            return this.order_type === 'dine_in' || this.order_type === 'take_away';
-        },
+        // nama customer dipakai di semua tipe order (juga jadi nama kontak Zoho)
         guestPayload() {
-            return this.usesGuest() ? this.guest_name : '';
+            return this.guest_name;
         },
         productMatch(name) { return !this.search || name.includes(this.search.toLowerCase()); },
         itemBaseName(item) {
