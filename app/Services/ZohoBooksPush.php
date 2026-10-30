@@ -8,6 +8,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Customer;
 use App\Models\Order;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 
 class ZohoBooksPush
@@ -256,6 +257,7 @@ class ZohoBooksPush
 
     protected function lineItems(Order $order): array
     {
+        $taxId = $this->taxId($order);
         $lines = [];
         foreach ($order->items as $item) {
             $itemId = (string) ($item->product?->zoho_item_id ?? '');
@@ -266,11 +268,34 @@ class ZohoBooksPush
                 'item_id' => $itemId,
                 'quantity' => (float) $item->quantity,
                 'rate' => (float) $item->unit_price,
-                'tax_id' => (string) config('zoho.tax_id'),
+                'tax_id' => $taxId,
             ];
         }
 
         return $lines;
+    }
+
+    /** Pajak Zoho harus setarif dengan order, kalau tidak total invoice beda dengan pembayaran POS. */
+    protected function taxId(Order $order): string
+    {
+        $rate = (float) $order->tax_rate;
+        if ($rate <= 0) {
+            return '';
+        }
+
+        $taxes = Cache::remember('zoho.taxes', 3600, fn () => $this->zoho->get('/books/v3/settings/taxes')['taxes'] ?? []);
+        $ids = collect($taxes)
+            ->filter(fn (array $tax) => abs((float) ($tax['tax_percentage'] ?? -1) - $rate) < 0.001)
+            ->pluck('tax_id')
+            ->map(fn ($id) => (string) $id);
+
+        if ($ids->isEmpty()) {
+            throw new RuntimeException("Pajak {$rate}% tidak ada di Zoho Books.");
+        }
+
+        $configured = (string) config('zoho.tax_id');
+
+        return $ids->contains($configured) ? $configured : $ids->first();
     }
 
     protected function paymentMode(PaymentMethod $method): string
