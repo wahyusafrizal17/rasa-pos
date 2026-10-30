@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Customer;
@@ -11,11 +12,15 @@ use RuntimeException;
 
 class ZohoBooksPush
 {
+    protected const SENDABLE = [PaymentStatus::Paid, PaymentStatus::Partial, PaymentStatus::Unpaid];
+
     public function __construct(protected ZohoClient $zoho) {}
 
-    public function push(Order $order): void
+    /** @param  bool  $includeUnpaid  order belum lunas ikut dikirim (SO + Invoice tanpa Payment) */
+    public function push(Order $order, bool $includeUnpaid = false): void
     {
-        if ($order->payment_status !== PaymentStatus::Paid || $order->zoho_payment_id) {
+        $sendable = $includeUnpaid ? self::SENDABLE : [PaymentStatus::Paid];
+        if (! in_array($order->payment_status, $sendable, true) || $order->zoho_payment_id) {
             return;
         }
 
@@ -37,8 +42,8 @@ class ZohoBooksPush
             $this->createInvoice($order);
         }
 
-        // compliment: invoice diskon 100%, tidak ada uang masuk
-        if ($order->is_compliment) {
+        // compliment: invoice diskon 100%, tidak ada uang masuk; belum lunas: tercatat piutang di Zoho
+        if ($order->is_compliment || $order->payment_status !== PaymentStatus::Paid) {
             return;
         }
 
@@ -52,28 +57,50 @@ class ZohoBooksPush
         $this->pendingQuery()->each(fn (Order $order) => $this->push($order));
     }
 
-    /** Order lunas yang belum selesai terkirim ke Zoho. */
-    public function pendingQuery(): Builder
+    /**
+     * Order yang boleh dikirim ke Zoho. Default hanya lunas; draft, held, dan batal tidak pernah ikut.
+     *
+     * @param  array{from?: ?string, to?: ?string, payment_status?: ?string}  $filters  tanggal transaksi (WIB); payment_status: paid|partial|unpaid|all
+     */
+    public function pushableQuery(array $filters = []): Builder
     {
+        $payment = $filters['payment_status'] ?? PaymentStatus::Paid->value;
+
         return Order::query()
-            ->where('payment_status', PaymentStatus::Paid)
-            ->whereNull('zoho_payment_id')
-            ->where(fn ($q) => $q->where('is_compliment', false)->orWhereNull('zoho_invoice_id'));
+            ->whereIn('payment_status', $payment === 'all' ? self::SENDABLE : [$payment])
+            ->whereNotIn('status', [OrderStatus::Draft, OrderStatus::Held, OrderStatus::Cancelled])
+            ->when($filters['from'] ?? null, fn ($q, $day) => $q->where('created_at', '>=', wib_day_bounds($day)[0]))
+            ->when($filters['to'] ?? null, fn ($q, $day) => $q->where('created_at', '<=', wib_day_bounds($day)[1]));
     }
 
-    /** Lupakan semua ID Zoho supaya order lunas dikirim ulang dari awal (setelah data di Zoho dibersihkan). */
-    public function resetAll(): int
+    /** Order yang belum selesai terkirim ke Zoho. */
+    public function pendingQuery(array $filters = []): Builder
+    {
+        return $this->pushableQuery($filters)
+            ->whereNull('zoho_payment_id')
+            ->where(fn ($q) => $q->whereNull('zoho_invoice_id')
+                ->orWhere(fn ($q) => $q->where('payment_status', PaymentStatus::Paid)->where('is_compliment', false)));
+    }
+
+    /**
+     * Lupakan ID Zoho supaya order dikirim ulang dari awal (setelah data di Zoho dibersihkan).
+     * ID kontak customer selalu direset: kontak dicari lagi by name, jadi aman untuk filter apa pun.
+     */
+    public function resetAll(array $filters = []): int
     {
         Customer::query()->whereNotNull('zoho_contact_id')->update(['zoho_contact_id' => null]);
 
-        return Order::query()
-            ->where('payment_status', PaymentStatus::Paid)
-            ->update([
-                'zoho_contact_id' => null,
-                'zoho_salesorder_id' => null,
-                'zoho_invoice_id' => null,
-                'zoho_payment_id' => null,
-            ]);
+        return $this->pushableQuery($filters)->update([
+            'zoho_contact_id' => null,
+            'zoho_salesorder_id' => null,
+            'zoho_invoice_id' => null,
+            'zoho_payment_id' => null,
+        ]);
+    }
+
+    protected function sourceField(): array
+    {
+        return [['api_name' => 'cf_source', 'value' => config('zoho.cf_source', 'POS')]];
     }
 
     protected function wibDate(?\DateTimeInterface $at): string
@@ -149,9 +176,7 @@ class ZohoBooksPush
             'customer_id' => $this->customerId($order),
             'date' => $this->wibDate($order->created_at),
             'reference_number' => $order->order_number,
-            'custom_fields' => [
-                ['api_name' => 'cf_source', 'value' => config('zoho.cf_source', 'POS')],
-            ],
+            'custom_fields' => $this->sourceField(),
             'line_items' => $lines,
         ]);
 
@@ -186,6 +211,7 @@ class ZohoBooksPush
             'customer_id' => $this->customerId($order),
             'reference_number' => $order->order_number,
             'date' => $this->wibDate($order->created_at),
+            'custom_fields' => $this->sourceField(),
             'line_items' => $lines,
         ]))['invoice'] ?? [];
 

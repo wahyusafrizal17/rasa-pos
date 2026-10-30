@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Console\Commands\RepushZohoOrders;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Outlet;
 use App\Services\OrderService;
 use App\Services\ZohoBooksPush;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -22,13 +22,17 @@ class OrderController extends Controller
     {
         abort_unless($request->user()->hasPermission('settings.manage'), 403);
 
-        $data = $request->validate(['mode' => ['required', 'in:all,pending']]);
+        $data = $request->validate(['mode' => ['required', 'in:all,pending']] + $this->repushRules(), $this->repushMessages());
+        $filters = array_filter(array_intersect_key($data, array_flip(['from', 'to', 'payment_status'])));
 
         if (! $this->repushIdle()) {
             return back()->with('success', 'Push ulang ke Zoho masih berjalan.');
         }
 
         $args = $data['mode'] === 'all' ? ' --reset' : '';
+        foreach ($filters as $key => $value) {
+            $args .= ' --'.str_replace('_', '-', $key).'='.escapeshellarg($value);
+        }
         $command = sprintf(
             'cd %s && setsid %s %s zoho:repush-orders%s >> %s 2>&1 < /dev/null & echo $!',
             escapeshellarg(base_path()),
@@ -50,6 +54,35 @@ class OrderController extends Controller
         return back()->with('success', $data['mode'] === 'all'
             ? 'Push ulang semua order ke Zoho dimulai. Progres tampil di halaman ini.'
             : 'Pengiriman order yang belum terkirim ke Zoho dimulai.');
+    }
+
+    /** Jumlah order yang akan dikirim ulang untuk filter di modal. */
+    public function repushPreview(Request $request, ZohoBooksPush $push): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('settings.manage'), 403);
+
+        $filters = array_filter($request->validate($this->repushRules(), $this->repushMessages()));
+
+        return response()->json(['count' => $push->pushableQuery($filters)->count()]);
+    }
+
+    protected function repushRules(): array
+    {
+        return [
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'payment_status' => ['nullable', 'in:paid,partial,unpaid,all'],
+        ];
+    }
+
+    protected function repushMessages(): array
+    {
+        return [
+            'from.date_format' => 'Tanggal mulai tidak valid.',
+            'to.date_format' => 'Tanggal sampai tidak valid.',
+            'to.after_or_equal' => 'Tanggal sampai tidak boleh sebelum tanggal mulai.',
+            'payment_status.in' => 'Status bayar tidak valid.',
+        ];
     }
 
     protected function phpCliBinary(): string
@@ -110,7 +143,7 @@ class OrderController extends Controller
                 ])->count(),
             ],
             'zoho' => $request->user()->hasPermission('settings.manage') ? [
-                'paid' => Order::query()->where('payment_status', PaymentStatus::Paid)->count(),
+                'paid' => app(ZohoBooksPush::class)->pushableQuery()->count(),
                 'pending' => app(ZohoBooksPush::class)->pendingQuery()->count(),
                 'running' => ! $this->repushIdle(),
                 'progress' => Cache::get(RepushZohoOrders::PROGRESS),

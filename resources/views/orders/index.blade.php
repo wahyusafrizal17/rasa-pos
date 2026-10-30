@@ -40,6 +40,43 @@
 
     @if ($zoho)
         @php $progress = $zoho['progress']; @endphp
+        <script>
+            function zohoRepush() {
+                return {
+                    repushOpen: false, scope: 'all', from: '', to: '', paymentStatus: 'paid', count: null, error: '',
+                    query() {
+                        const params = new URLSearchParams();
+                        if (this.scope === 'range') {
+                            if (this.from) params.set('from', this.from);
+                            if (this.to) params.set('to', this.to);
+                        }
+                        params.set('payment_status', this.paymentStatus);
+                        return params;
+                    },
+                    open() {
+                        this.repushOpen = true;
+                        this.refresh();
+                    },
+                    async refresh() {
+                        this.count = null;
+                        this.error = '';
+                        const response = await fetch(@json(route('orders.zoho-repush.preview')) + '?' + this.query(), { headers: { Accept: 'application/json' } });
+                        const data = await response.json();
+                        if (response.ok) {
+                            this.count = data.count;
+                        } else {
+                            this.error = data.message || 'Filter tidak valid.';
+                        }
+                    },
+                    confirmSubmit(event) {
+                        if (!this.count || !confirm(`Push ulang ${this.count} order ke Zoho?\n\nID Zoho lama order ini dilupakan lalu dibuat ulang (kontak, Sales Order, Invoice, Payment). Lakukan hanya kalau data order ini di Zoho sudah dibersihkan, kalau tidak akan dobel.`)) {
+                            event.preventDefault();
+                        }
+                    },
+                };
+            }
+        </script>
+        <div x-data="zohoRepush()">
         <div class="card mb-5">
             <div class="card-header">
                 <div>
@@ -49,7 +86,7 @@
                         @if ($zoho['running'] && $progress)
                             <span class="font-semibold text-[#ff9f43]">Sedang berjalan: {{ $progress['done'] + $progress['failed'] }}/{{ $progress['total'] }} ({{ $progress['failed'] }} gagal). Muat ulang halaman untuk melihat progres.</span>
                         @elseif ($progress && $progress['status'] === 'finished')
-                            Terakhir {{ wib($progress['finished_at']) }}: {{ $progress['done'] }} terkirim, {{ $progress['failed'] }} gagal dari {{ $progress['total'] }}.
+                            Terakhir {{ wib($progress['finished_at']) }}: {{ $progress['done'] }} terkirim, {{ $progress['failed'] }} gagal dari {{ $progress['total'] }}@if (! empty($progress['filters'])) (filter: {{ implode(', ', array_map(fn ($key, $value) => $key.' '.$value, array_keys($progress['filters']), $progress['filters'])) }})@endif.
                         @endif
                     </p>
                     @if (! $zoho['running'] && ! empty($progress['errors']))
@@ -67,14 +104,69 @@
                         <input type="hidden" name="mode" value="pending">
                         <button type="submit" class="btn-ghost" @disabled($zoho['running'] || $zoho['pending'] === 0)>Kirim yang belum terkirim</button>
                     </form>
-                    <form method="POST" action="{{ route('orders.zoho-repush') }}"
-                          onsubmit="return confirm('Push ulang SEMUA {{ $zoho['paid'] }} order lunas ke Zoho?\n\nID Zoho lama akan dilupakan dan semua order dibuat ulang (kontak, Sales Order, Invoice, Payment). Lakukan ini hanya kalau data di Zoho sudah dibersihkan, kalau tidak akan terjadi data dobel.')">
-                        @csrf
-                        <input type="hidden" name="mode" value="all">
-                        <button type="submit" class="btn-add" @disabled($zoho['running'] || $zoho['paid'] === 0)>Push ulang semua ke Zoho</button>
-                    </form>
+                    <button type="button" class="btn-add" @click="open()" @disabled($zoho['running'] || $zoho['paid'] === 0)>Push ulang ke Zoho</button>
                 </div>
             </div>
+        </div>
+
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" x-show="repushOpen" x-cloak @click.self="repushOpen = false">
+            <div class="crud-modal">
+                <form class="flex min-h-0 flex-1 flex-col" method="POST" action="{{ route('orders.zoho-repush') }}" @submit="confirmSubmit($event)">
+                    @csrf
+                    <input type="hidden" name="mode" value="all">
+                    <div class="crud-modal-body">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-semibold text-heading">Push ulang ke Zoho</h3>
+                                <p class="mt-1 text-[13px] text-muted">Pilih order yang akan dikirim ulang. Order draft, held, dan batal tidak ikut dikirim.</p>
+                            </div>
+                            <button type="button" class="modal-close" @click="repushOpen = false">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6l12 12M18 6L6 18"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="mt-5 grid gap-4">
+                            <div>
+                                <label class="label">Periode</label>
+                                <div class="flex gap-4 text-sm">
+                                    <label class="inline-flex items-center gap-2"><input type="radio" value="all" x-model="scope" @change="refresh()"> Semua tanggal</label>
+                                    <label class="inline-flex items-center gap-2"><input type="radio" value="range" x-model="scope" @change="refresh()"> Pilih tanggal</label>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3" x-show="scope === 'range'" x-cloak>
+                                <div>
+                                    <label class="label">Dari tanggal</label>
+                                    <input type="date" class="input" name="from" x-model="from" :disabled="scope !== 'range'" @change="refresh()">
+                                </div>
+                                <div>
+                                    <label class="label">Sampai tanggal</label>
+                                    <input type="date" class="input" name="to" x-model="to" :disabled="scope !== 'range'" @change="refresh()">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="label">Status bayar</label>
+                                <select class="input" name="payment_status" x-model="paymentStatus" @change="refresh()">
+                                    <option value="paid">Paid (lunas)</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="all">Semua status bayar</option>
+                                </select>
+                                <p class="mt-1 text-xs text-[#b26a1f]" x-show="paymentStatus !== 'paid'" x-cloak>Order belum lunas dikirim sebagai Sales Order + Invoice tanpa Payment, jadi tercatat sebagai piutang di Zoho.</p>
+                            </div>
+                            <p class="rounded-lg bg-[#f6f6f6] px-4 py-3 text-sm text-heading">
+                                <span x-show="error" x-text="error" class="text-brand"></span>
+                                <span x-show="!error && count === null">Menghitung order…</span>
+                                <span x-show="!error && count !== null"><strong x-text="count"></strong> order akan dikirim ulang.</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="crud-modal-footer">
+                        <button type="button" class="btn-ghost" @click="repushOpen = false">Batal</button>
+                        <button class="btn-add" type="submit" :disabled="!count">Push ulang</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         </div>
     @endif
 
