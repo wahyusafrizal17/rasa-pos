@@ -51,7 +51,6 @@
                             ['label' => 'Log Sinkronisasi', 'route' => 'sync-logs.index', 'active' => 'sync-logs.*', 'perm' => 'products.view', 'icon' => 'document'],
                         ]],
                         ['label' => 'Inventori', 'icon' => 'inventory', 'children' => [
-                            ['label' => 'Stock', 'route' => 'inventory.index', 'perm' => 'inventory.view', 'icon' => 'inventory'],
                             ['label' => 'Movements', 'route' => 'inventory.movements', 'perm' => 'inventory.view', 'icon' => 'arrows'],
                             ['label' => 'Transfers', 'route' => 'transfers.index', 'active' => 'transfers.*', 'perm' => 'inventory.view', 'icon' => 'swap'],
                             ['label' => 'Stock Opname', 'route' => 'opnames.index', 'active' => 'opnames.*', 'perm' => 'inventory.view', 'icon' => 'clipboard-check'],

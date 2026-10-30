@@ -66,6 +66,7 @@
                             <th>Kategori</th>
                             <th>Tipe</th>
                             <th>Harga</th>
+                            <th>Stok</th>
                             <th>Status</th>
                             <th>Pilihan</th>
                             <th class="col-actions"></th>
@@ -95,6 +96,7 @@
                                 </select>
                             </th>
                             <th></th>
+                            <th></th>
                             <th>
                                 <select form="product-filters" class="col-filter" name="status" onchange="this.form.submit()">
                                     <option value="">Semua</option>
@@ -121,6 +123,7 @@
                                 <td>{{ $product->category?->name ?? '—' }}</td>
                                 <td><span class="badge-soft">{{ $product->type?->label() }}</span></td>
                                 <td class="font-semibold">{{ money($product->price) }}</td>
+                                <td class="whitespace-nowrap">{{ $product->is_stockable ? qty_label((float) $product->stock, $product->unit?->code ?? '') : '—' }}</td>
                                 <td>
                                     <x-status :value="$product->is_active ? 'green' : 'gray'">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</x-status>
                                 </td>
@@ -150,7 +153,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="py-16 text-center text-sm text-slate-400">Tidak ada produk yang cocok dengan filter kolom ini.</td>
+                                <td colspan="10" class="py-16 text-center text-sm text-slate-400">Tidak ada produk yang cocok dengan filter kolom ini.</td>
                             </tr>
                         @endforelse
                     </tbody>

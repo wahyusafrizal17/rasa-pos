@@ -123,9 +123,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
     Route::post('/customers/import', [CustomerController::class, 'import'])->name('customers.import');
     Route::resource('customers', CustomerController::class);
 
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('/inventory/movements', [InventoryController::class, 'movements'])->name('inventory.movements');
-    Route::post('/inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');
 
     Route::get('/opnames', [StockOpnameController::class, 'index'])->name('opnames.index');
     Route::post('/opnames', [StockOpnameController::class, 'store'])->name('opnames.store');

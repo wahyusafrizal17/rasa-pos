@@ -148,10 +148,7 @@
 
     @if ($metrics['low_stock_items']->count())
         <div class="card mt-4 p-5">
-            <div class="flex items-center justify-between">
-                <p class="font-semibold text-heading">Low stock alerts</p>
-                <a href="{{ route('inventory.index') }}" class="text-sm font-medium text-brand">Lihat inventory</a>
-            </div>
+            <p class="font-semibold text-heading">Low stock alerts</p>
             <div class="mt-4 divide-y divide-slate-100">
                 @foreach ($metrics['low_stock_items'] as $product)
                     <div class="flex items-center justify-between py-3 text-sm">

@@ -42,12 +42,6 @@
                     <h5 class="card-header-title">Riwayat mutasi</h5>
                     <p class="card-header-subtitle">Filter kolom memuat ulang otomatis saat nilai diubah.</p>
                 </div>
-                <div class="card-header-actions">
-                    <a href="{{ route('inventory.index') }}" class="btn-import">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/></svg>
-                        Daftar stok
-                    </a>
-                </div>
             </div>
 
             <form id="movement-filters" method="GET" action="{{ route('inventory.movements') }}"></form>
