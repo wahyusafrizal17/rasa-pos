@@ -308,7 +308,8 @@ class ZohoCatalogSync
 
             Inventory::query()->updateOrCreate(
                 ['outlet_id' => $outlet->id, 'product_id' => $product->id],
-                ['quantity' => (float) ($row['location_stock_on_hand'] ?? 0), 'reserved_quantity' => 0],
+                // Physical Stock di Zoho; location_stock_on_hand itu Accounting Stock (baru naik setelah bill)
+                ['quantity' => (float) ($row['location_actual_available_stock'] ?? $row['location_stock_on_hand'] ?? 0), 'reserved_quantity' => 0],
             );
             $outlet->products()->syncWithoutDetaching([
                 $product->id => ['price' => $product->price, 'is_available' => $product->is_sellable],
