@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Customer;
 use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 
 class ZohoBooksPush
@@ -48,11 +49,36 @@ class ZohoBooksPush
 
     public function pending(): void
     {
-        Order::query()
+        $this->pendingQuery()->each(fn (Order $order) => $this->push($order));
+    }
+
+    /** Order lunas yang belum selesai terkirim ke Zoho. */
+    public function pendingQuery(): Builder
+    {
+        return Order::query()
             ->where('payment_status', PaymentStatus::Paid)
             ->whereNull('zoho_payment_id')
-            ->where(fn ($q) => $q->where('is_compliment', false)->orWhereNull('zoho_invoice_id'))
-            ->each(fn (Order $order) => $this->push($order));
+            ->where(fn ($q) => $q->where('is_compliment', false)->orWhereNull('zoho_invoice_id'));
+    }
+
+    /** Lupakan semua ID Zoho supaya order lunas dikirim ulang dari awal (setelah data di Zoho dibersihkan). */
+    public function resetAll(): int
+    {
+        Customer::query()->whereNotNull('zoho_contact_id')->update(['zoho_contact_id' => null]);
+
+        return Order::query()
+            ->where('payment_status', PaymentStatus::Paid)
+            ->update([
+                'zoho_contact_id' => null,
+                'zoho_salesorder_id' => null,
+                'zoho_invoice_id' => null,
+                'zoho_payment_id' => null,
+            ]);
+    }
+
+    protected function wibDate(?\DateTimeInterface $at): string
+    {
+        return wib($at ?? now(), 'Y-m-d');
     }
 
     /**
@@ -121,7 +147,7 @@ class ZohoBooksPush
 
         $payload = $this->withDiscount($order, [
             'customer_id' => $this->customerId($order),
-            'date' => $order->created_at?->toDateString() ?? now()->toDateString(),
+            'date' => $this->wibDate($order->created_at),
             'reference_number' => $order->order_number,
             'custom_fields' => [
                 ['api_name' => 'cf_source', 'value' => config('zoho.cf_source', 'POS')],
@@ -159,7 +185,7 @@ class ZohoBooksPush
         $invoice = $this->zoho->post('/books/v3/invoices', $this->withDiscount($order, [
             'customer_id' => $this->customerId($order),
             'reference_number' => $order->order_number,
-            'date' => now()->toDateString(),
+            'date' => $this->wibDate($order->created_at),
             'line_items' => $lines,
         ]))['invoice'] ?? [];
 
@@ -177,7 +203,7 @@ class ZohoBooksPush
             'payment_mode' => $this->paymentMode($method),
             'account_id' => (string) config('zoho.payment_account_id'),
             'amount' => $amount,
-            'date' => now()->toDateString(),
+            'date' => $this->wibDate($order->payments->sortByDesc('id')->first()?->created_at ?? $order->created_at),
             'reference_number' => $order->payments->sortByDesc('id')->first()?->reference ?: $order->order_number,
             'invoices' => [[
                 'invoice_id' => $order->zoho_invoice_id,

@@ -90,6 +90,7 @@ Route::middleware(['auth', 'active', 'outlet'])->group(function () {
 
     Route::get('/orders/kanban', fn () => redirect()->route('orders.index'))->name('orders.kanban');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::post('/orders/zoho-repush', [OrderController::class, 'repushZoho'])->name('orders.zoho-repush');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/status', fn ($order) => redirect()->route('orders.show', $order));
     Route::post('/orders/{order}/status', [OrderController::class, 'status'])->name('orders.status');

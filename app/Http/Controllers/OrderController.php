@@ -2,17 +2,72 @@
 
 namespace App\Http\Controllers;
 
+use App\Console\Commands\RepushZohoOrders;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Outlet;
 use App\Services\OrderService;
+use App\Services\ZohoBooksPush;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderController extends Controller
 {
+    public function repushZoho(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('settings.manage'), 403);
+
+        $data = $request->validate(['mode' => ['required', 'in:all,pending']]);
+
+        if (! $this->repushIdle()) {
+            return back()->with('success', 'Push ulang ke Zoho masih berjalan.');
+        }
+
+        $args = $data['mode'] === 'all' ? ' --reset' : '';
+        $command = sprintf(
+            'cd %s && setsid %s %s zoho:repush-orders%s >> %s 2>&1 < /dev/null & echo $!',
+            escapeshellarg(base_path()),
+            escapeshellarg($this->phpCliBinary()),
+            escapeshellarg(base_path('artisan')),
+            $args,
+            escapeshellarg(storage_path('logs/zoho-repush.log')),
+        );
+
+        if (app()->runningUnitTests()) {
+            Cache::put('zoho-repush-orders.spawned', $command, 60);
+        } elseif (! function_exists('exec')) {
+            return back()->with('error', 'Server tidak bisa menjalankan proses background. Jalankan: php artisan zoho:repush-orders'.$args);
+        } else {
+            exec($command);
+            Log::info('Zoho repush spawned from orders page', ['mode' => $data['mode'], 'user_id' => $request->user()->id]);
+        }
+
+        return back()->with('success', $data['mode'] === 'all'
+            ? 'Push ulang semua order ke Zoho dimulai. Progres tampil di halaman ini.'
+            : 'Pengiriman order yang belum terkirim ke Zoho dimulai.');
+    }
+
+    protected function phpCliBinary(): string
+    {
+        $binary = PHP_BINARY;
+        if ($binary !== '' && ! str_contains(strtolower($binary), 'fpm') && is_executable($binary)) {
+            return $binary;
+        }
+
+        foreach (['/usr/bin/php', '/usr/local/bin/php'] as $candidate) {
+            if (is_executable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return 'php';
+    }
+
     public function index(Request $request): View
     {
         abort_unless($request->user()->hasPermission('orders.view'), 403);
@@ -54,7 +109,24 @@ class OrderController extends Controller
                     OrderStatus::Preparing->value,
                 ])->count(),
             ],
+            'zoho' => $request->user()->hasPermission('settings.manage') ? [
+                'paid' => Order::query()->where('payment_status', PaymentStatus::Paid)->count(),
+                'pending' => app(ZohoBooksPush::class)->pendingQuery()->count(),
+                'running' => ! $this->repushIdle(),
+                'progress' => Cache::get(RepushZohoOrders::PROGRESS),
+            ] : null,
         ]);
+    }
+
+    protected function repushIdle(): bool
+    {
+        $probe = Cache::lock(RepushZohoOrders::LOCK, 1);
+        if (! $probe->get()) {
+            return false;
+        }
+        $probe->release();
+
+        return true;
     }
 
     public function show(Order $order): View

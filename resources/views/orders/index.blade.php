@@ -38,6 +38,46 @@
         </div>
     </div>
 
+    @if ($zoho)
+        @php $progress = $zoho['progress']; @endphp
+        <div class="card mb-5">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-header-title">Sinkron Zoho Books</h5>
+                    <p class="card-header-subtitle">
+                        {{ number_format($zoho['paid']) }} order lunas · {{ number_format($zoho['pending']) }} belum terkirim ke Zoho.
+                        @if ($zoho['running'] && $progress)
+                            <span class="font-semibold text-[#ff9f43]">Sedang berjalan: {{ $progress['done'] + $progress['failed'] }}/{{ $progress['total'] }} ({{ $progress['failed'] }} gagal). Muat ulang halaman untuk melihat progres.</span>
+                        @elseif ($progress && $progress['status'] === 'finished')
+                            Terakhir {{ wib($progress['finished_at']) }}: {{ $progress['done'] }} terkirim, {{ $progress['failed'] }} gagal dari {{ $progress['total'] }}.
+                        @endif
+                    </p>
+                    @if (! $zoho['running'] && ! empty($progress['errors']))
+                        <details class="mt-1 text-xs text-muted">
+                            <summary class="cursor-pointer text-brand">Lihat order yang gagal</summary>
+                            <ul class="mt-1 list-disc pl-5">
+                                @foreach ($progress['errors'] as $error)<li>{{ $error }}</li>@endforeach
+                            </ul>
+                        </details>
+                    @endif
+                </div>
+                <div class="card-header-actions">
+                    <form method="POST" action="{{ route('orders.zoho-repush') }}">
+                        @csrf
+                        <input type="hidden" name="mode" value="pending">
+                        <button type="submit" class="btn-ghost" @disabled($zoho['running'] || $zoho['pending'] === 0)>Kirim yang belum terkirim</button>
+                    </form>
+                    <form method="POST" action="{{ route('orders.zoho-repush') }}"
+                          onsubmit="return confirm('Push ulang SEMUA {{ $zoho['paid'] }} order lunas ke Zoho?\n\nID Zoho lama akan dilupakan dan semua order dibuat ulang (kontak, Sales Order, Invoice, Payment). Lakukan ini hanya kalau data di Zoho sudah dibersihkan, kalau tidak akan terjadi data dobel.')">
+                        @csrf
+                        <input type="hidden" name="mode" value="all">
+                        <button type="submit" class="btn-add" @disabled($zoho['running'] || $zoho['paid'] === 0)>Push ulang semua ke Zoho</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="card overflow-hidden">
         <div class="card-header">
             <div>
