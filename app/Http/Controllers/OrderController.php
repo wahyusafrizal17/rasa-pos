@@ -166,8 +166,14 @@ class OrderController extends Controller
     {
         abort_unless(auth()->user()->hasPermission('orders.view'), 403);
 
+        $order->load(['items.product', 'items.batch', 'payments', 'customer', 'outlet', 'table', 'user', 'discount']);
+        $cancellation = $order->status === OrderStatus::Cancelled
+            ? $order->histories()->with('user')->where('to_status', OrderStatus::Cancelled->value)->latest('id')->first()
+            : null;
+
         return view('orders.show', [
-            'order' => $order->load(['items.product', 'items.batch', 'payments', 'customer', 'outlet', 'table', 'user', 'discount']),
+            'order' => $order,
+            'cancelledBy' => $cancellation?->user,
         ]);
     }
 

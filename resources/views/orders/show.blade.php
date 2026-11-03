@@ -76,6 +76,22 @@
                     @if ($order->notes)
                         <p class="rounded-xl bg-[#fff8f0] px-4 py-3 text-sm text-[#9a6b2f]">{{ $order->notes }}</p>
                     @endif
+                    @if ($order->status === \App\Enums\OrderStatus::Cancelled)
+                        <div class="rounded-xl border border-[#f3c9c7] bg-[#fdf1f0] px-4 py-3 text-sm text-[#8a1f1b]">
+                            <p class="font-semibold">Order dibatalkan</p>
+                            <dl class="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[auto_1fr]">
+                                <dt class="text-[#b05a56]">Alasan</dt>
+                                <dd class="font-medium">{{ $order->cancel_reason ?: '—' }}</dd>
+                                <dt class="text-[#b05a56]">Dibatalkan oleh</dt>
+                                <dd class="font-medium">{{ $cancelledBy?->name ?? '—' }}</dd>
+                                <dt class="text-[#b05a56]">Waktu</dt>
+                                <dd class="font-medium">{{ $order->cancelled_at ? wib($order->cancelled_at) : '—' }}</dd>
+                            </dl>
+                            @if ($order->payment_status === \App\Enums\PaymentStatus::Paid)
+                                <p class="mt-2 text-xs">Order ini sudah lunas sebelum dibatalkan. Pembayaran belum dikembalikan di sistem.</p>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
 
