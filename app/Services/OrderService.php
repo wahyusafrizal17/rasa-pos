@@ -364,6 +364,10 @@ class OrderService
     {
         $from = $order->status?->value;
 
+        if ($status === OrderStatus::Cancelled && $order->hasPayment()) {
+            throw ValidationException::withMessages(['status' => 'Order yang sudah dibayar tidak dapat dibatalkan.']);
+        }
+
         $order->status = $status;
         if ($status === OrderStatus::Held) {
             $order->held_at = now();

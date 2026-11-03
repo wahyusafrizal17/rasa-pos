@@ -207,12 +207,14 @@
                         Cetak invoice
                     </a>
                 @endif
-                @if ($order->status->isOpen() && $canCancel)
+                @if ($order->canBeCancelled() && $canCancel)
                     <form id="cancel-order-form" method="POST" action="{{ route('pos.cancel', $order) }}">
                         @csrf
                         <input type="hidden" name="reason">
                         <button id="cancel-order-btn" class="btn-ghost w-full text-brand hover:bg-brand-soft" style="border-color: #6f1715" type="button">Cancel order</button>
                     </form>
+                @elseif ($order->status->isOpen() && $order->hasPayment() && $canCancel)
+                    <p class="rounded-xl bg-[#f6f6f6] px-4 py-3 text-xs text-muted">Order sudah dibayar sehingga tidak dapat dibatalkan.</p>
                 @endif
             </div>
         </div>

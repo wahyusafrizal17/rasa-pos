@@ -90,6 +90,17 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class);
     }
 
+    /** Sudah ada uang masuk (lunas atau sebagian), jadi tidak boleh dibatalkan. */
+    public function hasPayment(): bool
+    {
+        return in_array($this->payment_status, [PaymentStatus::Paid, PaymentStatus::Partial], true);
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return $this->status->isOpen() && ! $this->hasPayment();
+    }
+
     public function paidTotal(): float
     {
         return (float) $this->payments()->where('status', 'paid')->sum('amount');

@@ -117,6 +117,10 @@ class TableService
                 throw ValidationException::withMessages(['tables' => 'Kedua meja harus punya order aktif. Pilih dua meja Occupied.']);
             }
 
+            if ($sourceOrder->hasPayment()) {
+                throw ValidationException::withMessages(['tables' => 'Order '.$sourceOrder->order_number.' sudah dibayar, tidak dapat digabung ke meja lain.']);
+            }
+
             $sourceCode = DiningTable::query()->whereKey($sourceId)->value('code');
 
             foreach ($sourceOrder->items as $item) {
