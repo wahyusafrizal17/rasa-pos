@@ -49,7 +49,7 @@ class PosController extends Controller
         $categories = Category::catalog();
         $categoryIds = $categories->pluck('id');
 
-        $products = Product::query()->where('is_active', true)->hasSku()->atOutlet($outletId)->where('is_addon', false)
+        $products = Product::query()->posOwned()->where('is_active', true)->hasSku()->atOutlet($outletId)->where('is_addon', false)
             ->whereIn('category_id', $categoryIds)
             ->with([
             'category',
@@ -58,11 +58,11 @@ class PosController extends Controller
             'addons',
             'inventories' => fn ($q) => $q->where('outlet_id', $outletId),
         ])->orderBy('name')->get();
-        $addons = Product::query()->sellable()->where('is_addon', true)->orderBy('name')->get();
+        $addons = Product::query()->posOwned()->sellable()->where('is_addon', true)->orderBy('name')->get();
         $lowStock = app(InventoryService::class)->lowStock($outletId);
         $bundles = Bundle::query()
             ->where('is_active', true)
-            ->whereHas('product', fn ($q) => $q->hasSku()->atOutlet($outletId))
+            ->whereHas('product', fn ($q) => $q->posOwned()->hasSku()->atOutlet($outletId))
             ->with(['product.unit', 'product.inventories' => fn ($q) => $q->where('outlet_id', $outletId), 'items.product', 'outlets'])
             ->get()
             ->filter(fn (Bundle $bundle) => $bundle->isCurrentlyActive($outletId) && $categoryIds->contains($bundle->product?->category_id))

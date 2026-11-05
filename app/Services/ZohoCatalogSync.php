@@ -41,10 +41,9 @@ class ZohoCatalogSync
             $this->attachUsers($outlets);
             $onProgress && $onProgress('Outlets '.$outlets->count());
 
-            $items = array_values(array_filter(
-                $this->zoho->paginate('/inventory/v1/items', 'items'),
-                fn (array $row) => $this->ownedByPos($row),
-            ));
+            $allItems = $this->zoho->paginate('/inventory/v1/items', 'items');
+            $owners = collect($allItems)->mapWithKeys(fn (array $row) => [(string) ($row['item_id'] ?? '') => $this->owner($row)]);
+            $items = array_values(array_filter($allItems, fn (array $row) => $this->ownedByPos($row)));
             $total = count($items);
             $onProgress && $onProgress('Items '.$total);
             $products = 0;
@@ -81,9 +80,10 @@ class ZohoCatalogSync
 
             $removedRows = [];
             if ($seen !== []) {
+                // hanya item yang sudah tidak ada di Zoho; item non-POS cukup disembunyikan lewat zoho_owner
                 $gone = Product::query()
                     ->whereNotNull('zoho_item_id')
-                    ->whereNotIn('zoho_item_id', $seen)
+                    ->whereNotIn('zoho_item_id', $owners->keys()->map(fn ($id) => (string) $id)->all())
                     ->where(function ($q) {
                         $q->where('is_active', true)->orWhere('is_sellable', true);
                     })
@@ -100,6 +100,13 @@ class ZohoCatalogSync
                         ->whereIn('zoho_item_id', $gone->pluck('zoho_item_id'))
                         ->update(['is_active' => false, 'is_sellable' => false]);
                 }
+
+                // simpan owner item non-POS supaya Products dan POS bisa menyembunyikannya
+                $owners->reject(fn (string $owner) => in_array($owner, self::POS_OWNERS, true))
+                    ->groupBy(fn (string $owner) => $owner, preserveKeys: true)
+                    ->each(fn ($group, string $owner) => Product::withTrashed()
+                        ->whereIn('zoho_item_id', $group->keys()->map(fn ($id) => (string) $id))
+                        ->update(['zoho_owner' => $owner]));
             }
             $removedCategories = $seen !== [] ? $this->pruneEmptyCategories() : [];
             $onProgress && $removedCategories && $onProgress('Kategori kosong dihapus: '.implode(', ', $removedCategories));
@@ -206,6 +213,7 @@ class ZohoCatalogSync
             'price' => (float) ($item['rate'] ?? 0),
             'cost' => (float) ($item['purchase_rate'] ?? 0),
             'is_sellable' => $sold && $active,
+            'zoho_owner' => $this->owner($item),
             'is_stockable' => $stockable,
             'is_active' => $active,
             'reorder_level' => (float) ($item['reorder_level'] ?? 0),
@@ -357,14 +365,21 @@ class ZohoCatalogSync
 
     protected function ownedByPos(array $item): bool
     {
+        return in_array($this->owner($item), self::POS_OWNERS, true);
+    }
+
+    /** cf_owner dinormalisasi; '-' kalau di Zoho kosong. */
+    protected function owner(array $item): string
+    {
         $owner = $item['cf_owner_unformatted'] ?? $item['cf_owner'] ?? null;
         foreach ($item['custom_fields'] ?? [] as $field) {
             if (($field['api_name'] ?? '') === 'cf_owner') {
                 $owner = $field['value'] ?? $owner;
             }
         }
+        $owner = strtoupper(trim((string) $owner));
 
-        return in_array(strtoupper(trim((string) $owner)), self::POS_OWNERS, true);
+        return $owner === '' ? '-' : $owner;
     }
 
     protected function itemCategory(array $item): string

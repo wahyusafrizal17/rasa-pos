@@ -93,6 +93,12 @@ class OrderService
                 ? Bundle::query()->find($payload['bundle_id'])
                 : null;
 
+            if (! Product::query()->posOwned()->whereKey($product->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'product_id' => $product->name.' bukan item POS. Isi cf_owner POS di Zoho lalu sinkronkan.',
+                ]);
+            }
+
             if (! $bundle && ! ($product->is_sellable && $product->is_active)) {
                 throw ValidationException::withMessages([
                     'product_id' => $product->name.' belum bisa dijual. Aktifkan penjualan item ini di Zoho lalu sinkronkan.',

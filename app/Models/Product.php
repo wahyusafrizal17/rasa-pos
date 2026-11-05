@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProductType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use App\Services\ZohoCatalogSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'sku', 'zoho_item_id', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
+    'sku', 'zoho_item_id', 'zoho_owner', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
     'price', 'cost', 'is_sellable', 'is_addon', 'has_optional', 'has_expresso', 'is_stockable', 'is_active',
     'minimum_stock', 'reorder_level', 'maximum_stock', 'station', 'prep_minutes',
 ])]
@@ -77,6 +78,16 @@ class Product extends Model
     public function scopeSellable(Builder $query): Builder
     {
         return $query->where('is_sellable', true)->where('is_active', true);
+    }
+
+    /** Produk milik POS (cf_owner POS/CISXPOS). Owner kosong = buatan lokal atau belum pernah disync. */
+    public function scopePosOwned(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query) {
+            $query->whereNull('zoho_item_id')
+                ->orWhereNull('zoho_owner')
+                ->orWhereIn('zoho_owner', ZohoCatalogSync::POS_OWNERS);
+        });
     }
 
     public function scopeHasSku(Builder $query): Builder

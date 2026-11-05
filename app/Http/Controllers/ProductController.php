@@ -20,7 +20,7 @@ class ProductController extends Controller
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
         $categories = Category::catalog();
-        $catalog = Product::query()->whereIn('category_id', $categories->pluck('id'));
+        $catalog = Product::query()->posOwned()->whereIn('category_id', $categories->pluck('id'));
         $outletId = current_outlet_id();
         $query = (clone $catalog)->with(['category', 'unit', 'variants', 'addons'])
             ->withSum(['inventories as stock' => fn ($q) => $q->when($outletId, fn ($q, $id) => $q->where('outlet_id', $id))], 'quantity');
