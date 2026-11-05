@@ -407,7 +407,8 @@ class ZohoCatalogSync
     protected function attachUsers($outlets): void
     {
         $ids = $outlets->pluck('id');
-        if ($ids->isEmpty()) {
+        // hanya instalasi pertama; setelah itu outlet user diatur dari halaman Users dan tidak disentuh sync
+        if ($ids->isEmpty() || DB::table('outlet_users')->exists()) {
             return;
         }
 
