@@ -20,8 +20,11 @@ class ProductController extends Controller
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
         $categories = Category::catalog();
-        $catalog = Product::query()->posOwned()->whereIn('category_id', $categories->pluck('id'));
         $outletId = current_outlet_id();
+        // isi daftar sama dengan katalog POS di outlet yang dipilih
+        $catalog = Product::query()->posOwned()->where('is_active', true)->hasSku()
+            ->when($outletId, fn ($q, $id) => $q->atOutlet($id))
+            ->whereIn('category_id', $categories->pluck('id'));
         $query = (clone $catalog)->with(['category', 'unit', 'variants', 'addons'])
             ->withSum(['inventories as stock' => fn ($q) => $q->when($outletId, fn ($q, $id) => $q->where('outlet_id', $id))], 'quantity');
 
@@ -37,10 +40,10 @@ class ProductController extends Controller
         if (filled($filters['type'] ?? null)) {
             $query->where('type', $filters['type']);
         }
-        if (($filters['status'] ?? '') === 'active') {
-            $query->where('is_active', true);
-        } elseif (($filters['status'] ?? '') === 'inactive') {
-            $query->where('is_active', false);
+        if (($filters['status'] ?? '') === 'sellable') {
+            $query->where('is_sellable', true);
+        } elseif (($filters['status'] ?? '') === 'unsellable') {
+            $query->where('is_sellable', false);
         }
 
         $focusProduct = $request->filled('product')
@@ -53,8 +56,8 @@ class ProductController extends Controller
             'categories' => $categories,
             'stats' => [
                 'total' => (clone $catalog)->count(),
-                'sellable' => (clone $catalog)->where('is_sellable', true)->where('is_active', true)->count(),
-                'inactive' => (clone $catalog)->where('is_active', false)->count(),
+                'sellable' => (clone $catalog)->where('is_sellable', true)->count(),
+                'unsellable' => (clone $catalog)->where('is_sellable', false)->count(),
             ],
             'focusPayload' => $focusProduct?->toModalArray(),
         ]);

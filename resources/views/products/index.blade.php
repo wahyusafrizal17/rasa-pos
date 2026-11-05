@@ -26,9 +26,9 @@
             </div>
             <div class="stat-card">
                 <div>
-                    <p class="stat-kicker">Nonaktif</p>
-                    <p class="stat-value">{{ number_format($stats['inactive']) }}</p>
-                    <p class="stat-hint">Tidak tampil di POS</p>
+                    <p class="stat-kicker">Belum bisa dijual</p>
+                    <p class="stat-value">{{ number_format($stats['unsellable']) }}</p>
+                    <p class="stat-hint">Tampil di POS, belum bisa dipesan</p>
                 </div>
                 <span class="stat-icon bg-brand-soft text-brand">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
@@ -100,8 +100,8 @@
                             <th>
                                 <select form="product-filters" class="col-filter" name="status" onchange="this.form.submit()">
                                     <option value="">Semua</option>
-                                    <option value="active" @selected(($filters['status'] ?? '') === 'active')>Aktif</option>
-                                    <option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Nonaktif</option>
+                                    <option value="sellable" @selected(($filters['status'] ?? '') === 'sellable')>Bisa dijual</option>
+                                    <option value="unsellable" @selected(($filters['status'] ?? '') === 'unsellable')>Belum bisa dijual</option>
                                 </select>
                             </th>
                             <th></th>
@@ -125,7 +125,7 @@
                                 <td class="font-semibold">{{ money($product->price) }}</td>
                                 <td class="whitespace-nowrap">{{ $product->is_stockable ? qty_label((float) $product->stock, $product->unit?->code ?? '') : '—' }}</td>
                                 <td>
-                                    <x-status :value="$product->is_active ? 'green' : 'gray'">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</x-status>
+                                    <x-status :value="$product->is_sellable ? 'green' : 'gray'">{{ $product->is_sellable ? 'Bisa dijual' : 'Belum bisa dijual' }}</x-status>
                                 </td>
                                 <td>
                                     @can('products.manage')
