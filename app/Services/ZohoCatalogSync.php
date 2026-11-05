@@ -18,6 +18,9 @@ use Illuminate\Support\Str;
 
 class ZohoCatalogSync
 {
+    /** Nilai cf_owner di Zoho untuk item milik POS; item lain tidak ditarik. */
+    public const POS_OWNERS = ['POS', 'CISXPOS'];
+
     public function __construct(protected ZohoClient $zoho) {}
 
     public function run(bool $fresh = false, ?callable $onProgress = null, string $trigger = 'cli'): array
@@ -38,7 +41,10 @@ class ZohoCatalogSync
             $this->attachUsers($outlets);
             $onProgress && $onProgress('Outlets '.$outlets->count());
 
-            $items = $this->zoho->paginate('/inventory/v1/items', 'items');
+            $items = array_values(array_filter(
+                $this->zoho->paginate('/inventory/v1/items', 'items'),
+                fn (array $row) => $this->ownedByPos($row),
+            ));
             $total = count($items);
             $onProgress && $onProgress('Items '.$total);
             $products = 0;
@@ -347,6 +353,18 @@ class ZohoCatalogSync
         $empty->each->delete();
 
         return $empty->pluck('name')->all();
+    }
+
+    protected function ownedByPos(array $item): bool
+    {
+        $owner = $item['cf_owner_unformatted'] ?? $item['cf_owner'] ?? null;
+        foreach ($item['custom_fields'] ?? [] as $field) {
+            if (($field['api_name'] ?? '') === 'cf_owner') {
+                $owner = $field['value'] ?? $owner;
+            }
+        }
+
+        return in_array(strtoupper(trim((string) $owner)), self::POS_OWNERS, true);
     }
 
     protected function itemCategory(array $item): string
