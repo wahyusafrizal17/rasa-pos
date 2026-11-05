@@ -382,27 +382,18 @@ class ZohoCatalogSync
         return $owner === '' ? '-' : $owner;
     }
 
+    /** Kategori POS hanya dari cf_product_category (Product Category di Zoho). */
     protected function itemCategory(array $item): string
     {
-        foreach (['cf_category', 'cf_product_category'] as $key) {
-            $value = trim((string) ($item[$key] ?? ''));
-            if ($value !== '') {
-                return $value;
-            }
-        }
+        $value = trim((string) ($item['cf_product_category'] ?? ''));
 
         foreach ($item['custom_fields'] ?? [] as $field) {
-            $api = (string) ($field['api_name'] ?? $field['placeholder'] ?? '');
-            if (! in_array($api, ['cf_category', 'cf_product_category'], true)) {
-                continue;
-            }
-            $value = trim((string) ($field['value'] ?? ''));
-            if ($value !== '') {
-                return $value;
+            if (($field['api_name'] ?? $field['placeholder'] ?? '') === 'cf_product_category') {
+                $value = trim((string) ($field['value'] ?? '')) ?: $value;
             }
         }
 
-        return trim((string) ($item['category_name'] ?? '')) ?: 'Uncategorized';
+        return $value !== '' ? $value : 'Uncategorized';
     }
 
     protected function unit(string $name): Unit
