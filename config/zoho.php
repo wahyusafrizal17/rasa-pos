@@ -10,5 +10,5 @@ return [
     'customer_id' => env('ZOHO_CUSTOMER_ID', ''),
     'cf_source' => env('ZOHO_CF_SOURCE', 'POS'),
     'tax_id' => env('ZOHO_TAX_ID', '7386545000001141159'),
-    'payment_account_id' => env('ZOHO_PAYMENT_ACCOUNT_ID', '7386545000004569992'),
+    'payment_account_id' => env('ZOHO_PAYMENT_ACCOUNT_ID', '7386545000007590003'), // Faspay Clearing
 ];
