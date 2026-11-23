@@ -298,13 +298,15 @@ class ZohoBooksPush
         return $ids->contains($configured) ? $configured : $ids->first();
     }
 
+    /** Nama payment mode di Zoho (Settings → Payment Modes), sama dengan pilihan di kasir. */
     protected function paymentMode(PaymentMethod $method): string
     {
         return match ($method) {
             PaymentMethod::Cash => 'Cash',
-            PaymentMethod::Edc => 'creditcard',
-            PaymentMethod::Transfer => 'banktransfer',
-            PaymentMethod::Qris, PaymentMethod::Compliment => 'others',
+            PaymentMethod::Edc => 'EDC',
+            PaymentMethod::Qris => 'QRIS',
+            PaymentMethod::Transfer => 'Bank Transfer',
+            PaymentMethod::Compliment => 'Others',
         };
     }
 }
