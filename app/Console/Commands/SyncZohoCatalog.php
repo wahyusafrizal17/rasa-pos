@@ -21,15 +21,21 @@ class SyncZohoCatalog extends Command
             return $lock;
         }
 
-        // ponytail: steal only when log is quiet 10m; live sync writes every ~40s
-        $log = storage_path('logs/zoho-sync.log');
-        if (is_file($log) && filemtime($log) >= time() - 600) {
+        // ambil alih hanya kalau sync yang memegang kunci tidak memberi tanda hidup 10 menit
+        // (sync hidup menyentuh file ini tiap ~40 detik; log biasa ikut berubah oleh percobaan yang dilewati)
+        $heartbeat = self::heartbeatPath();
+        if (is_file($heartbeat) && filemtime($heartbeat) >= time() - 600) {
             return null;
         }
 
         $lock->forceRelease();
 
         return $lock->get() ? $lock : null;
+    }
+
+    public static function heartbeatPath(): string
+    {
+        return storage_path('logs/zoho-sync.heartbeat');
     }
 
     public function handle(ZohoCatalogSync $sync): int
@@ -50,7 +56,8 @@ class SyncZohoCatalog extends Command
 
         $lock = self::acquireLock();
         if (! $lock) {
-            $this->logLine('Sync dilewati, masih berjalan.');
+            // jangan tulis ke zoho-sync.log: log yang terus berubah membuat kunci sync mati tidak pernah dilepas
+            $this->warn('Sync dilewati, masih berjalan. Cek: tail -f storage/logs/zoho-sync.log');
 
             return self::SUCCESS;
         }
@@ -89,6 +96,7 @@ class SyncZohoCatalog extends Command
 
     protected function logLine(string $line): void
     {
+        @touch(self::heartbeatPath());
         $path = storage_path('logs/zoho-sync.log');
         try {
             if ((! is_file($path) && is_writable(dirname($path))) || (is_file($path) && is_writable($path))) {
