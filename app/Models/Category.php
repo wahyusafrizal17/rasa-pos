@@ -20,11 +20,14 @@ class Category extends Model
         ];
     }
 
+    /** Semua kategori (brand Zoho) tampil; yang dikenal diurutkan dulu, sisanya abjad, Uncategorized paling akhir. */
     public static function catalog()
     {
         return static::query()->get()
-            ->filter(fn (Category $category) => static::posRank($category->name) !== null)
-            ->sortBy(fn (Category $category) => static::posRank($category->name))
+            ->sortBy([
+                fn (Category $a, Category $b) => (static::posRank($a->name) ?? 50) <=> (static::posRank($b->name) ?? 50),
+                fn (Category $a, Category $b) => strcasecmp($a->name, $b->name),
+            ])
             ->values();
     }
 
@@ -33,7 +36,8 @@ class Category extends Model
         $name = strtolower(trim($name));
 
         return match (true) {
-            $name === 'menu' => 0,
+            $name === 'uncategorized' => 99,
+            $name === 'menu', $name === 'house of rasa' => 0,
             str_starts_with($name, 'drip') => 1,
             $name === 'sku syrup', $name === 'syrup' => 2,
             str_starts_with($name, 'powder') => 3,

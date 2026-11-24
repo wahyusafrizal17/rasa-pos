@@ -19,12 +19,12 @@ class ProductController extends Controller
         abort_unless($request->user()->hasPermission('products.view'), 403);
 
         $filters = $request->only(['sku', 'name', 'category_id', 'type', 'status']);
-        $categories = Category::catalog();
         $outletId = current_outlet_id();
         // isi daftar sama dengan katalog POS di outlet yang dipilih
         $catalog = Product::query()->posOwned()->where('is_active', true)->hasSku()
-            ->when($outletId, fn ($q, $id) => $q->atOutlet($id))
-            ->whereIn('category_id', $categories->pluck('id'));
+            ->when($outletId, fn ($q, $id) => $q->atOutlet($id));
+        $filledIds = (clone $catalog)->distinct()->pluck('category_id');
+        $categories = Category::catalog()->whereIn('id', $filledIds)->values();
         $query = (clone $catalog)->with(['category', 'unit', 'variants', 'addons'])
             ->withSum(['inventories as stock' => fn ($q) => $q->when($outletId, fn ($q, $id) => $q->where('outlet_id', $id))], 'quantity');
 
