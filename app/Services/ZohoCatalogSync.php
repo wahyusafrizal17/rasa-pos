@@ -382,13 +382,13 @@ class ZohoCatalogSync
         return $owner === '' ? '-' : $owner;
     }
 
-    /** Kategori POS hanya dari cf_product_category (Product Category di Zoho). */
+    /** Kategori POS dari cf_brand (Brand di Zoho). */
     protected function itemCategory(array $item): string
     {
-        $value = trim((string) ($item['cf_product_category'] ?? ''));
+        $value = trim((string) ($item['cf_brand'] ?? ''));
 
         foreach ($item['custom_fields'] ?? [] as $field) {
-            if (($field['api_name'] ?? $field['placeholder'] ?? '') === 'cf_product_category') {
+            if (($field['api_name'] ?? $field['placeholder'] ?? '') === 'cf_brand') {
                 $value = trim((string) ($field['value'] ?? '')) ?: $value;
             }
         }
