@@ -62,7 +62,9 @@ class EscPosPrinter
         $out .= $this->rule();
         $out .= $this->cols('Subtotal', money($order->subtotal));
         $out .= $this->cols('Diskon', money($order->discount_amount));
-        $out .= $this->cols('Pajak', money($order->tax_amount));
+        if ((float) $order->tax_amount > 0) {
+            $out .= $this->cols('Pajak', money($order->tax_amount));
+        }
         if ((float) $order->service_charge > 0) {
             $out .= $this->cols('Service', money($order->service_charge));
         }

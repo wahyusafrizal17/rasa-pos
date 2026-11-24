@@ -21,11 +21,33 @@
                         }
                     }
                 @endphp
-                <div class="pos-chips">
-                    <button type="button" class="pos-chip" :class="!category && 'pos-chip-active'" @click="category = null">Semua <span class="pos-chip-count">{{ array_sum($categoryCounts) }}</span></button>
-                    @foreach ($categories as $category)
-                        <button type="button" class="pos-chip" :class="category == {{ $category->id }} && 'pos-chip-active'" @click="category = {{ $category->id }}">{{ $category->name }} <span class="pos-chip-count">{{ $categoryCounts[$category->id] ?? 0 }}</span></button>
-                    @endforeach
+                <div class="pos-chips-wrap"
+                     x-data="{
+                         canLeft: false,
+                         canRight: false,
+                         update() {
+                             const track = this.$refs.track;
+                             this.canLeft = track.scrollLeft > 4;
+                             this.canRight = track.scrollLeft + track.clientWidth < track.scrollWidth - 4;
+                         },
+                         slide(direction) {
+                             this.$refs.track.scrollBy({ left: direction * this.$refs.track.clientWidth * 0.7, behavior: 'smooth' });
+                         },
+                     }"
+                     x-init="$nextTick(() => update())"
+                     @resize.window.debounce.100ms="update()">
+                    <button type="button" class="pos-chips-nav" x-show="canLeft || canRight" x-cloak :disabled="!canLeft" @click="slide(-1)" aria-label="Geser kategori ke kiri">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="pos-chips" x-ref="track" @scroll.passive.debounce.50ms="update()">
+                        <button type="button" class="pos-chip" :class="!category && 'pos-chip-active'" @click="category = null">Semua <span class="pos-chip-count">{{ array_sum($categoryCounts) }}</span></button>
+                        @foreach ($categories as $category)
+                            <button type="button" class="pos-chip" :class="category == {{ $category->id }} && 'pos-chip-active'" @click="category = {{ $category->id }}">{{ $category->name }} <span class="pos-chip-count">{{ $categoryCounts[$category->id] ?? 0 }}</span></button>
+                        @endforeach
+                    </div>
+                    <button type="button" class="pos-chips-nav" x-show="canLeft || canRight" x-cloak :disabled="!canRight" @click="slide(1)" aria-label="Geser kategori ke kanan">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
                 </div>
                 <div class="relative shrink-0">
                     <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 110-15 7.5 7.5 0 010 15z"/></svg>
@@ -176,7 +198,7 @@
                     </select>
                     <p class="text-[11px] text-[#c2410c]" x-show="discountHint()" x-text="discountHint()" x-cloak></p>
                 </div>
-                <div class="order-row text-muted">
+                <div class="order-row text-muted" x-show="Number(order?.tax_amount || 0) > 0" x-cloak>
                     <span>Tax</span>
                     <span class="font-medium text-heading" x-text="formatMoney(order?.tax_amount || 0)"></span>
                 </div>

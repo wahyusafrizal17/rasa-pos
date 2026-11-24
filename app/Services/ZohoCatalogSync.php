@@ -214,6 +214,9 @@ class ZohoCatalogSync
             'cost' => (float) ($item['purchase_rate'] ?? 0),
             'is_sellable' => $sold && $active,
             'zoho_owner' => $this->owner($item),
+            // tax_id kosong di Zoho = item tanpa pajak
+            'zoho_tax_id' => trim((string) ($item['tax_id'] ?? '')) ?: null,
+            'tax_rate' => trim((string) ($item['tax_id'] ?? '')) !== '' ? (float) ($item['tax_percentage'] ?? 0) : 0,
             'is_stockable' => $stockable,
             'is_active' => $active,
             'reorder_level' => (float) ($item['reorder_level'] ?? 0),

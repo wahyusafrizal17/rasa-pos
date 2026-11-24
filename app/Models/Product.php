@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
-    'sku', 'zoho_item_id', 'zoho_owner', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
+    'sku', 'zoho_item_id', 'zoho_owner', 'zoho_tax_id', 'tax_rate', 'name', 'category_id', 'unit_id', 'type', 'bom_level', 'description', 'image',
     'price', 'cost', 'is_sellable', 'is_addon', 'has_optional', 'has_expresso', 'is_stockable', 'is_active',
     'minimum_stock', 'reorder_level', 'maximum_stock', 'station', 'prep_minutes',
 ])]
@@ -28,6 +28,7 @@ class Product extends Model
             'type' => ProductType::class,
             'price' => 'decimal:2',
             'cost' => 'decimal:2',
+            'tax_rate' => 'decimal:2',
             'is_sellable' => 'boolean',
             'is_addon' => 'boolean',
             'has_optional' => 'boolean',

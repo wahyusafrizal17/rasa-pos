@@ -147,6 +147,8 @@ class OrderService
                 'quantity' => $qty,
                 'unit_price' => $price,
                 'discount_amount' => 0,
+                'tax_rate' => (float) $product->tax_rate,
+                'zoho_tax_id' => $product->zoho_tax_id,
                 'tax_amount' => 0,
                 'total' => $price * $qty,
                 'notes' => $payload['notes'] ?? null,
@@ -163,6 +165,8 @@ class OrderService
                         'quantity' => $qty,
                         'unit_price' => (float) $addon->price,
                         'discount_amount' => 0,
+                        'tax_rate' => (float) $addon->tax_rate,
+                        'zoho_tax_id' => $addon->zoho_tax_id,
                         'tax_amount' => 0,
                         'total' => (float) $addon->price * $qty,
                         'station' => $addon->station ?? $item->station,
@@ -298,7 +302,17 @@ class OrderService
         }
 
         $taxable = max(0, $subtotal - $discount);
-        $tax = round($taxable * ((float) $order->tax_rate / 100), 2);
+        // pajak per item sesuai tax_id Zoho; diskon order dibagi rata sebelum pajak (sama dengan Zoho)
+        $ratio = $subtotal > 0 ? $taxable / $subtotal : 0;
+        $tax = 0.0;
+        foreach ($order->items as $item) {
+            $lineTax = round((float) $item->unit_price * (float) $item->quantity * $ratio * ((float) $item->tax_rate / 100), 2);
+            if ((float) $item->tax_amount !== $lineTax) {
+                $item->update(['tax_amount' => $lineTax]);
+            }
+            $tax += $lineTax;
+        }
+        $tax = round($tax, 2);
         $service = round($taxable * (service_charge_rate() / 100), 2);
         $grand = max(0, $taxable + $tax + $service);
 

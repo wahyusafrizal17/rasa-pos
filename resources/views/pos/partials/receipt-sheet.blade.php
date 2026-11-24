@@ -17,7 +17,9 @@
     <hr>
     <div class="row"><span>Subtotal</span><span>{{ money($order->subtotal) }}</span></div>
     <div class="row"><span>Diskon</span><span>{{ money($order->discount_amount) }}</span></div>
-    <div class="row"><span>Pajak</span><span>{{ money($order->tax_amount) }}</span></div>
+    @if ((float) $order->tax_amount > 0)
+        <div class="row"><span>Pajak</span><span>{{ money($order->tax_amount) }}</span></div>
+    @endif
     @if ((float) $order->service_charge > 0)
         <div class="row"><span>Service</span><span>{{ money($order->service_charge) }}</span></div>
     @endif

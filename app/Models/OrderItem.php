@@ -11,7 +11,7 @@ use App\Models\Concerns\AppliesFillableAttribute;
 
 #[Fillable([
     'order_id', 'parent_id', 'product_id', 'product_variant_id', 'bundle_id', 'batch_id', 'name',
-    'quantity', 'unit_price', 'discount_amount', 'tax_amount', 'total',
+    'quantity', 'unit_price', 'discount_amount', 'tax_rate', 'zoho_tax_id', 'tax_amount', 'total',
     'notes', 'station', 'status', 'confirmed_by', 'confirmed_at',
 ])]
 class OrderItem extends Model
@@ -26,6 +26,7 @@ class OrderItem extends Model
             'quantity' => 'decimal:3',
             'unit_price' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'tax_rate' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'confirmed_at' => 'datetime',

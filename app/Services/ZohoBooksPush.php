@@ -7,6 +7,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
@@ -257,7 +258,6 @@ class ZohoBooksPush
 
     protected function lineItems(Order $order): array
     {
-        $taxId = $this->taxId($order);
         $lines = [];
         foreach ($order->items as $item) {
             $itemId = (string) ($item->product?->zoho_item_id ?? '');
@@ -268,19 +268,22 @@ class ZohoBooksPush
                 'item_id' => $itemId,
                 'quantity' => (float) $item->quantity,
                 'rate' => (float) $item->unit_price,
-                'tax_id' => $taxId,
+                'tax_id' => $this->taxId($item),
             ];
         }
 
         return $lines;
     }
 
-    /** Pajak Zoho harus setarif dengan order, kalau tidak total invoice beda dengan pembayaran POS. */
-    protected function taxId(Order $order): string
+    /** Pajak Zoho per item harus setarif dengan POS, kalau tidak total invoice beda dengan pembayaran POS. */
+    protected function taxId(OrderItem $item): string
     {
-        $rate = (float) $order->tax_rate;
+        $rate = (float) $item->tax_rate;
         if ($rate <= 0) {
             return '';
+        }
+        if ($item->zoho_tax_id) {
+            return (string) $item->zoho_tax_id;
         }
 
         $taxes = Cache::remember('zoho.taxes', 3600, fn () => $this->zoho->get('/books/v3/settings/taxes')['taxes'] ?? []);
