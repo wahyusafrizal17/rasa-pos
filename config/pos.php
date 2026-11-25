@@ -2,6 +2,11 @@
 
 return [
     'tax_rate' => 11,
+    // pajak per item di POS: hanya kategori (cf_brand) ini yang kena pajak; di Zoho dikirim sebagai pajak 10% (PB1)
+    'category_tax' => [
+        'rate' => 10,
+        'categories' => ['House of Rasa', 'Locton'],
+    ],
     'service_charge' => 0,
     'currency' => 'IDR',
     'order_prefix' => 'ORD',

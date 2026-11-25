@@ -91,6 +91,15 @@ class Product extends Model
         });
     }
 
+    /** Tarif pajak POS untuk produk ini: hanya kategori di config pos.category_tax yang kena pajak. */
+    public function posTaxRate(): float
+    {
+        $category = strtolower(trim((string) $this->category?->name));
+        $taxed = array_map(fn ($name) => strtolower(trim($name)), config('pos.category_tax.categories', []));
+
+        return $category !== '' && in_array($category, $taxed, true) ? (float) config('pos.category_tax.rate', 0) : 0.0;
+    }
+
     public function scopeHasSku(Builder $query): Builder
     {
         $placeholder = $query->getConnection()->getDriverName() === 'sqlite'
